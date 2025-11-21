@@ -1,0 +1,197 @@
+export interface PeerSupportItem {
+  id: string;
+  blockName: string;
+  blockCode?: string;
+  thumbnail: string;
+  driveLink: string;
+  generation: string;
+  block: string;
+  category: string;
+}
+
+export const mockPeerSupportData: PeerSupportItem[] = [
+  // AC Category
+  {
+    id: 'ac-1',
+    blockName: 'Clinical Neuroscience',
+    blockCode: '3000384',
+    thumbnail: 'https://images.unsplash.com/photo-1559757175-5700dde675bc?w=400',
+    driveLink: 'https://drive.google.com',
+    generation: 'MDCU 81',
+    block: 'Clinical Neuroscience',
+    category: 'AC',
+  },
+  {
+    id: 'ac-2',
+    blockName: 'Cardiovascular System',
+    blockCode: '3000385',
+    thumbnail: 'https://images.unsplash.com/photo-1628595351029-c2bf17511435?w=400',
+    driveLink: 'https://drive.google.com',
+    generation: 'MDCU 80',
+    block: 'Cardiovascular System',
+    category: 'AC',
+  },
+  {
+    id: 'ac-3',
+    blockName: 'Respiratory System',
+    blockCode: '3000386',
+    thumbnail: 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=400',
+    driveLink: 'https://drive.google.com',
+    generation: 'MDCU 81',
+    block: 'Block 2.1',
+    category: 'AC',
+  },
+  
+  // Peer Tutoring Category
+  {
+    id: 'pt-1',
+    blockName: 'Clinical Neuroscience Tutorial',
+    blockCode: '3000384',
+    thumbnail: 'https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?w=400',
+    driveLink: 'https://drive.google.com',
+    generation: 'MDCU 81',
+    block: 'Clinical Neuroscience',
+    category: 'Peer Tutoring',
+  },
+  {
+    id: 'pt-2',
+    blockName: 'Pharmacology Study Session',
+    blockCode: '3000387',
+    thumbnail: 'https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?w=400',
+    driveLink: 'https://drive.google.com',
+    generation: 'MDCU 80',
+    block: 'Block 1.2',
+    category: 'Peer Tutoring',
+  },
+  {
+    id: 'pt-3',
+    blockName: 'Anatomy Review Session',
+    thumbnail: 'https://images.unsplash.com/photo-1530026405186-ed1f139313f8?w=400',
+    driveLink: 'https://drive.google.com',
+    generation: 'MDCU 79',
+    block: 'Block 1.1',
+    category: 'Peer Tutoring',
+  },
+
+  // Summary Category
+  {
+    id: 'sum-1',
+    blockName: 'Neuroscience Summary Notes',
+    blockCode: '3000384',
+    thumbnail: 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=400',
+    driveLink: 'https://drive.google.com',
+    generation: 'MDCU 81',
+    block: 'Clinical Neuroscience',
+    category: 'Summary',
+  },
+  {
+    id: 'sum-2',
+    blockName: 'Cardiovascular Condensed Notes',
+    blockCode: '3000385',
+    thumbnail: 'https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=400',
+    driveLink: 'https://drive.google.com',
+    generation: 'MDCU 80',
+    block: 'Cardiovascular System',
+    category: 'Summary',
+  },
+  {
+    id: 'sum-3',
+    blockName: 'Pathology Quick Reference',
+    thumbnail: 'https://images.unsplash.com/photo-1515378791036-0648a3ef77b2?w=400',
+    driveLink: 'https://drive.google.com',
+    generation: 'MDCU 81',
+    block: 'Block 2.2',
+    category: 'Summary',
+  },
+
+  // Mock Exam Category
+  {
+    id: 'mock-1',
+    blockName: 'Neuroscience Practice Test',
+    blockCode: '3000384',
+    thumbnail: 'https://images.unsplash.com/photo-1606326608606-aa0b62935f2b?w=400',
+    driveLink: 'https://drive.google.com',
+    generation: 'MDCU 81',
+    block: 'Clinical Neuroscience',
+    category: 'Mock Exam',
+  },
+  {
+    id: 'mock-2',
+    blockName: 'Cardio Mock Exam',
+    blockCode: '3000385',
+    thumbnail: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=400',
+    driveLink: 'https://drive.google.com',
+    generation: 'MDCU 80',
+    block: 'Cardiovascular System',
+    category: 'Mock Exam',
+  },
+  {
+    id: 'mock-3',
+    blockName: 'Comprehensive Block Exam',
+    thumbnail: 'https://images.unsplash.com/photo-1513258496099-48168024aec0?w=400',
+    driveLink: 'https://drive.google.com',
+    generation: 'MDCU 79',
+    block: 'Block 3.1',
+    category: 'Mock Exam',
+  },
+
+  // Resources Category
+  {
+    id: 'res-1',
+    blockName: 'Neuroscience Reference Materials',
+    blockCode: '3000384',
+    thumbnail: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=400',
+    driveLink: 'https://drive.google.com',
+    generation: 'MDCU 81',
+    block: 'Clinical Neuroscience',
+    category: 'Resources',
+  },
+  {
+    id: 'res-2',
+    blockName: 'Clinical Skills Videos',
+    thumbnail: 'https://images.unsplash.com/photo-1516534775068-ba3e7458af70?w=400',
+    driveLink: 'https://drive.google.com',
+    generation: 'MDCU 80',
+    block: 'Block 1.1',
+    category: 'Resources',
+  },
+  {
+    id: 'res-3',
+    blockName: 'Anatomy Atlas Collection',
+    thumbnail: 'https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=400',
+    driveLink: 'https://drive.google.com',
+    generation: 'MDCU 81',
+    block: 'Block 1.2',
+    category: 'Resources',
+  },
+
+  // Survival Guide Category
+  {
+    id: 'sg-1',
+    blockName: 'How to Pass Neuroscience',
+    blockCode: '3000384',
+    thumbnail: 'https://images.unsplash.com/photo-1471107340929-a87cd0f5b5f3?w=400',
+    driveLink: 'https://drive.google.com',
+    generation: 'MDCU 81',
+    block: 'Clinical Neuroscience',
+    category: 'Survival Guide',
+  },
+  {
+    id: 'sg-2',
+    blockName: 'Study Tips for Block 2',
+    thumbnail: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=400',
+    driveLink: 'https://drive.google.com',
+    generation: 'MDCU 80',
+    block: 'Block 2.1',
+    category: 'Survival Guide',
+  },
+  {
+    id: 'sg-3',
+    blockName: 'Exam Preparation Strategy',
+    thumbnail: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=400',
+    driveLink: 'https://drive.google.com',
+    generation: 'MDCU 79',
+    block: 'Block 3.1',
+    category: 'Survival Guide',
+  },
+];
