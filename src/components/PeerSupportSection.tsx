@@ -1,7 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { FilterBar } from './FilterBar';
 import { ContentCategory } from './ContentCategory';
-import { mockPeerSupportData } from '../data/mockData';
+import { getPeerSupportData } from '../lib/dataService';
+import type { PeerSupportItem } from '../lib/types';
 import { Button } from './ui/button';
 import { Plus, Settings, Upload, Link } from 'lucide-react';
 
@@ -12,15 +13,33 @@ interface PeerSupportSectionProps {
 export function PeerSupportSection({ isAdmin = false }: PeerSupportSectionProps) {
   const [selectedGeneration, setSelectedGeneration] = useState<string>('ทั้งหมด');
   const [selectedBlock, setSelectedBlock] = useState<string>('ทั้งหมด');
+  const [peerSupportData, setPeerSupportData] = useState<PeerSupportItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch data on component mount
+  useEffect(() => {
+    async function loadData() {
+      try {
+        setIsLoading(true);
+        const data = await getPeerSupportData();
+        setPeerSupportData(data);
+      } catch (error) {
+        console.error('Error loading peer support data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadData();
+  }, []);
 
   // Filter data based on selections
   const filteredData = useMemo(() => {
-    return mockPeerSupportData.filter((item) => {
+    return peerSupportData.filter((item) => {
       const generationMatch = selectedGeneration === 'ทั้งหมด' || item.generation === selectedGeneration;
       const blockMatch = selectedBlock === 'ทั้งหมด' || item.block === selectedBlock;
       return generationMatch && blockMatch;
     });
-  }, [selectedGeneration, selectedBlock]);
+  }, [peerSupportData, selectedGeneration, selectedBlock]);
 
   // Group by category
   const groupedByCategory = useMemo(() => {
@@ -102,16 +121,22 @@ export function PeerSupportSection({ isAdmin = false }: PeerSupportSectionProps)
         onBlockChange={setSelectedBlock}
       />
 
-      <div className="space-y-6 sm:space-y-8 mt-6 sm:mt-8">
-        {groupedByCategory.map((category) => (
-          <ContentCategory
-            key={category.name}
-            categoryName={category.name}
-            items={category.items}
-            isAdmin={isAdmin}
-          />
-        ))}
-      </div>
+      {isLoading ? (
+        <div className="flex justify-center items-center py-12">
+          <div className="text-slate-600">Loading...</div>
+        </div>
+      ) : (
+        <div className="space-y-6 sm:space-y-8 mt-6 sm:mt-8">
+          {groupedByCategory.map((category) => (
+            <ContentCategory
+              key={category.name}
+              categoryName={category.name}
+              items={category.items}
+              isAdmin={isAdmin}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

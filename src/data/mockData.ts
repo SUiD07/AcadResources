@@ -1,13 +1,4 @@
-export interface PeerSupportItem {
-  id: string;
-  blockName: string;
-  blockCode?: string;
-  thumbnail: string;
-  driveLink: string;
-  generation: string;
-  block: string;
-  category: string;
-}
+import type { PeerSupportItem, Activity, ResourceCategory } from '../lib/types';
 
 export const mockPeerSupportData: PeerSupportItem[] = [
   // AC Category
@@ -193,5 +184,93 @@ export const mockPeerSupportData: PeerSupportItem[] = [
     generation: 'MDCU 79',
     block: 'Block 3.1',
     category: 'Survival Guide',
+  },
+];
+
+// Mock Activities Data
+export const mockActivities: Activity[] = [
+  {
+    id: '1',
+    title: 'Clinical Skills Workshop',
+    description: 'Hands-on practice sessions for essential clinical examination techniques',
+    icon: 'Users',
+    date: 'Every Tuesday, 14:00-16:00',
+    status: 'Completed',
+  },
+  {
+    id: '2',
+    title: 'Research Symposium',
+    description: 'Annual student research presentation and poster session',
+    icon: 'Award',
+    date: 'December 15, 2025',
+    status: 'Upcoming',
+  },
+  {
+    id: '3',
+    title: 'Journal Club',
+    description: 'Monthly discussion of recent medical literature and evidence-based practice',
+    icon: 'BookOpen',
+    date: 'First Friday of each month',
+    status: 'Ongoing',
+  },
+  {
+    id: '4',
+    title: 'OSCE Preparation',
+    description: 'Mock OSCE stations with feedback from senior students and faculty',
+    icon: 'Calendar',
+    date: 'November 25-28, 2025',
+    status: 'Registration Open',
+  },
+];
+
+// Mock Resource Categories Data
+export const mockResourceCategories: ResourceCategory[] = [
+  {
+    id: 'acd',
+    title: 'ACD Resources',
+    description: 'Official Academic Development Center materials and guidelines',
+    icon: 'BookOpen',
+    items: [
+      { name: 'Study Guidelines', type: 'PDF' },
+      { name: 'Curriculum Overview', type: 'PDF' },
+      { name: 'Assessment Rubrics', type: 'Document' },
+    ],
+    link: '#',
+  },
+  {
+    id: 'textbooks',
+    title: 'Recommended Textbooks',
+    description: 'Curated list of essential medical textbooks by subject',
+    icon: 'FileText',
+    items: [
+      { name: "Robbins Basic Pathology", type: 'Reference' },
+      { name: "Guyton and Hall Physiology", type: 'Reference' },
+      { name: "Kumar & Clark's Medicine", type: 'Reference' },
+    ],
+    link: '#',
+  },
+  {
+    id: 'videos',
+    title: 'Video Lectures',
+    description: 'Recorded lectures and demonstrations from faculty',
+    icon: 'Video',
+    items: [
+      { name: 'Anatomy Demonstrations', type: 'Video Series' },
+      { name: 'Clinical Skills Videos', type: 'Video Series' },
+      { name: 'Pharmacology Lectures', type: 'Video Series' },
+    ],
+    link: '#',
+  },
+  {
+    id: 'external',
+    title: 'External Resources',
+    description: 'Links to useful medical education websites and databases',
+    icon: 'LinkIcon',
+    items: [
+      { name: 'PubMed', type: 'Database' },
+      { name: 'UpToDate', type: 'Clinical Resource' },
+      { name: 'Osmosis', type: 'Learning Platform' },
+    ],
+    link: '#',
   },
 ];
