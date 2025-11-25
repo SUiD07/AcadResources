@@ -2,8 +2,14 @@ import { useState, useMemo } from 'react';
 import { FilterBar } from './FilterBar';
 import { ContentCategory } from './ContentCategory';
 import { mockPeerSupportData } from '../data/mockData';
+import { Button } from './ui/button';
+import { Plus, Settings, Upload, Link } from 'lucide-react';
 
-export function PeerSupportSection() {
+interface PeerSupportSectionProps {
+  isAdmin?: boolean;
+}
+
+export function PeerSupportSection({ isAdmin = false }: PeerSupportSectionProps) {
   const [selectedGeneration, setSelectedGeneration] = useState<string>('ทั้งหมด');
   const [selectedBlock, setSelectedBlock] = useState<string>('ทั้งหมด');
 
@@ -25,10 +31,67 @@ export function PeerSupportSection() {
     }));
   }, [filteredData]);
 
+  const handleAddResource = () => {
+    console.log('Add new resource');
+  };
+
+  const handleManageBlock = () => {
+    console.log('Manage block');
+  };
+
+  const handleUploadPicture = () => {
+    console.log('Upload picture');
+  };
+
+  const handleUpdateLink = () => {
+    console.log('Update Google Drive link');
+  };
+
   return (
     <div className="pb-20 lg:pb-8">
       <div className="mb-6 sm:mb-8">
-        <h1 className="text-slate-900 mb-2 font-bold text-[24px]">Peer Support Resources</h1>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
+          <h1 className="text-slate-900 font-bold text-[24px]">Peer Support Resources</h1>
+          {isAdmin && (
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                onClick={handleAddResource}
+                className="bg-[#E5007D] hover:bg-[#c00069] text-white"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add New Resource
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleManageBlock}
+                className="border-[#E5007D] text-[#E5007D] hover:bg-pink-50"
+              >
+                <Settings className="w-4 h-4 mr-2" />
+                Manage Block
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleUploadPicture}
+                className="border-[#E5007D] text-[#E5007D] hover:bg-pink-50"
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                Upload Picture
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleUpdateLink}
+                className="border-[#E5007D] text-[#E5007D] hover:bg-pink-50"
+              >
+                <Link className="w-4 h-4 mr-2" />
+                Update Drive Link
+              </Button>
+            </div>
+          )}
+        </div>
         <p className="text-slate-600 text-sm sm:text-base">Browse and access peer-created academic materials</p>
       </div>
 
@@ -45,6 +108,7 @@ export function PeerSupportSection() {
             key={category.name}
             categoryName={category.name}
             items={category.items}
+            isAdmin={isAdmin}
           />
         ))}
       </div>

@@ -1,4 +1,4 @@
-import { Home, Calendar, BookOpen, GraduationCap, Menu, X } from 'lucide-react';
+import { Home, Calendar, BookOpen, GraduationCap, Menu, X, LogOut } from 'lucide-react';
 import { Button } from './ui/button';
 
 type Section = 'peer-support' | 'academic-activities' | 'academic-resources';
@@ -8,9 +8,10 @@ interface MobileNavProps {
   onSectionChange: (section: Section) => void;
   isOpen: boolean;
   onToggle: () => void;
+  onLogout: () => void;
 }
 
-export function MobileNav({ activeSection, onSectionChange, isOpen, onToggle }: MobileNavProps) {
+export function MobileNav({ activeSection, onSectionChange, isOpen, onToggle, onLogout }: MobileNavProps) {
   const navItems = [
     { id: 'peer-support' as Section, label: 'Peer Support', icon: Home },
     { id: 'academic-activities' as Section, label: 'Academic Activities', icon: Calendar },
@@ -26,7 +27,7 @@ export function MobileNav({ activeSection, onSectionChange, isOpen, onToggle }: 
       <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white border-b border-slate-200 z-40">
         <div className="flex items-center justify-between h-full px-4">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-[#E5007D] rounded-lg flex items-center justify-center">
               <GraduationCap className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -55,11 +56,11 @@ export function MobileNav({ activeSection, onSectionChange, isOpen, onToggle }: 
 
       {/* Mobile Menu Drawer */}
       <div
-        className={`lg:hidden fixed top-16 left-0 bottom-0 w-64 bg-white border-r border-slate-200 z-50 transform transition-transform duration-300 ease-in-out ${
+        className={`lg:hidden fixed top-16 left-0 bottom-0 w-64 bg-white border-r border-slate-200 z-50 transform transition-transform duration-300 ease-in-out flex flex-col ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <nav className="p-4 space-y-2">
+        <nav className="p-4 space-y-2 flex-1">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeSection === item.id;
@@ -70,7 +71,7 @@ export function MobileNav({ activeSection, onSectionChange, isOpen, onToggle }: 
                 onClick={() => onSectionChange(item.id)}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                   isActive
-                    ? 'bg-blue-50 text-blue-700'
+                    ? 'bg-pink-50 text-[#E5007D]'
                     : 'text-slate-600 hover:bg-slate-50'
                 }`}
               >
@@ -80,6 +81,21 @@ export function MobileNav({ activeSection, onSectionChange, isOpen, onToggle }: 
             );
           })}
         </nav>
+        
+        {/* Logout Button in Drawer */}
+        <div className="p-4 border-t border-slate-200">
+          <Button
+            variant="outline"
+            className="w-full justify-start gap-3 border-slate-300 hover:bg-slate-50 text-slate-600"
+            onClick={() => {
+              onLogout();
+              onToggle();
+            }}
+          >
+            <LogOut className="w-5 h-5" />
+            Logout
+          </Button>
+        </div>
       </div>
 
       {/* Mobile Bottom Nav */}
@@ -95,11 +111,11 @@ export function MobileNav({ activeSection, onSectionChange, isOpen, onToggle }: 
                 onClick={() => onSectionChange(item.id)}
                 className={`flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg transition-colors min-w-0 flex-1 ${
                   isActive
-                    ? 'text-blue-700'
+                    ? 'text-[#E5007D]'
                     : 'text-slate-600'
                 }`}
               >
-                <Icon className={`w-5 h-5 ${isActive ? 'text-blue-700' : 'text-slate-400'}`} />
+                <Icon className={`w-5 h-5 ${isActive ? 'text-[#E5007D]' : 'text-slate-400'}`} />
                 <span className="text-xs truncate w-full text-center">{item.label}</span>
               </button>
             );
