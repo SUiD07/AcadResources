@@ -145,7 +145,7 @@ export function ContentCategory({ categoryName, items, isAdmin = false }: Conten
               <ImageWithFallback
                 src={item.thumbnail}
                 alt={item.blockName}
-                className="w-20 h-20 rounded-lg object-cover border border-slate-200 flex-shrink-0"
+                className="w-20 h-20 rounded-lg object-cover border border-slate-200 shrink-0"
               />
               <div className="flex-1 min-w-0">
                 {item.blockCode && (
