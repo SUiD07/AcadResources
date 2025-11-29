@@ -33,7 +33,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-pink-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-linear-to-br from-slate-50 via-white to-pink-50 flex items-center justify-center p-4">
       <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
         {/* Left Side - Branding & Illustration */}
         <div className="hidden lg:flex flex-col justify-center space-y-6">
@@ -59,7 +59,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
               alt="Medical students studying"
               className="rounded-2xl shadow-2xl w-full aspect-square object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#E5007D]/10 to-transparent rounded-2xl" />
+            <div className="absolute inset-0 bg-linear-to-t from-[#E5007D]/10 to-transparent rounded-2xl" />
           </div>
 
           <div className="bg-white/80 backdrop-blur-sm p-6 rounded-xl border border-slate-200">
