@@ -1,21 +1,38 @@
-// ============================================
-// DATA SOURCE CONFIGURATION
-// ============================================
-// EDIT THIS FILE IN GITHUB to switch between mock data and Supabase
-// DO NOT EDIT IN FIGMA MAKE
+// // ============================================
+// // DATA SOURCE CONFIGURATION
+// // ============================================
+// // EDIT THIS FILE IN GITHUB to switch between mock data and Supabase
+// // DO NOT EDIT IN FIGMA MAKE
 
-/**
- * Set this to true when you've completed Supabase integration
- * Set to false to use mock data for development/testing
- */
-export const USE_SUPABASE = false;
+// /**
+//  * Set this to true when you've completed Supabase integration
+//  * Set to false to use mock data for development/testing
+//  */
+// export const USE_SUPABASE = false;
 
-/**
- * Supabase configuration
- * These will be set up when you integrate Supabase
- * In production, replace these with your actual values or use environment variables
- */
+// /**
+//  * Supabase configuration
+//  * These will be set up when you integrate Supabase
+//  * In production, replace these with your actual values or use environment variables
+//  */
+// export const SUPABASE_CONFIG = {
+//   url: '',
+//   anonKey: '',
+// };
+// lib/config.ts
+
+// lib/config.ts
+
+// Use import.meta.env for Vite/modern bundlers
+// lib/config.ts
+
+// Cast to 'any' to bypass the "Property env does not exist" error
+const meta = (import.meta as any).env;
+
+export const USE_SUPABASE = meta?.VITE_USE_SUPABASE === 'true' || 
+                           meta?.NEXT_PUBLIC_USE_SUPABASE === 'true';
+
 export const SUPABASE_CONFIG = {
-  url: '',
-  anonKey: '',
+  url: meta?.VITE_SUPABASE_URL || meta?.NEXT_PUBLIC_SUPABASE_URL || '',
+  anonKey: meta?.VITE_SUPABASE_ANON_KEY || meta?.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
 };
