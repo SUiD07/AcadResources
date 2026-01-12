@@ -4,10 +4,10 @@ import { ImageWithFallback } from './figma/ImageWithFallback';
 
 interface ContentItem {
   id: string;
-  blockName: string;
-  blockCode?: string;
+  block_name: string;
+  block_code?: string;
   thumbnail: string;
-  driveLink: string;
+  drive_link: string;
   generation: string;
   block: string;
   category: string;
@@ -73,16 +73,16 @@ export function ContentCategory({ categoryName, items, isAdmin = false }: Conten
               <tr key={item.id} className="hover:bg-slate-50 transition-colors">
                 <td className="px-6 py-4">
                   <div>
-                    {item.blockCode && (
-                      <div className="text-xs text-slate-500 mb-1">{item.blockCode}</div>
+                    {item.block_code && (
+                      <div className="text-xs text-slate-500 mb-1">{item.block_code}</div>
                     )}
-                    <div className="text-slate-900">{item.blockName}</div>
+                    <div className="text-slate-900">{item.block_name}</div>
                   </div>
                 </td>
                 <td className="px-6 py-4">
                   <ImageWithFallback
                     src={item.thumbnail}
-                    alt={item.blockName}
+                    alt={item.block_name}
                     className="w-16 h-16 rounded-lg object-cover border border-slate-200"
                   />
                 </td>
@@ -98,7 +98,7 @@ export function ContentCategory({ categoryName, items, isAdmin = false }: Conten
                     asChild
                   >
                     <a
-                      href={item.driveLink}
+                      href={item.drive_link}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-2"
@@ -144,14 +144,14 @@ export function ContentCategory({ categoryName, items, isAdmin = false }: Conten
             <div className="flex gap-3">
               <ImageWithFallback
                 src={item.thumbnail}
-                alt={item.blockName}
-                className="w-20 h-20 rounded-lg object-cover border border-slate-200 shrink-0"
+                alt={item.block_name}
+                className="w-20 h-20 rounded-lg object-cover border border-slate-200 flex-shrink-0"
               />
               <div className="flex-1 min-w-0">
-                {item.blockCode && (
-                  <div className="text-xs text-slate-500 mb-1">{item.blockCode}</div>
+                {item.block_code && (
+                  <div className="text-xs text-slate-500 mb-1">{item.block_code}</div>
                 )}
-                <h4 className="text-slate-900 mb-2 line-clamp-2">{item.blockName}</h4>
+                <h4 className="text-slate-900 mb-2 line-clamp-2">{item.block_name}</h4>
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-pink-50 text-[#E5007D] mb-3">
                   {item.generation}
                 </span>
@@ -165,7 +165,7 @@ export function ContentCategory({ categoryName, items, isAdmin = false }: Conten
                 asChild
               >
                 <a
-                  href={item.driveLink}
+                  href={item.drive_link}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center justify-center gap-2"

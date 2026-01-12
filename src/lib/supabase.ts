@@ -95,119 +95,108 @@
 //   // TODO: Implement Supabase delete
 //   throw new Error('Supabase not yet implemented');
 // }
-// ============================================
-// SUPABASE CLIENT & API FUNCTIONS
-// ============================================
-// EDIT THIS FILE IN GITHUB when implementing Supabase integration
-// DO NOT EDIT IN FIGMA MAKE
-
+import { createClient } from '@supabase/supabase-js';
 import { SUPABASE_CONFIG } from './config';
 import type { PeerSupportItem, Activity, ResourceCategory } from './types';
 
-// 1. UNCOMMENT THE SUPABASE CLIENT
-import { createClient } from '@supabase/supabase-js';
- 
+// ============================================
+// SUPABASE CLIENT INITIALIZATION
+// ============================================
 export const supabase = createClient(
   SUPABASE_CONFIG.url,
   SUPABASE_CONFIG.anonKey
 );
 
 // ============================================
-// PEER SUPPORT DATA FUNCTIONS
+// 1. PEER SUPPORT DATA FUNCTIONS
 // ============================================
 
 export async function fetchPeerSupportData(): Promise<PeerSupportItem[]> {
-  // 2. IMPLEMENT SELECT
   const { data, error } = await supabase
     .from('peer_support')
     .select('*')
     .order('created_at', { ascending: false });
   
-  if (error) throw error;
+  if (error) {
+    console.error('Fetch Error (Peer Support):', error.message);
+    return [];
+  }
   return data || [];
 }
 
 export async function createPeerSupportItem(item: Omit<PeerSupportItem, 'id'>): Promise<PeerSupportItem> {
-  // 2. IMPLEMENT INSERT
   const { data, error } = await supabase
     .from('peer_support')
     .insert(item)
-    .select() // Return the newly created row
+    .select()
     .single();
-
+  
   if (error) throw error;
-  if (!data) throw new Error("Insert operation failed to return data.");
   return data;
 }
 
 export async function updatePeerSupportItem(id: string, updates: Partial<PeerSupportItem>): Promise<PeerSupportItem> {
-  // 2. IMPLEMENT UPDATE
   const { data, error } = await supabase
     .from('peer_support')
     .update(updates)
     .eq('id', id)
-    .select() // Return the updated row
+    .select()
     .single();
-
+  
   if (error) throw error;
-  if (!data) throw new Error("Update operation failed to return data.");
   return data;
 }
 
 export async function deletePeerSupportItem(id: string): Promise<void> {
-  // 2. IMPLEMENT DELETE
   const { error } = await supabase
     .from('peer_support')
     .delete()
     .eq('id', id);
-
+  
   if (error) throw error;
 }
 
 // ============================================
-// ACADEMIC ACTIVITIES FUNCTIONS
+// 2. ACADEMIC ACTIVITIES FUNCTIONS
 // ============================================
 
 export async function fetchActivities(): Promise<Activity[]> {
-  // 2. IMPLEMENT SELECT
   const { data, error } = await supabase
     .from('activities')
     .select('*')
-    .order('created_at', { ascending: false });
+    .order('date', { ascending: true });
   
-  if (error) throw error;
+  if (error) {
+    console.error('Fetch Error (Activities):', error.message);
+    return [];
+  }
   return data || [];
 }
 
 export async function createActivity(activity: Omit<Activity, 'id'>): Promise<Activity> {
-  // 2. IMPLEMENT INSERT
   const { data, error } = await supabase
     .from('activities')
     .insert(activity)
     .select()
     .single();
-
+  
   if (error) throw error;
-  if (!data) throw new Error("Insert operation failed to return data.");
   return data;
 }
 
 export async function updateActivity(id: string, updates: Partial<Activity>): Promise<Activity> {
-  // 2. IMPLEMENT UPDATE
   const { data, error } = await supabase
     .from('activities')
     .update(updates)
     .eq('id', id)
     .select()
     .single();
-
+  
   if (error) throw error;
-  if (!data) throw new Error("Update operation failed to return data.");
   return data;
 }
 
 export async function deleteActivity(id: string): Promise<void> {
-  // 2. IMPLEMENT DELETE
   const { error } = await supabase
     .from('activities')
     .delete()
@@ -217,49 +206,46 @@ export async function deleteActivity(id: string): Promise<void> {
 }
 
 // ============================================
-// ACADEMIC RESOURCES FUNCTIONS
+// 3. ACADEMIC RESOURCES FUNCTIONS
 // ============================================
 
 export async function fetchResourceCategories(): Promise<ResourceCategory[]> {
-  // 2. IMPLEMENT SELECT
   const { data, error } = await supabase
     .from('resource_categories')
     .select('*')
-    .order('name', { ascending: true });
+    .order('title', { ascending: true });
   
-  if (error) throw error;
+  if (error) {
+    console.error('Fetch Error (Resources):', error.message);
+    return [];
+  }
   return data || [];
 }
 
 export async function createResourceCategory(category: Omit<ResourceCategory, 'id'>): Promise<ResourceCategory> {
-  // 2. IMPLEMENT INSERT
   const { data, error } = await supabase
     .from('resource_categories')
     .insert(category)
     .select()
     .single();
-
+  
   if (error) throw error;
-  if (!data) throw new Error("Insert operation failed to return data.");
   return data;
 }
 
 export async function updateResourceCategory(id: string, updates: Partial<ResourceCategory>): Promise<ResourceCategory> {
-  // 2. IMPLEMENT UPDATE
   const { data, error } = await supabase
     .from('resource_categories')
     .update(updates)
     .eq('id', id)
     .select()
     .single();
-
+  
   if (error) throw error;
-  if (!data) throw new Error("Update operation failed to return data.");
   return data;
 }
 
 export async function deleteResourceCategory(id: string): Promise<void> {
-  // 2. IMPLEMENT DELETE
   const { error } = await supabase
     .from('resource_categories')
     .delete()

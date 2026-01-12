@@ -7,10 +7,10 @@
 
 export interface PeerSupportItem {
   id: string;
-  blockName: string;
-  blockCode?: string;
+  block_name: string;
+  block_code?: string;
   thumbnail: string;
-  driveLink: string;
+  drive_link: string;
   generation: string;
   block: string;
   category: string;
