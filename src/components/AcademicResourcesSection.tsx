@@ -132,7 +132,7 @@ export function AcademicResourcesSection({ isAdmin = false }: AcademicResourcesS
                           className="flex items-center justify-between py-2 px-3 bg-slate-50 rounded-lg"
                         >
                           <span className="text-xs sm:text-sm text-slate-700 truncate pr-2">{item.name}</span>
-                          <span className="text-xs text-slate-500 flex-shrink-0">{item.type}</span>
+                          <span className="text-xs text-slate-500 shrink-0">{item.type}</span>
                         </div>
                       ))}
                     </div>
@@ -151,7 +151,7 @@ export function AcademicResourcesSection({ isAdmin = false }: AcademicResourcesS
           {/* ACD Resources Highlight */}
           <div className="mt-6 sm:mt-8 bg-pink-50 border border-pink-200 rounded-xl p-4 sm:p-6">
             <div className="flex flex-col sm:flex-row items-start gap-4">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#E5007D] rounded-lg flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#E5007D] rounded-lg flex items-center justify-center shrink-0">
                 <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
               <div className="flex-1">

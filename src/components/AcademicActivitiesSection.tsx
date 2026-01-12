@@ -25,8 +25,10 @@ export function AcademicActivitiesSection({ isAdmin = false }: AcademicActivitie
   useEffect(() => {
     async function loadData() {
       try {
+        console.log('Loading activities...');
         setIsLoading(true);
         const data = await getActivities();
+        console.log('Activities loaded:', data);
         setActivities(data);
       } catch (error) {
         console.error('Error loading activities:', error);
@@ -116,7 +118,7 @@ export function AcademicActivitiesSection({ isAdmin = false }: AcademicActivitie
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center gap-2 text-sm text-slate-600 mb-4">
-                    <Calendar className="w-4 h-4 flex-shrink-0" />
+                    <Calendar className="w-4 h-4 shrink-0" />
                     <span className="text-xs sm:text-sm">{activity.date}</span>
                   </div>
                   <div className="flex gap-2">

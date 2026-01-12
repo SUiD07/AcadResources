@@ -20,9 +20,11 @@ export function PeerSupportSection({ isAdmin = false }: PeerSupportSectionProps)
   useEffect(() => {
     async function loadData() {
       try {
+        console.log('Loading peer support data...');
         setIsLoading(true);
         const data = await getPeerSupportData();
         setPeerSupportData(data);
+        console.log('Peer support data loaded:', data);
       } catch (error) {
         console.error('Error loading peer support data:', error);
       } finally {
