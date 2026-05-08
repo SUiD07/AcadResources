@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { FileText, BookOpen, Video, Link as LinkIcon, ExternalLink, Plus, Settings, Pencil, Trash2 } from 'lucide-react';
+import { FileText, BookOpen, Video, Link as LinkIcon, ExternalLink, Plus, Settings, Pencil, Trash2, FolderOpen, RefreshCcw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { getResourceCategories } from '../lib/dataService';
 import type { ResourceCategory } from '../lib/types';
+import * as googleDrive from '../lib/googleDriveService';
 
 interface AcademicResourcesSectionProps {
   isAdmin?: boolean;
@@ -19,7 +20,10 @@ const iconMap: Record<string, any> = {
 
 export function AcademicResourcesSection({ isAdmin = false }: AcademicResourcesSectionProps) {
   const [resourceCategories, setResourceCategories] = useState<ResourceCategory[]>([]);
+  const [driveFiles, setDriveFiles] = useState<googleDrive.DriveFile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingDrive, setIsLoadingDrive] = useState(false);
+  const [driveError, setDriveError] = useState<string | null>(null);
 
   // Fetch data on component mount
   useEffect(() => {
@@ -28,6 +32,11 @@ export function AcademicResourcesSection({ isAdmin = false }: AcademicResourcesS
         setIsLoading(true);
         const data = await getResourceCategories();
         setResourceCategories(data);
+        
+        // Load Google Drive files if token is available
+        if (googleDrive.getAccessToken()) {
+          fetchDriveFiles();
+        }
       } catch (error) {
         console.error('Error loading resource categories:', error);
       } finally {
@@ -36,6 +45,20 @@ export function AcademicResourcesSection({ isAdmin = false }: AcademicResourcesS
     }
     loadData();
   }, []);
+
+  const fetchDriveFiles = async () => {
+    try {
+      setIsLoadingDrive(true);
+      setDriveError(null);
+      const files = await googleDrive.listDriveFiles();
+      setDriveFiles(files);
+    } catch (error: any) {
+      console.error('Error loading Drive files:', error);
+      setDriveError(error.message || 'Failed to load files from Google Drive');
+    } finally {
+      setIsLoadingDrive(false);
+    }
+  };
 
   const handleAddResource = () => {
     console.log('Add new resource');
@@ -90,6 +113,71 @@ export function AcademicResourcesSection({ isAdmin = false }: AcademicResourcesS
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+            {/* Google Drive Resources Card */}
+            {googleDrive.getAccessToken() && (
+              <Card className="hover:shadow-lg transition-shadow border-[#E5007D]/20">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between mb-3 sm:mb-4">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#4285F4]/10 rounded-lg flex items-center justify-center">
+                      <FolderOpen className="w-5 h-5 sm:w-6 sm:h-6 text-[#4285F4]" />
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={fetchDriveFiles}
+                      disabled={isLoadingDrive}
+                      className="h-8 w-8 p-0"
+                    >
+                      <RefreshCcw className={`w-4 h-4 ${isLoadingDrive ? 'animate-spin' : ''}`} />
+                    </Button>
+                  </div>
+                  <CardTitle className="text-base sm:text-lg">Google Drive Resources</CardTitle>
+                  <CardDescription className="text-sm">Private files from the docchula shared folder</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {isLoadingDrive ? (
+                    <div className="space-y-2 mb-4 animate-pulse">
+                      {[1, 2, 3].map((i) => (
+                        <div key={i} className="h-10 bg-slate-100 rounded-lg w-full" />
+                      ))}
+                    </div>
+                  ) : driveError ? (
+                    <div className="p-3 bg-red-50 text-red-600 text-xs rounded-lg mb-4">
+                      {driveError}
+                    </div>
+                  ) : driveFiles.length > 0 ? (
+                    <div className="space-y-2 mb-4 max-h-[200px] overflow-y-auto pr-1 custom-scrollbar">
+                      {driveFiles.map((file) => (
+                        <a
+                          key={file.id}
+                          href={file.webViewLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-between py-2 px-3 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors group"
+                        >
+                          <div className="flex items-center gap-2 truncate flex-1">
+                            <FileText className="w-3 h-3 text-slate-400 shrink-0" />
+                            <span className="text-xs sm:text-sm text-slate-700 truncate">{file.name}</span>
+                          </div>
+                          <ExternalLink className="w-3 h-3 text-slate-300 group-hover:text-[#E5007D] shrink-0" />
+                        </a>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 text-slate-400 text-xs italic">
+                      No files found in this folder.
+                    </div>
+                  )}
+                  <Button variant="outline" className="w-full border-[#4285F4] text-[#4285F4] hover:bg-[#4285F4]/5" size="sm" asChild>
+                    <a href={`https://drive.google.com/drive/folders/${import.meta.env.VITE_GDRIVE_FOLDER_ID}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2">
+                      Open in Google Drive
+                      <ExternalLink className="w-4 h-4" />
+                    </a>
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
             {resourceCategories.map((category) => {
               const Icon = iconMap[category.icon] || BookOpen;
               

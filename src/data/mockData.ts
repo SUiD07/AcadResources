@@ -54,15 +54,6 @@ export const mockPeerSupportData: PeerSupportItem[] = [
     block: 'Block 1.2',
     category: 'Peer Tutoring',
   },
-  {
-    id: 'pt-3',
-    block_name: 'Anatomy Review Session',
-    thumbnail: 'https://images.unsplash.com/photo-1530026405186-ed1f139313f8?w=400',
-    drive_link: 'https://drive.google.com',
-    generation: 'MDCU 79',
-    block: 'Block 1.1',
-    category: 'Peer Tutoring',
-  },
 
   // Summary Category
   {
@@ -73,25 +64,6 @@ export const mockPeerSupportData: PeerSupportItem[] = [
     drive_link: 'https://drive.google.com',
     generation: 'MDCU 81',
     block: 'Clinical Neuroscience',
-    category: 'Summary',
-  },
-  {
-    id: 'sum-2',
-    block_name: 'Cardiovascular Condensed Notes',
-    block_code: '3000385',
-    thumbnail: 'https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=400',
-    drive_link: 'https://drive.google.com',
-    generation: 'MDCU 80',
-    block: 'Cardiovascular System',
-    category: 'Summary',
-  },
-  {
-    id: 'sum-3',
-    block_name: 'Pathology Quick Reference',
-    thumbnail: 'https://images.unsplash.com/photo-1515378791036-0648a3ef77b2?w=400',
-    drive_link: 'https://drive.google.com',
-    generation: 'MDCU 81',
-    block: 'Block 2.2',
     category: 'Summary',
   },
 
@@ -106,55 +78,6 @@ export const mockPeerSupportData: PeerSupportItem[] = [
     block: 'Clinical Neuroscience',
     category: 'Mock Exam',
   },
-  {
-    id: 'mock-2',
-    block_name: 'Cardio Mock Exam',
-    block_code: '3000385',
-    thumbnail: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=400',
-    drive_link: 'https://drive.google.com',
-    generation: 'MDCU 80',
-    block: 'Cardiovascular System',
-    category: 'Mock Exam',
-  },
-  {
-    id: 'mock-3',
-    block_name: 'Comprehensive Block Exam',
-    thumbnail: 'https://images.unsplash.com/photo-1513258496099-48168024aec0?w=400',
-    drive_link: 'https://drive.google.com',
-    generation: 'MDCU 79',
-    block: 'Block 3.1',
-    category: 'Mock Exam',
-  },
-
-  // Resources Category
-  {
-    id: 'res-1',
-    block_name: 'Neuroscience Reference Materials',
-    block_code: '3000384',
-    thumbnail: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=400',
-    drive_link: 'https://drive.google.com',
-    generation: 'MDCU 81',
-    block: 'Clinical Neuroscience',
-    category: 'Resources',
-  },
-  {
-    id: 'res-2',
-    block_name: 'Clinical Skills Videos',
-    thumbnail: 'https://images.unsplash.com/photo-1516534775068-ba3e7458af70?w=400',
-    drive_link: 'https://drive.google.com',
-    generation: 'MDCU 80',
-    block: 'Block 1.1',
-    category: 'Resources',
-  },
-  {
-    id: 'res-3',
-    block_name: 'Anatomy Atlas Collection',
-    thumbnail: 'https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=400',
-    drive_link: 'https://drive.google.com',
-    generation: 'MDCU 81',
-    block: 'Block 1.2',
-    category: 'Resources',
-  },
 
   // Survival Guide Category
   {
@@ -167,24 +90,6 @@ export const mockPeerSupportData: PeerSupportItem[] = [
     block: 'Clinical Neuroscience',
     category: 'Survival Guide',
   },
-  {
-    id: 'sg-2',
-    block_name: 'Study Tips for Block 2',
-    thumbnail: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=400',
-    drive_link: 'https://drive.google.com',
-    generation: 'MDCU 80',
-    block: 'Block 2.1',
-    category: 'Survival Guide',
-  },
-  {
-    id: 'sg-3',
-    block_name: 'Exam Preparation Strategy',
-    thumbnail: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=400',
-    drive_link: 'https://drive.google.com',
-    generation: 'MDCU 79',
-    block: 'Block 3.1',
-    category: 'Survival Guide',
-  },
 ];
 
 // Mock Activities Data
@@ -192,15 +97,15 @@ export const mockActivities: Activity[] = [
   {
     id: '1',
     title: 'Clinical Skills Workshop',
-    description: 'Hands-on practice sessions for essential clinical examination techniques',
+    description: 'Hands-on practice sessions',
     icon: 'Users',
-    date: 'Every Tuesday, 14:00-16:00',
+    date: 'May 2, 2026',
     status: 'Completed',
   },
   {
     id: '2',
     title: 'Research Symposium',
-    description: 'Annual student research presentation and poster session',
+    description: 'Annual student research presentation',
     icon: 'Award',
     date: 'December 15, 2025',
     status: 'Upcoming',
@@ -208,17 +113,17 @@ export const mockActivities: Activity[] = [
   {
     id: '3',
     title: 'Journal Club',
-    description: 'Monthly discussion of recent medical literature and evidence-based practice',
+    description: 'Monthly discussion of medical literature',
     icon: 'BookOpen',
-    date: 'First Friday of each month',
+    date: 'May 2, 2026',
     status: 'Ongoing',
   },
   {
     id: '4',
     title: 'OSCE Preparation',
-    description: 'Mock OSCE stations with feedback from senior students and faculty',
+    description: 'Mock OSCE stations with feedback',
     icon: 'Calendar',
-    date: 'November 25-28, 2025',
+    date: 'November 25, 2025',
     status: 'Registration Open',
   },
 ];
