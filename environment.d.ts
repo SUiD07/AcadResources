@@ -4,6 +4,9 @@ interface ImportMetaEnv {
   // Update these key names to match your new VITE_ prefix:
   readonly VITE_SUPABASE_URL: string; 
   readonly VITE_SUPABASE_ANON_KEY: string;
+  readonly VITE_USE_SUPABASE: string;
+  readonly VITE_GDRIVE_API_KEY: string;
+  readonly VITE_GDRIVE_FOLDER_ID: string;
   // (You may want to keep the NEXT_PUBLIC_ lines commented out or remove them)
 }
 

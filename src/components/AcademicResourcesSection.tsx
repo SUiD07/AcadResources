@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { FileText, BookOpen, Video, Link as LinkIcon, ExternalLink, Plus, Settings, Pencil, Trash2, FolderOpen, RefreshCcw } from 'lucide-react';
+import { FileText, BookOpen, Video, Link as LinkIcon, ExternalLink, Plus, Settings, Pencil, Trash2, FolderOpen, RefreshCcw, Search } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
+import { Input } from './ui/input';
 import { getResourceCategories } from '../lib/dataService';
 import type { ResourceCategory } from '../lib/types';
 import * as googleDrive from '../lib/googleDriveService';
@@ -24,6 +25,7 @@ export function AcademicResourcesSection({ isAdmin = false }: AcademicResourcesS
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingDrive, setIsLoadingDrive] = useState(false);
   const [driveError, setDriveError] = useState<string | null>(null);
+  const [driveSearchQuery, setDriveSearchQuery] = useState('');
 
   // Fetch data on component mount
   useEffect(() => {
@@ -59,6 +61,11 @@ export function AcademicResourcesSection({ isAdmin = false }: AcademicResourcesS
       setIsLoadingDrive(false);
     }
   };
+
+  // Filter drive files based on search query and limit to 50 for performance
+  const filteredDriveFiles = driveFiles
+    .filter(file => file.name.toLowerCase().includes(driveSearchQuery.toLowerCase()))
+    .slice(0, 50);
 
   const handleAddResource = () => {
     console.log('Add new resource');
@@ -135,6 +142,16 @@ export function AcademicResourcesSection({ isAdmin = false }: AcademicResourcesS
                   <CardDescription className="text-sm">Private files from the docchula shared folder</CardDescription>
                 </CardHeader>
                 <CardContent>
+                  <div className="relative mb-4">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+                    <Input
+                      placeholder="Search files..."
+                      className="pl-9 h-9 text-sm"
+                      value={driveSearchQuery}
+                      onChange={(e) => setDriveSearchQuery(e.target.value)}
+                    />
+                  </div>
+                  
                   {isLoadingDrive ? (
                     <div className="space-y-2 mb-4 animate-pulse">
                       {[1, 2, 3].map((i) => (
@@ -145,9 +162,9 @@ export function AcademicResourcesSection({ isAdmin = false }: AcademicResourcesS
                     <div className="p-3 bg-red-50 text-red-600 text-xs rounded-lg mb-4">
                       {driveError}
                     </div>
-                  ) : driveFiles.length > 0 ? (
-                    <div className="space-y-2 mb-4 max-h-[200px] overflow-y-auto pr-1 custom-scrollbar">
-                      {driveFiles.map((file) => (
+                  ) : filteredDriveFiles.length > 0 ? (
+                    <div className="space-y-2 mb-4 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
+                      {filteredDriveFiles.map((file) => (
                         <a
                           key={file.id}
                           href={file.webViewLink}
@@ -162,10 +179,15 @@ export function AcademicResourcesSection({ isAdmin = false }: AcademicResourcesS
                           <ExternalLink className="w-3 h-3 text-slate-300 group-hover:text-[#E5007D] shrink-0" />
                         </a>
                       ))}
+                      {driveFiles.length > 50 && !driveSearchQuery && (
+                        <div className="text-[10px] text-center text-slate-400 mt-2">
+                          Showing first 50 of {driveFiles.length} files. Use search to find more.
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="text-center py-6 text-slate-400 text-xs italic">
-                      No files found in this folder.
+                      {driveSearchQuery ? 'No files match your search.' : 'No files found in this folder.'}
                     </div>
                   )}
                   <Button variant="outline" className="w-full border-[#4285F4] text-[#4285F4] hover:bg-[#4285F4]/5" size="sm" asChild>

@@ -75,7 +75,7 @@ export async function getUserInfo(): Promise<UserInfo> {
   return await response.json();
 }
 /**
- * List files from the specific folder
+ * List files from the specific folder (supports pagination for large folders)
  */
 export async function listDriveFiles(): Promise<DriveFile[]> {
   if (!accessToken) {
@@ -86,24 +86,48 @@ export async function listDriveFiles(): Promise<DriveFile[]> {
     console.warn('VITE_GDRIVE_FOLDER_ID is not set. Listing all files.');
   }
 
+  let allFiles: DriveFile[] = [];
+  let pageToken: string | undefined = undefined;
   const query = FOLDER_ID ? `'${FOLDER_ID}' in parents and trashed = false` : 'trashed = false';
-  const fields = 'files(id, name, mimeType, webViewLink, thumbnailLink, modifiedTime, size)';
-  
-  const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=${encodeURIComponent(fields)}&orderBy=name`;
+  const fields = 'nextPageToken, files(id, name, mimeType, webViewLink, thumbnailLink, modifiedTime, size)';
 
-  const response = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
+  try {
+    do {
+      const url = new URL('https://www.googleapis.com/drive/v3/files');
+      url.searchParams.append('q', query);
+      url.searchParams.append('fields', fields);
+      url.searchParams.append('orderBy', 'name');
+      url.searchParams.append('pageSize', '1000'); // Get more per request
+      if (pageToken) {
+        url.searchParams.append('pageToken', pageToken);
+      }
 
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.error?.message || 'Failed to fetch files from Google Drive');
+      const response = await fetch(url.toString(), {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || 'Failed to fetch files from Google Drive');
+      }
+
+      const data = await response.json();
+      allFiles = allFiles.concat(data.files || []);
+      pageToken = data.nextPageToken;
+      
+      // Safety limit: Stop after 5000 files to prevent browser memory issues 
+      // unless specifically requested to load more
+      if (allFiles.length >= 5000) break;
+
+    } while (pageToken);
+
+    return allFiles;
+  } catch (error) {
+    console.error('Error fetching drive files:', error);
+    throw error;
   }
-
-  const data = await response.json();
-  return data.files || [];
 }
 
 /**

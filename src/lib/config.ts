@@ -26,11 +26,9 @@
 // Use import.meta.env for Vite/modern bundlers
 // lib/config.ts
 
-// Cast to 'any' to bypass the "Property env does not exist" error
-const meta = (import.meta as any).env;
+const meta = import.meta.env;
 
-export const USE_SUPABASE = meta?.VITE_USE_SUPABASE === 'true' || 
-                           meta?.NEXT_PUBLIC_USE_SUPABASE === 'true';
+export const USE_SUPABASE = meta?.VITE_USE_SUPABASE === 'true';
 
 export const SUPABASE_CONFIG = {
   url: meta?.VITE_SUPABASE_URL || meta?.NEXT_PUBLIC_SUPABASE_URL || '',
