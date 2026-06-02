@@ -74,55 +74,85 @@ export async function getUserInfo(): Promise<UserInfo> {
 
   return await response.json();
 }
+// Cache settings
+const CACHE_KEY = 'drive_files_cache';
+const CACHE_DURATION = 1000 * 60 * 15; // 15 minutes
+
+interface CachedData {
+  files: DriveFile[];
+  timestamp: number;
+}
+
 /**
- * List files from the specific folder (supports pagination for large folders)
+ * List files and subfolders from the specific folder recursively
+ * Implements simple caching
  */
 export async function listDriveFiles(): Promise<DriveFile[]> {
   if (!accessToken) {
     throw new Error('No access token available. Please login first.');
   }
 
-  if (!FOLDER_ID) {
-    console.warn('VITE_GDRIVE_FOLDER_ID is not set. Listing all files.');
+  // Check cache
+  const cached = localStorage.getItem(CACHE_KEY);
+  if (cached) {
+    const { files, timestamp }: CachedData = JSON.parse(cached);
+    if (Date.now() - timestamp < CACHE_DURATION) {
+      return files;
+    }
   }
 
-  let allFiles: DriveFile[] = [];
-  let pageToken: string | undefined = undefined;
-  const query = FOLDER_ID ? `'${FOLDER_ID}' in parents and trashed = false` : 'trashed = false';
-  const fields = 'nextPageToken, files(id, name, mimeType, webViewLink, thumbnailLink, modifiedTime, size)';
+  const allFiles: DriveFile[] = [];
+  const processedFolders = new Set<string>();
 
-  try {
+  async function fetchFolderContents(folderId: string) {
+    if (processedFolders.has(folderId)) return;
+    processedFolders.add(folderId);
+
+    let pageToken: string | undefined = undefined;
+    const fields = 'nextPageToken, files(id, name, mimeType, webViewLink, thumbnailLink, modifiedTime, size)';
+
     do {
       const url = new URL('https://www.googleapis.com/drive/v3/files');
-      url.searchParams.append('q', query);
+      url.searchParams.append('q', `'${folderId}' in parents and trashed = false`);
       url.searchParams.append('fields', fields);
       url.searchParams.append('orderBy', 'name');
-      url.searchParams.append('pageSize', '1000'); // Get more per request
+      url.searchParams.append('pageSize', '1000');
       if (pageToken) {
         url.searchParams.append('pageToken', pageToken);
       }
 
       const response = await fetch(url.toString(), {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
+        headers: { Authorization: `Bearer ${accessToken}` },
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || 'Failed to fetch files from Google Drive');
-      }
-
+      if (!response.ok) throw new Error('Failed to fetch from Drive');
       const data = await response.json();
-      allFiles = allFiles.concat(data.files || []);
+
+      for (const file of (data.files || [])) {
+        if (file.mimeType === 'application/vnd.google-apps.folder') {
+          // Parallel fetch for subfolders
+          await fetchFolderContents(file.id);
+        } else {
+          allFiles.push(file);
+        }
+      }
       pageToken = data.nextPageToken;
-      
-      // Safety limit: Stop after 5000 files to prevent browser memory issues 
-      // unless specifically requested to load more
       if (allFiles.length >= 5000) break;
-
     } while (pageToken);
+  }
 
+  try {
+    if (FOLDER_ID) {
+      await fetchFolderContents(FOLDER_ID);
+      
+      // Save to cache
+      localStorage.setItem(CACHE_KEY, JSON.stringify({
+        files: allFiles,
+        timestamp: Date.now()
+      }));
+    } else {
+      console.warn('VITE_GDRIVE_FOLDER_ID is not set.');
+    }
     return allFiles;
   } catch (error) {
     console.error('Error fetching drive files:', error);
@@ -131,12 +161,21 @@ export async function listDriveFiles(): Promise<DriveFile[]> {
 }
 
 /**
- * Check if the user has access by attempting to list files
+ * Check if the user has access by attempting to fetch the folder metadata
  */
 export async function checkDriveAccess(): Promise<boolean> {
+  if (!accessToken) return false;
+  if (!FOLDER_ID) return true; // Cannot check if ID is missing
+
   try {
-    await listDriveFiles();
-    return true;
+    const url = new URL(`https://www.googleapis.com/drive/v3/files/${FOLDER_ID}`);
+    url.searchParams.append('fields', 'id');
+    
+    const response = await fetch(url.toString(), {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    return response.ok;
   } catch (error) {
     console.error('Access check failed:', error);
     return false;

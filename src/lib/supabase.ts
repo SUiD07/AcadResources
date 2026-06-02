@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { SUPABASE_CONFIG } from './config';
-import type { PeerSupportItem, Activity, ResourceCategory } from './types';
+import type { PeerSupportItem, Activity, ResourceCategory, StudentDocument } from './types';
 
 // ============================================
 // SUPABASE CLIENT INITIALIZATION
@@ -11,7 +11,7 @@ export const supabase = createClient(
 );
 
 // ============================================
-// 1. PEER SUPPORT DATA FUNCTIONS
+// 1. PEER SUPPORT & STUDENT DOCUMENTS DATA FUNCTIONS
 // ============================================
 
 export async function fetchPeerSupportData(): Promise<PeerSupportItem[]> {
@@ -22,6 +22,19 @@ export async function fetchPeerSupportData(): Promise<PeerSupportItem[]> {
   
   if (error) {
     console.error('Fetch Error (Peer Support):', error.message);
+    return [];
+  }
+  return data || [];
+}
+
+export async function fetchStudentDocuments(): Promise<StudentDocument[]> {
+  const { data, error } = await supabase
+    .from('student_documents')
+    .select('*')
+    .order('upload_date', { ascending: false });
+  
+  if (error) {
+    console.error('Fetch Error (Student Documents):', error.message);
     return [];
   }
   return data || [];

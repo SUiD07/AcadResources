@@ -22,15 +22,19 @@ import {
 interface FilterBarProps {
   selectedGeneration: string;
   selectedBlock: string;
+  selectedCategory: string;
   onGenerationChange: (value: string) => void;
   onBlockChange: (value: string) => void;
+  onCategoryChange: (value: string) => void;
 }
 
 export function FilterBar({
   selectedGeneration,
   selectedBlock,
+  selectedCategory,
   onGenerationChange,
   onBlockChange,
+  onCategoryChange,
 }: FilterBarProps) {
   const generations = [
     "ทั้งหมด",
@@ -53,6 +57,19 @@ export function FilterBar({
     "Cardiovascular System",
   ];
 
+  const categories = [
+    "ทั้งหมด",
+    "AC",
+    "Summary",
+    "Peer Tutoring",
+    "Mock Exam",
+    "Lab & Spottest",
+    "NLE 1",
+    "NLE 2",
+    "Resources",
+    "Survival Guide",
+  ];
+
   return (
     <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-6 shadow-sm">
       <div className="flex items-center gap-2 mb-4">
@@ -60,7 +77,7 @@ export function FilterBar({
         <h2 className="text-slate-900 font-medium">Filter Resources</h2>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <FilterSelect
           label="เลือกรุ่น"
           value={selectedGeneration}
@@ -73,6 +90,13 @@ export function FilterBar({
           value={selectedBlock}
           options={blocks}
           onChange={onBlockChange}
+        />
+
+        <FilterSelect
+          label="เลือกประเภท"
+          value={selectedCategory}
+          options={categories}
+          onChange={onCategoryChange}
         />
       </div>
     </div>

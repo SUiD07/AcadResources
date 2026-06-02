@@ -20,34 +20,42 @@ export function LoginPage({ onLogin }: LoginPageProps) {
   const [isVerifying, setIsVerifying] = useState(false);
 
   useEffect(() => {
-    // Initialize Google GIS client
-    googleDrive.initTokenClient(async (token) => {
-      try {
-        setIsVerifying(true);
-        setError(null);
-        
-        // 1. Verify email domain is @docchula.com
-        const userInfo = await googleDrive.getUserInfo();
-        if (!userInfo.email.endsWith('@docchula.com')) {
-          setError('Access Denied: Please sign in with your @docchula.com account.');
-          setIsVerifying(false);
-          return;
-        }
+    // Wait for the Google script to load before initializing
+    const checkGoogle = setInterval(() => {
+      if ((window as any).google) {
+        clearInterval(checkGoogle);
+        // Initialize Google GIS client
+        googleDrive.initTokenClient(async (token) => {
+          try {
+            setIsVerifying(true);
+            setError(null);
+            
+            // 1. Verify email domain is @docchula.com
+            const userInfo = await googleDrive.getUserInfo();
+            if (!userInfo.email.endsWith('@docchula.com')) {
+              setError('Access Denied: Please sign in with your @docchula.com account.');
+              setIsVerifying(false);
+              return;
+            }
 
-        // 2. Verify folder access
-        const hasAccess = await googleDrive.checkDriveAccess();
-        
-        if (hasAccess) {
-          onLogin(isAdminLogin);
-        } else {
-          setError('Access Denied: Your @docchula.com account does not have permission to access the required Drive folder.');
-        }
-      } catch (err: any) {
-        setError(err.message || 'Failed to verify access.');
-      } finally {
-        setIsVerifying(false);
+            // 2. Verify folder access
+            const hasAccess = await googleDrive.checkDriveAccess();
+            
+            if (hasAccess) {
+              onLogin(isAdminLogin);
+            } else {
+              setError('Access Denied: Your @docchula.com account does not have permission to access the required Drive folder.');
+            }
+          } catch (err: any) {
+            setError(err.message || 'Failed to verify access.');
+          } finally {
+            setIsVerifying(false);
+          }
+        });
       }
-    });
+    }, 100);
+
+    return () => clearInterval(checkGoogle);
   }, [isAdminLogin, onLogin]);
 
   const handleSubmit = (e: React.FormEvent) => {

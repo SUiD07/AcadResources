@@ -7,7 +7,7 @@
 
 import { USE_SUPABASE } from './config';
 import * as supabaseApi from './supabase';
-import type { PeerSupportItem, Activity, ResourceCategory } from './types';
+import type { PeerSupportItem, Activity, ResourceCategory, StudentDocument } from './types';
 
 // ============================================
 // PEER SUPPORT DATA SERVICE
@@ -16,6 +16,13 @@ import type { PeerSupportItem, Activity, ResourceCategory } from './types';
 export async function getPeerSupportData(): Promise<PeerSupportItem[]> {
   if (USE_SUPABASE) {
     return await supabaseApi.fetchPeerSupportData();
+  }
+  return [];
+}
+
+export async function getStudentDocuments(): Promise<StudentDocument[]> {
+  if (USE_SUPABASE) {
+    return await supabaseApi.fetchStudentDocuments();
   }
   return [];
 }
