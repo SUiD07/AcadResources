@@ -88,8 +88,7 @@ export function AcademicResourcesSection({ isAdmin = false }: AcademicResourcesS
           <div className="text-slate-600">Loading...</div>
         </div>
       ) : (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             {resourceCategories.map((category) => {
               const Icon = iconMap[category.icon] || BookOpen;
               
@@ -146,27 +145,7 @@ export function AcademicResourcesSection({ isAdmin = false }: AcademicResourcesS
                 </Card>
               );
             })}
-          </div>
-
-          {/* ACD Resources Highlight */}
-          <div className="mt-6 sm:mt-8 bg-pink-50 border border-pink-200 rounded-xl p-4 sm:p-6">
-            <div className="flex flex-col sm:flex-row items-start gap-4">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#E5007D] rounded-lg flex items-center justify-center shrink-0">
-                <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-slate-900 mb-2">ACD Resources Portal</h3>
-                <p className="text-slate-600 text-sm sm:text-base mb-4">
-                  Access comprehensive resources from the Academic Development Center including study guides, 
-                  curriculum documents, and official academic policies.
-                </p>
-                <Button variant="default" size="sm" className="w-full sm:w-auto">
-                  Go to ACD Resources
-                </Button>
-              </div>
-            </div>
-          </div>
-        </>
+        </div>
       )}
     </div>
   );

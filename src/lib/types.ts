@@ -16,6 +16,21 @@ export interface PeerSupportItem {
   category: string;
 }
 
+export interface StudentDocument {
+  id: number;
+  title: string;
+  file_url: string;
+  folder_path: string;
+  student_year?: number;
+  block: string;
+  doc_type: string;
+  generation: number;
+  is_precourse: boolean;
+  description?: string;
+  uploaded_by: string;
+  upload_date: string;
+}
+
 export interface Activity {
   id: string;
   title: string;

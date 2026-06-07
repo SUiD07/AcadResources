@@ -6,9 +6,8 @@
 // It automatically switches based on USE_SUPABASE flag in config.ts
 
 import { USE_SUPABASE } from './config';
-import { mockPeerSupportData, mockActivities, mockResourceCategories } from '../data/mockData';
 import * as supabaseApi from './supabase';
-import type { PeerSupportItem, Activity, ResourceCategory } from './types';
+import type { PeerSupportItem, Activity, ResourceCategory, StudentDocument } from './types';
 
 // ============================================
 // PEER SUPPORT DATA SERVICE
@@ -18,33 +17,34 @@ export async function getPeerSupportData(): Promise<PeerSupportItem[]> {
   if (USE_SUPABASE) {
     return await supabaseApi.fetchPeerSupportData();
   }
-  return Promise.resolve(mockPeerSupportData);
+  return [];
+}
+
+export async function getStudentDocuments(): Promise<StudentDocument[]> {
+  if (USE_SUPABASE) {
+    return await supabaseApi.fetchStudentDocuments();
+  }
+  return [];
 }
 
 export async function addPeerSupportItem(item: Omit<PeerSupportItem, 'id'>): Promise<PeerSupportItem> {
   if (USE_SUPABASE) {
     return await supabaseApi.createPeerSupportItem(item);
   }
-  // For mock data, just return with generated ID
-  const newItem = { ...item, id: `temp-${Date.now()}` };
-  return Promise.resolve(newItem);
+  throw new Error('Supabase not enabled');
 }
 
 export async function editPeerSupportItem(id: string, updates: Partial<PeerSupportItem>): Promise<PeerSupportItem> {
   if (USE_SUPABASE) {
     return await supabaseApi.updatePeerSupportItem(id, updates);
   }
-  // For mock data, find and return updated item
-  const item = mockPeerSupportData.find(i => i.id === id);
-  if (!item) throw new Error('Item not found');
-  return Promise.resolve({ ...item, ...updates });
+  throw new Error('Supabase not enabled');
 }
 
 export async function removePeerSupportItem(id: string): Promise<void> {
   if (USE_SUPABASE) {
     return await supabaseApi.deletePeerSupportItem(id);
   }
-  return Promise.resolve();
 }
 
 // ============================================
@@ -55,31 +55,27 @@ export async function getActivities(): Promise<Activity[]> {
   if (USE_SUPABASE) {
     return await supabaseApi.fetchActivities();
   }
-  return Promise.resolve(mockActivities);
+  return [];
 }
 
 export async function addActivity(activity: Omit<Activity, 'id'>): Promise<Activity> {
   if (USE_SUPABASE) {
     return await supabaseApi.createActivity(activity);
   }
-  const newActivity = { ...activity, id: `temp-${Date.now()}` };
-  return Promise.resolve(newActivity);
+  throw new Error('Supabase not enabled');
 }
 
 export async function editActivity(id: string, updates: Partial<Activity>): Promise<Activity> {
   if (USE_SUPABASE) {
     return await supabaseApi.updateActivity(id, updates);
   }
-  const activity = mockActivities.find(a => a.id === id);
-  if (!activity) throw new Error('Activity not found');
-  return Promise.resolve({ ...activity, ...updates });
+  throw new Error('Supabase not enabled');
 }
 
 export async function removeActivity(id: string): Promise<void> {
   if (USE_SUPABASE) {
     return await supabaseApi.deleteActivity(id);
   }
-  return Promise.resolve();
 }
 
 // ============================================
@@ -90,29 +86,25 @@ export async function getResourceCategories(): Promise<ResourceCategory[]> {
   if (USE_SUPABASE) {
     return await supabaseApi.fetchResourceCategories();
   }
-  return Promise.resolve(mockResourceCategories);
+  return [];
 }
 
 export async function addResourceCategory(category: Omit<ResourceCategory, 'id'>): Promise<ResourceCategory> {
   if (USE_SUPABASE) {
     return await supabaseApi.createResourceCategory(category);
   }
-  const newCategory = { ...category, id: `temp-${Date.now()}` };
-  return Promise.resolve(newCategory);
+  throw new Error('Supabase not enabled');
 }
 
 export async function editResourceCategory(id: string, updates: Partial<ResourceCategory>): Promise<ResourceCategory> {
   if (USE_SUPABASE) {
     return await supabaseApi.updateResourceCategory(id, updates);
   }
-  const category = mockResourceCategories.find(c => c.id === id);
-  if (!category) throw new Error('Category not found');
-  return Promise.resolve({ ...category, ...updates });
+  throw new Error('Supabase not enabled');
 }
 
 export async function removeResourceCategory(id: string): Promise<void> {
   if (USE_SUPABASE) {
     return await supabaseApi.deleteResourceCategory(id);
   }
-  return Promise.resolve();
 }
