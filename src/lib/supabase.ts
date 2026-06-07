@@ -14,30 +14,78 @@ export const supabase = createClient(
 // 1. PEER SUPPORT & STUDENT DOCUMENTS DATA FUNCTIONS
 // ============================================
 
-export async function fetchPeerSupportData(): Promise<PeerSupportItem[]> {
-  const { data, error } = await supabase
-    .from('peer_support')
-    .select('*')
-    .order('created_at', { ascending: false });
-  
-  if (error) {
-    console.error('Fetch Error (Peer Support):', error.message);
-    return [];
+export async function fetchPeerSupportData(): Promise<StudentDocument[]> {
+  const PAGE_SIZE = 1000;
+  let from = 0;
+  let allDocuments: StudentDocument[] = [];
+
+  while (true) {
+    const { data, error } = await supabase
+      .from('peer_support')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .range(from, from + PAGE_SIZE - 1);
+
+    if (error) {
+      console.error('Fetch Error (Peer Support):', error.message);
+      return [];
+    }
+
+    if (!data || data.length === 0) {
+      break;
+    }
+
+    allDocuments.push(...data);
+
+    console.log(
+      `Fetched ${data.length} rows (total: ${allDocuments.length})`
+    );
+
+    if (data.length < PAGE_SIZE) {
+      break;
+    }
+
+    from += PAGE_SIZE;
   }
-  return data || [];
+
+  return allDocuments;
 }
 
 export async function fetchStudentDocuments(): Promise<StudentDocument[]> {
-  const { data, error } = await supabase
-    .from('student_documents')
-    .select('*')
-    .order('upload_date', { ascending: false });
-  
-  if (error) {
-    console.error('Fetch Error (Student Documents):', error.message);
-    return [];
+  const PAGE_SIZE = 1000;
+  let from = 0;
+  let allDocuments: StudentDocument[] = [];
+
+  while (true) {
+    const { data, error } = await supabase
+      .from('student_documents')
+      .select('*')
+      .order('upload_date', { ascending: false })
+      .range(from, from + PAGE_SIZE - 1);
+
+    if (error) {
+      console.error('Fetch Error (Student Documents):', error.message);
+      return [];
+    }
+
+    if (!data || data.length === 0) {
+      break;
+    }
+
+    allDocuments.push(...data);
+
+    console.log(
+      `Fetched ${data.length} rows (total: ${allDocuments.length})`
+    );
+
+    if (data.length < PAGE_SIZE) {
+      break;
+    }
+
+    from += PAGE_SIZE;
   }
-  return data || [];
+
+  return allDocuments;
 }
 
 export async function createPeerSupportItem(item: Omit<PeerSupportItem, 'id'>): Promise<PeerSupportItem> {
@@ -46,7 +94,7 @@ export async function createPeerSupportItem(item: Omit<PeerSupportItem, 'id'>): 
     .insert(item)
     .select()
     .single();
-  
+
   if (error) throw error;
   return data;
 }
@@ -58,7 +106,7 @@ export async function updatePeerSupportItem(id: string, updates: Partial<PeerSup
     .eq('id', id)
     .select()
     .single();
-  
+
   if (error) throw error;
   return data;
 }
@@ -68,7 +116,7 @@ export async function deletePeerSupportItem(id: string): Promise<void> {
     .from('peer_support')
     .delete()
     .eq('id', id);
-  
+
   if (error) throw error;
 }
 
@@ -81,7 +129,7 @@ export async function fetchActivities(): Promise<Activity[]> {
     .from('activities')
     .select('*')
     .order('date', { ascending: true });
-  
+
   if (error) {
     console.error('Fetch Error (Activities):', error.message);
     return [];
@@ -95,7 +143,7 @@ export async function createActivity(activity: Omit<Activity, 'id'>): Promise<Ac
     .insert(activity)
     .select()
     .single();
-  
+
   if (error) throw error;
   return data;
 }
@@ -107,7 +155,7 @@ export async function updateActivity(id: string, updates: Partial<Activity>): Pr
     .eq('id', id)
     .select()
     .single();
-  
+
   if (error) throw error;
   return data;
 }
@@ -117,7 +165,7 @@ export async function deleteActivity(id: string): Promise<void> {
     .from('activities')
     .delete()
     .eq('id', id);
-  
+
   if (error) throw error;
 }
 
@@ -130,7 +178,7 @@ export async function fetchResourceCategories(): Promise<ResourceCategory[]> {
     .from('resource_categories')
     .select('*')
     .order('title', { ascending: true });
-  
+
   if (error) {
     console.error('Fetch Error (Resources):', error.message);
     return [];
@@ -144,7 +192,7 @@ export async function createResourceCategory(category: Omit<ResourceCategory, 'i
     .insert(category)
     .select()
     .single();
-  
+
   if (error) throw error;
   return data;
 }
@@ -156,7 +204,7 @@ export async function updateResourceCategory(id: string, updates: Partial<Resour
     .eq('id', id)
     .select()
     .single();
-  
+
   if (error) throw error;
   return data;
 }
@@ -166,6 +214,6 @@ export async function deleteResourceCategory(id: string): Promise<void> {
     .from('resource_categories')
     .delete()
     .eq('id', id);
-  
+
   if (error) throw error;
 }
