@@ -98,6 +98,9 @@ interface CachedData {
  * Implements simple caching
  */
 export async function listDriveFiles(): Promise<DriveFile[]> {
+  console.log("CLIENT_ID", CLIENT_ID);
+  console.log("FOLDER_ID", FOLDER_ID);
+  console.log("accessToken", accessToken);
   if (!accessToken) {
     throw new Error('No access token available. Please login first.');
   }
@@ -131,9 +134,12 @@ export async function listDriveFiles(): Promise<DriveFile[]> {
         url.searchParams.append('pageToken', pageToken);
       }
 
+      console.log("Fetching URL:", url.toString());
       const response = await fetch(url.toString(), {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
+      console.log("Response status:", response.status);
+      console.log("Response ok:", response.ok);
 
       if (!response.ok) throw new Error('Failed to fetch from Drive');
       const data = await response.json();
@@ -165,8 +171,11 @@ export async function listDriveFiles(): Promise<DriveFile[]> {
     }
     return allFiles;
   } catch (error) {
-    console.error('Error fetching drive files:', error);
-    throw error;
+    console.error("Error fetching drive files");
+    console.error(error);
+    console.error("CLIENT_ID", CLIENT_ID);
+    console.error("FOLDER_ID", FOLDER_ID);
+    console.error("accessToken", accessToken); throw error;
   }
 }
 
@@ -174,6 +183,9 @@ export async function listDriveFiles(): Promise<DriveFile[]> {
  * Check if the user has access by attempting to fetch the folder metadata
  */
 export async function checkDriveAccess(): Promise<boolean> {
+  console.log("=== CHECK DRIVE ACCESS ===");
+  console.log("FOLDER_ID", FOLDER_ID);
+  console.log("accessToken", accessToken);
   if (!accessToken) return false;
   if (!FOLDER_ID) return true; // Cannot check if ID is missing
 
@@ -181,9 +193,13 @@ export async function checkDriveAccess(): Promise<boolean> {
     const url = new URL(`https://www.googleapis.com/drive/v3/files/${FOLDER_ID}`);
     url.searchParams.append('fields', 'id');
 
+    console.log("Fetching URL:", url.toString());
+
     const response = await fetch(url.toString(), {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
+    console.log("Response status:", response.status);
+    console.log("Response ok:", response.ok);
 
     return response.ok;
   } catch (error) {
