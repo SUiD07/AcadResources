@@ -27,8 +27,14 @@ let accessToken: string | null = null;
  * Initialize the GIS token client
  */
 export function initTokenClient(onTokenReceived: (token: string) => void) {
-  if (typeof window === 'undefined' || !(window as any).google) return;
-
+  console.log("=== INIT TOKEN CLIENT ===");
+  console.log("CLIENT_ID", CLIENT_ID);
+  console.log("google", (window as any).google);
+  console.log("google.accounts", (window as any).google?.accounts);
+  if (typeof window === 'undefined' || !(window as any).google) {
+    console.log("Google SDK not loaded");
+    return;
+  }
   tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
     client_id: CLIENT_ID,
     scope: SCOPES,
@@ -40,12 +46,16 @@ export function initTokenClient(onTokenReceived: (token: string) => void) {
       onTokenReceived(response.access_token);
     },
   });
+  console.log("tokenClient created", tokenClient);
 }
 
 /**
  * Request a new access token
  */
 export function requestToken() {
+  console.log("=== REQUEST TOKEN ===");
+  console.log("CLIENT_ID", CLIENT_ID);
+  console.log("tokenClient", tokenClient);
   if (tokenClient) {
     // Hint to Google to show docchula.com accounts primarily
     tokenClient.requestAccessToken({ prompt: 'consent', hd: 'docchula.com' });
@@ -144,7 +154,7 @@ export async function listDriveFiles(): Promise<DriveFile[]> {
   try {
     if (FOLDER_ID) {
       await fetchFolderContents(FOLDER_ID);
-      
+
       // Save to cache
       localStorage.setItem(CACHE_KEY, JSON.stringify({
         files: allFiles,
@@ -170,7 +180,7 @@ export async function checkDriveAccess(): Promise<boolean> {
   try {
     const url = new URL(`https://www.googleapis.com/drive/v3/files/${FOLDER_ID}`);
     url.searchParams.append('fields', 'id');
-    
+
     const response = await fetch(url.toString(), {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
