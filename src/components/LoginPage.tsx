@@ -29,7 +29,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
           try {
             setIsVerifying(true);
             setError(null);
-            
+
             // 1. Verify email domain is @docchula.com
             const userInfo = await googleDrive.getUserInfo();
             if (!userInfo.email.endsWith('@docchula.com')) {
@@ -40,7 +40,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
 
             // 2. Verify folder access
             const hasAccess = await googleDrive.checkDriveAccess();
-            
+
             if (hasAccess) {
               onLogin(isAdminLogin);
             } else {
@@ -61,10 +61,19 @@ export function LoginPage({ onLogin }: LoginPageProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // For demo/mock admin login
-    if (isAdminLogin && email === 'admin@docchula.com' && password === 'admin') {
-      onLogin(true);
+    if (isAdminLogin) {
+      if (email === "admin@docchula.com" && password === "admin") {
+        onLogin(true);
+      } else {
+        setError("Invalid admin credentials.");
+      }
     } else {
-      setError('Invalid credentials for admin login.');
+      //for demo User: เช็คแค่ว่าเป็น @docchula.com
+      if (email.endsWith("@docchula.com")) {
+        onLogin(false);
+      } else {
+        setError("Please use your @docchula.com account.");
+      }
     }
   };
 
@@ -138,7 +147,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                 {isAdminLogin ? 'Admin Sign In' : 'Welcome Back'}
               </CardTitle>
               <CardDescription className="text-sm">
-                {isAdminLogin 
+                {isAdminLogin
                   ? 'Admin Sign In (docchula account)' 
                   : 'Sign in with your docchula account to access academic resources'
                 }
@@ -196,23 +205,22 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                   size="lg"
                   disabled={isVerifying}
                 >
-                  {isAdminLogin ? 'Sign In as Admin' : 'Sign In'}
+                  {isAdminLogin ? "Sign In as Admin" : "Sign In"}
                 </Button>
 
-                {!isAdminLogin && (
+                {/* Toggle Admin/User */}
+                {!isAdminLogin ? (
                   <Button
                     type="button"
                     variant="outline"
-                    className="w-full border-slate-300 hover:bg-slate-50 text-slate-600"
+                    className="w-full border-slate-300 text-slate-600 hover:bg-slate-50"
                     size="sm"
                     onClick={handleAdminLogin}
                     disabled={isVerifying}
                   >
                     Admin Login
                   </Button>
-                )}
-
-                {isAdminLogin && (
+                ) : (
                   <Button
                     type="button"
                     variant="ghost"
@@ -271,8 +279,12 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                         d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                       />
                     </svg>
-                    Login with Google
-                    <span className="text-xs text-slate-500 ml-2">(docchula only)</span>
+                    {isAdminLogin
+                      ? "Login with Google (Admin)"
+                      : "Login with Google"}
+                    <span className="text-xs text-slate-500 ml-2">
+                      (docchula only)
+                    </span>
                   </>
                 )}
               </Button>

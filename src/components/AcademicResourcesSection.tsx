@@ -68,7 +68,7 @@ export function AcademicResourcesSection({ isAdmin = false }: AcademicResourcesS
                 <Plus className="w-4 h-4 mr-2" />
                 Add New Resource
               </Button>
-              <Button
+              {/* <Button
                 size="sm"
                 variant="outline"
                 onClick={handleManageResources}
@@ -76,7 +76,7 @@ export function AcademicResourcesSection({ isAdmin = false }: AcademicResourcesS
               >
                 <Settings className="w-4 h-4 mr-2" />
                 Manage Resources
-              </Button>
+              </Button> */}
             </div>
           )}
         </div>

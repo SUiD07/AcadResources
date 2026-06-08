@@ -7,6 +7,7 @@ import * as googleDrive from "../lib/googleDriveService";
 import { detectDocType, detectBlock } from "./categorize";
 import { Button } from "./ui/button";
 import { Plus, Search, RefreshCcw, ChevronDown, ChevronUp } from "lucide-react";
+import { useIsMobile } from "./ui/use-mobile";
 
 // ─── TYPE ORDER (Precourse ขึ้นก่อนเสมอ) ─────────────────────────────────────
 const DOC_TYPE_ORDER = [
@@ -125,6 +126,7 @@ export function PeerSupportSection({
   isAdmin = false,
   isMobile = false,
 }: PeerSupportSectionProps) {
+  const isMobileScreen = useIsMobile();
   // filter state — multi-select string[]
   const [selectedGeneration, setSelectedGeneration] = useState<string[]>([]);
   const [selectedBlock, setSelectedBlock] = useState<string[]>([]);
@@ -144,7 +146,7 @@ export function PeerSupportSection({
         // Fetch DB data
         const data = await getStudentDocuments();
         setStudentDocs(data);
-        
+
         // Fetch Drive data
         if (googleDrive.getAccessToken()) {
           fetchDriveFiles();
@@ -270,13 +272,23 @@ export function PeerSupportSection({
       <div
         style={{
           display: "flex",
-          flexDirection: isMobile ? "column" : "row",
+          flexDirection: isMobileScreen ? "column" : "row",
           gap: 20,
           alignItems: "flex-start",
         }}
       >
         {/* Filter sidebar */}
-        <div style={{ width: isMobile ? "100%" : 230, flexShrink: 0 }}>
+        <div
+          style={{
+            width: isMobileScreen ? "100%" : 230,
+            flexShrink: 0,
+            position: isMobileScreen ? "static" : "sticky",
+            top: 20,
+            maxHeight: isMobileScreen ? "auto" : "calc(100vh - 40px)",
+            overflowY: isMobileScreen ? "visible" : "auto",
+          }}
+        >
+          {" "}
           <FilterBar
             generationOptions={filterOptions.generations}
             blockOptions={filterOptions.blocks}
@@ -287,7 +299,7 @@ export function PeerSupportSection({
             onGenerationChange={setSelectedGeneration}
             onBlockChange={setSelectedBlock}
             onCategoryChange={setSelectedCategory}
-            isMobile={isMobile}
+            isMobile={isMobileScreen}
           />
         </div>
 
