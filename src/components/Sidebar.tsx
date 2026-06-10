@@ -1,7 +1,7 @@
-import { Home, Calendar, BookOpen, GraduationCap, LogOut } from 'lucide-react';
+import { Home, Calendar, BookOpen, GraduationCap, LogOut, Users } from 'lucide-react';
 import { Button } from './ui/button';
 
-type Section = 'peer-support' | 'academic-activities' | 'academic-resources';
+type Section = 'peer-support' | 'academic-activities' | 'academic-resources' | 'career-navigation' | 'board';
 
 interface SidebarProps {
   activeSection: Section;
@@ -14,6 +14,8 @@ export function Sidebar({ activeSection, onSectionChange, onLogout }: SidebarPro
     { id: 'peer-support' as Section, label: 'Peer Support', icon: Home },
     { id: 'academic-activities' as Section, label: 'Academic Activities', icon: Calendar },
     { id: 'academic-resources' as Section, label: 'Academic Resources', icon: BookOpen },
+    { id: 'career-navigation' as Section, label: 'Career Navigation', icon: GraduationCap },
+    { id: 'board' as Section, label: 'Board', icon: Users },
   ];
 
   return (
