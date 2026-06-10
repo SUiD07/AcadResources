@@ -175,7 +175,7 @@ export async function deleteActivity(id: string): Promise<void> {
 
 export async function fetchResourceCategories(): Promise<ResourceCategory[]> {
   const { data, error } = await supabase
-    .from('resource_categories')
+    .from('resources')
     .select('*')
     .order('title', { ascending: true });
 
@@ -183,6 +183,7 @@ export async function fetchResourceCategories(): Promise<ResourceCategory[]> {
     console.error('Fetch Error (Resources):', error.message);
     return [];
   }
+  console.log(`Fetched ${data?.length || 0} resource categories`);
   return data || [];
 }
 
@@ -203,7 +204,7 @@ export async function updateResourceCategory(id: string, updates: Partial<Resour
     .update(updates)
     .eq('id', id)
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) throw error;
   return data;

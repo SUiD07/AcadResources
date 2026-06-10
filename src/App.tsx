@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { LoginPage } from './components/LoginPage';
 import { Sidebar } from './components/Sidebar';
 import { MobileNav } from './components/MobileNav';
-import { PeerSupportSection } from './components/PeerSupportSection';
-import { AcademicActivitiesSection } from './components/AcademicActivitiesSection';
-import { AcademicResourcesSection } from './components/AcademicResourcesSection';
+import { PeerSupportSection } from './components/section/PeerSupportSection';
+import { AcademicActivitiesSection } from './components/section/AcademicActivitiesSection';
+import { AcademicResourcesSection } from './components/section/AcademicResourcesSection';
+import CareerNavigationSection from './components/section/CareerNavigationSection';
+import { BoardSection } from './components/section/BoardSection';
 
-type Section = 'peer-support' | 'academic-activities' | 'academic-resources';
+type Section = 'peer-support' | 'academic-activities' | 'academic-resources' | 'career-navigation' | 'board';
 
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -58,6 +60,8 @@ export default function App() {
             {activeSection === 'peer-support' && <PeerSupportSection isAdmin={isAdmin} />}
             {activeSection === 'academic-activities' && <AcademicActivitiesSection isAdmin={isAdmin} />}
             {activeSection === 'academic-resources' && <AcademicResourcesSection isAdmin={isAdmin} />}
+            {activeSection === 'career-navigation' && <CareerNavigationSection />}
+            {activeSection === 'board' && <BoardSection isAdmin={isAdmin} />}
           </div>
         </main>
       </div>

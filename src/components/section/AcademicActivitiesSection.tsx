@@ -10,25 +10,26 @@ import {
 } from "lucide-react";
 import {
   Card,
-  CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
-} from "./ui/card";
-import { Button } from "./ui/button";
+  CardDescription,
+  CardContent,
+} from "../ui/card";
+import { Button } from "../ui/button";
+// import { getActivities } from "../../lib/dataService";
 import {
   getActivities,
   addActivity,
   editActivity,
-  removeActivity
-} from "../lib/dataService";
-import type { Activity } from "../lib/types";
+  removeActivity,
+} from "../../lib/dataService";
+import { Activity } from "../../lib/types";
 import {
   AddActivityDialog,
   type ActivityFormData,
-} from "./admin/AddActivityDialog";
-import { EditActivityDialog } from "./admin/EditActivityDialog";
-import { DeleteConfirmDialog } from "./admin/DeleteConfirmDialog";
+} from "../admin/AddActivityDialog";
+import { EditActivityDialog } from "../admin/EditActivityDialog";
+import { DeleteConfirmDialog } from "../admin/DeleteConfirmDialog";
 
 interface AcademicActivitiesSectionProps {
   isAdmin?: boolean;
@@ -71,13 +72,13 @@ export function AcademicActivitiesSection({
     }
   }
 
-  // ✅ Add
+  //Add
   const handleSubmitActivity = async (data: ActivityFormData) => {
     await addActivity(data);
     await loadData();
   };
 
-  // ✅ Edit — เปิด dialog พร้อมข้อมูลเดิม
+  //Edit — เปิด dialog พร้อมข้อมูลเดิม
   const handleEditActivity = (activity: Activity) => {
     setSelectedActivity(activity);
     setIsEditDialogOpen(true);
@@ -88,7 +89,7 @@ export function AcademicActivitiesSection({
     await loadData();
   };
 
-  // ✅ Delete — เปิด confirm dialog
+  //Delete — เปิด confirm dialog
   const handleDeleteActivity = (activity: Activity) => {
     setSelectedActivity(activity);
     setIsDeleteDialogOpen(true);
@@ -199,7 +200,7 @@ export function AcademicActivitiesSection({
         </div>
       )}
 
-      {/* ✅ Dialogs ครบทั้ง 3 ตัว */}
+      {/* Add, Edit, Delete Dialogs */}
       <AddActivityDialog
         open={isAddDialogOpen}
         onOpenChange={setIsAddDialogOpen}

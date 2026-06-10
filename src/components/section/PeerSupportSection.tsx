@@ -1,13 +1,13 @@
 import { useState, useMemo, useEffect } from "react";
-import { FilterBar } from "./FilterBar";
-import { ContentCategory } from "./ContentCategory";
-import { getStudentDocuments } from "../lib/dataService";
-import type { StudentDocument, PeerSupportItem } from "../lib/types";
-import * as googleDrive from "../lib/googleDriveService";
-import { detectDocType, detectBlock } from "./categorize";
-import { Button } from "./ui/button";
+import { FilterBar } from "../FilterBar";
+import { ContentCategory } from "../ContentCategory";
+import { getStudentDocuments } from "../../lib/dataService";
+import type { StudentDocument, PeerSupportItem } from "../../lib/types";
+import * as googleDrive from "../../lib/googleDriveService";
+import { detectDocType, detectBlock } from "../categorize";
+import { Button } from "../ui/button";
 import { Plus, Search, RefreshCcw, ChevronDown, ChevronUp } from "lucide-react";
-import { useIsMobile } from "./ui/use-mobile";
+import { useIsMobile } from "../ui/use-mobile";
 
 // ─── TYPE ORDER (Precourse ขึ้นก่อนเสมอ) ─────────────────────────────────────
 const DOC_TYPE_ORDER = [
@@ -94,7 +94,7 @@ function SubjectCard({ subject, items, isAdmin }: SubjectCardProps) {
             ))}
           </div>
         </div>
-        <span className="text-slate-400 ml-4 flex-shrink-0">
+        <span className="text-slate-400 ml-4 shrink-0">
           {expanded ? (
             <ChevronUp className="w-5 h-5" />
           ) : (
