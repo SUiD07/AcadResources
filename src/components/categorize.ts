@@ -1,5 +1,11 @@
+// ── Types ─────────────────────────────────────────────────────────────────────
+interface KeywordEntry {
+  keys: string[];
+  val: string;
+}
+
 // ── Doc Type Detection ────────────────────────────────────────────────────────
-const docKeywords = [
+const docKeywords: KeywordEntry[] = [
   {
     keys: ['tutor', 'ติว', 'tutoring', 'tutorial', 'ติวศรว', 'ติว nl',
       'nle1 tutoring', 'nle tutoring', 'peer support',
@@ -138,7 +144,7 @@ const docKeywords = [
 ];
 
 // ── Block Map ─────────────────────────────────────────────────────────────────
-export const blockMap = [
+export const blockMap: KeywordEntry[] = [
   {
     keys: [
       'DR/SOC', '3000106', 'DOCTOR AND SOCIETY', 'DOCTOR & SOCIETY',
@@ -181,7 +187,6 @@ export const blockMap = [
   },
 
   // ── NS I (previously MS II) ────────────────────────────────────────────────
-  // REQ 3: keys that WERE "MS II" now map to "NS I"
   {
     keys: [
       'MUSCU SYS II', 'MUSCU SYS 2', '3000262',
@@ -383,8 +388,7 @@ export const blockMap = [
 
   // ── Year III ──────────────────────────────────────────────────────────────
 
-  // ── NS II (previously NS I) ────────────────────────────────────────────────
-  // REQ 3: keys that WERE "NS I" (NEUROSCIENCE 1 / 3000278 / ACETYLCHOLINE) → now "NS II"
+  // ── NS II ─────────────────────────────────────────────────────────────────
   {
     keys: [
       'NEUROSCIENCE 1', 'NEUROSCI 1', '3000278', 'ACETYLCHOLINE',
@@ -394,8 +398,7 @@ export const blockMap = [
     ], val: 'NS II'
   },
 
-  // ── NS III (previously NS II) ──────────────────────────────────────────────
-  // REQ 3: keys that WERE "NS II" (CLIN NEURO / LEVETIRACETAM) → now "NS III"
+  // ── NS III ────────────────────────────────────────────────────────────────
   {
     keys: [
       'CLIN NEURO', 'CLIN NEUROSCIENCE', 'LEVETIRACETAM',
@@ -415,8 +418,7 @@ export const blockMap = [
     ], val: 'GI II'
   },
 
-  // ── MS II (previously MS III) ─────────────────────────────────────────────
-  // REQ 3: keys that WERE "MS III" (MUSCU SYS/CON / 3000375 / FRACTURE) → now "MS II"
+  // ── MS II ─────────────────────────────────────────────────────────────────
   {
     keys: [
       'MUSCU SYS/CON', '3000375',
@@ -549,13 +551,9 @@ export const blockMap = [
 
   // ── Year V ────────────────────────────────────────────────────────────────
   { keys: ['MEDICINE II', 'MED II', 'INTERNAL MED 2', 'INTERNAL MEDICINE 2', 'MEDICINE 2'], val: 'Medicine II' },
-
   { keys: ['FAM MED', 'FAMILY MED', 'FAMILY MEDICINE', 'FAMILY PRACTICE'], val: 'Fam Med' },
-
   { keys: ['PEDIATRICS II', 'PEDIATRIC II', 'PED II', 'PEDIATRICS 2'], val: 'Pediatrics II' },
-
   { keys: ['ANES', 'ANESTHESIA', 'ANESTHESIOL', 'CRITICAL CARE', 'ANESTHESIA & CRITICAL'], val: 'Anesthesia & Critical Care' },
-
   { keys: ['TRAUMA', 'AMBU', 'ER TRAUMA', 'AMBU/ER', 'CHRONIC PALLIATIVE'], val: 'Trauma' },
 
   {
@@ -589,7 +587,6 @@ export const blockMap = [
   },
 
   { keys: ['REHAB YEAR', 'REHAB MED', 'REHABILITATION MED', 'REHABILITATION MEDICINE'], val: 'Rehab' },
-
   { keys: ['FORENSIC', 'FORENSIC MED', 'FORENSIC MEDICINE', 'นิติเวช'], val: 'Forensic' },
 
   // ── Year VI ───────────────────────────────────────────────────────────────
@@ -606,8 +603,86 @@ export const blockMap = [
   { keys: ['OLD BLOCK', 'METAB/NUTRI', '3000274'], val: 'Old Block' },
 ];
 
+// ── Subject → Year Map ────────────────────────────────────────────────────────
+export const SUBJECT_YEAR_MAP: Record<string, number | 'other'> = {
+  // ── Year I ────────────────────────────────────────────────────────────────
+  'Cell Bio & Med Biochem': 1,
+  'Integ & MS I': 1,
+  'NS I': 1,
+  'RS I': 1,
+  'CVS I': 1,
+  'Endocrine I': 1,
+  'GI I': 1,
+  'Repro I': 1,
+  'Uri I': 1,
+
+  // ── Year II ───────────────────────────────────────────────────────────────
+  'Human Life': 2,
+  'Epi, Res Meth & Biostal': 2,
+  'Hematology': 2,
+  'Genetics': 2,
+  'CVS II': 2,
+  'Uri II': 2,
+  'RS II': 2,
+  'Princ Microbio Parasite': 2,
+  'Endocrine II': 2,
+  'Princ Patho': 2,
+  'Princ Pharm II': 2,
+  'Princ Immunology': 2,
+
+  // ── Year III ──────────────────────────────────────────────────────────────
+  'NS II': 3,
+  'NS III': 3,
+  'GI II': 3,
+  'MS II': 3,
+  'Integ II': 3,
+  'Cli Immuno & Infect Dis': 3,
+  'Repro II': 3,
+  'Psychopatho': 3,
+  'FCC': 3,
+  'Radio': 3,
+  'Com Health Pro & Dis Prev': 3,
+
+  // ── Year IV ───────────────────────────────────────────────────────────────
+  'Medicine I': 4,
+  'Pediatrics I': 4,
+  'Surgery I': 4,
+  'Ortho I': 4,
+  'Cli Comp Refresh': 4,
+  'Obstetrics & Gynecology': 4,
+  'Prev Med & Health Sys': 4,
+
+  // ── Year V ────────────────────────────────────────────────────────────────
+  'Medicine II': 5,
+  'Fam Med': 5,
+  'Pediatrics II': 5,
+  'Anesthesia & Critical Care': 5,
+  'Trauma': 5,
+  'ER I': 5,
+  'Psychi': 5,
+  'EYE': 5,
+  'ENT': 5,
+  'Rehab': 5,
+  'Forensic': 5,
+
+  // ── Year VI ───────────────────────────────────────────────────────────────
+  'Medicine III': 6,
+  'ER II': 6,
+  'Surgery II': 6,
+  'Ortho II': 6,
+  'ObGyn II': 6,
+  'Clinical Integration': 6,
+  'OSCE Prep': 6,
+  'Exit Examination': 6,
+
+  // ── Other ─────────────────────────────────────────────────────────────────
+  'MPD': "other",
+  'Old Block': 'other',
+  'Unclassified': 'other',
+};
+
 // ── Core matching function ────────────────────────────────────────────────────
-function matchKeywords(text, entries) {
+function matchKeywords(text: string, entries: KeywordEntry[]): string | null {
   const lower = text.toLowerCase();
   for (const entry of entries) {
     for (const key of entry.keys) {
@@ -619,16 +694,16 @@ function matchKeywords(text, entries) {
   return null;
 }
 
-export function detectDocType(fileName) {
+export function detectDocType(fileName: string): string {
   return matchKeywords(fileName, docKeywords) || 'Unknown';
 }
 
-export function detectBlock(fileName, path = '') {
+export function detectBlock(fileName: string, path = ''): string {
   const combined = `${path} ${fileName}`;
   return matchKeywords(combined, blockMap) || 'Unclassified';
 }
 
-export function categorizeFile(file) {
+export function categorizeFile(file: { name: string; path?: string }): object {
   return {
     ...file,
     docType: detectDocType(file.name),

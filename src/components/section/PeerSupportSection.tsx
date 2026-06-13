@@ -1,10 +1,10 @@
 import { useState, useMemo, useEffect } from "react";
-import { FilterBar } from "../FilterBar";
+import { FilterBar, filterBlocksByYear } from "../FilterBar";
 import { ContentCategory } from "../ContentCategory";
 import { getStudentDocuments } from "../../lib/dataService";
 import type { StudentDocument, PeerSupportItem } from "../../lib/types";
 import * as googleDrive from "../../lib/googleDriveService";
-import { detectDocType, detectBlock } from "../categorize";
+import { detectDocType, detectBlock, SUBJECT_YEAR_MAP } from "../categorize";
 import { Button } from "../ui/button";
 import { Plus, Search, RefreshCcw, ChevronDown, ChevronUp } from "lucide-react";
 import { useIsMobile } from "../ui/use-mobile";
@@ -128,6 +128,7 @@ export function PeerSupportSection({
 }: PeerSupportSectionProps) {
   const isMobileScreen = useIsMobile();
   // filter state — multi-select string[]
+  const [selectedYear, setSelectedYear] = useState<string[]>([]); 
   const [selectedGeneration, setSelectedGeneration] = useState<string[]>([]);
   const [selectedBlock, setSelectedBlock] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string[]>([]);
@@ -199,7 +200,7 @@ export function PeerSupportSection({
     [studentDocs, driveFiles],
   );
 
-  // dynamic filter options จากข้อมูลจริง
+  // dynamic filter options จากข้อมูลจริง (ไม่แสดงตัวเลือกที่ไม่มีในข้อมูล)
   const filterOptions = useMemo(() => {
     const genSet = new Set(
       allItems.map((d) => d.generation).filter((g) => g !== "Auto-Detected"),
@@ -213,10 +214,27 @@ export function PeerSupportSection({
     };
   }, [allItems]);
 
+  // ── clear selectedBlock ถ้าปีเปลี่ยนแล้ว block นั้นไม่อยู่ในปีที่เลือกแล้ว ──
+  useEffect(() => {
+    if (selectedYear.length === 0) return;
+    const validBlocks = filterBlocksByYear(filterOptions.blocks, selectedYear);
+    const stillValid = selectedBlock.filter((b) => validBlocks.includes(b));
+    if (stillValid.length !== selectedBlock.length) {
+      setSelectedBlock(stillValid);
+    }
+  }, [selectedYear]);
+
   // filter — OR within, AND across
   const filteredItems = useMemo(
     () =>
       allItems.filter((item) => {
+        // Year filter
+        if (selectedYear.length > 0) {
+          const year = SUBJECT_YEAR_MAP[item.block];
+          const yearStr = year === undefined ? "other" : String(year);
+          if (!selectedYear.includes(yearStr)) return false;
+        }
+
         const genMatch =
           selectedGeneration.length === 0 ||
           selectedGeneration.some((g) =>
@@ -227,9 +245,16 @@ export function PeerSupportSection({
         const catMatch =
           selectedCategory.length === 0 ||
           selectedCategory.includes(item.category);
+
         return genMatch && blockMatch && catMatch;
       }),
-    [allItems, selectedGeneration, selectedBlock, selectedCategory],
+    [
+      allItems,
+      selectedYear,
+      selectedGeneration,
+      selectedBlock,
+      selectedCategory,
+    ],
   );
 
   // จัดกลุ่มตาม Block/วิชา
@@ -300,6 +325,8 @@ export function PeerSupportSection({
             onBlockChange={setSelectedBlock}
             onCategoryChange={setSelectedCategory}
             isMobile={isMobileScreen}
+            selectedYear={selectedYear}
+            onYearChange={setSelectedYear}
           />
         </div>
 
