@@ -1,13 +1,25 @@
 import { useState, useMemo, useEffect } from "react";
 import { FilterBar, filterBlocksByYear } from "../FilterBar";
 import { ContentCategory } from "../ContentCategory";
-import { getStudentDocuments } from "../../lib/dataService";
+import {
+  getStudentDocuments,
+  addPeerSupportItem,
+  editPeerSupportItem,
+  removePeerSupportItem,
+} from "../../lib/dataService";
 import type { StudentDocument, PeerSupportItem } from "../../lib/types";
 import * as googleDrive from "../../lib/googleDriveService";
 import { detectDocType, detectBlock, SUBJECT_YEAR_MAP } from "../categorize";
 import { Button } from "../ui/button";
 import { Plus, Search, RefreshCcw, ChevronDown, ChevronUp } from "lucide-react";
 import { useIsMobile } from "../ui/use-mobile";
+import {
+  AddResourceDialog,
+  type ResourceFormData,
+} from "../admin/AddResourceDialog";
+import { EditResourceDialog } from "../admin/EditResourceDialog";
+import { DeleteConfirmDialog } from "../admin/DeleteConfirmDialog";
+// import { addStudentDocument, updateStudentDocument, deleteStudentDocument } from '../../lib/dataService';
 
 // ─── TYPE ORDER (Precourse ขึ้นก่อนเสมอ) ─────────────────────────────────────
 const DOC_TYPE_ORDER = [
@@ -47,9 +59,17 @@ interface SubjectCardProps {
   subject: string;
   items: PeerSupportItem[];
   isAdmin: boolean;
+  onEdit?: (item: PeerSupportItem) => void;
+  onDelete?: (item: PeerSupportItem) => void;
 }
 
-function SubjectCard({ subject, items, isAdmin }: SubjectCardProps) {
+function SubjectCard({
+  subject,
+  items,
+  isAdmin,
+  onEdit,
+  onDelete,
+}: SubjectCardProps) {
   const [expanded, setExpanded] = useState(false);
 
   const typesPresent = DOC_TYPE_ORDER.filter((t) =>
@@ -113,6 +133,8 @@ function SubjectCard({ subject, items, isAdmin }: SubjectCardProps) {
               items={items.filter((i) => i.category === type)}
               isAdmin={isAdmin}
               defaultExpanded={type === "Precourse"}
+              onEdit={onEdit}
+              onDelete={onDelete}
             />
           ))}
         </div>
@@ -126,9 +148,41 @@ export function PeerSupportSection({
   isAdmin = false,
   isMobile = false,
 }: PeerSupportSectionProps) {
+  // Dialog states
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<
+    (ResourceFormData & { id: string }) | null
+  >(null);
+  const [deletingItem, setDeletingItem] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+
+  const handleAdd = async (data: ResourceFormData) => {
+    await addPeerSupportItem(data);
+    const updated = await getStudentDocuments();
+    setStudentDocs(updated);
+  };
+
+  const handleEdit = async (data: ResourceFormData & { id: string }) => {
+    await editPeerSupportItem(data);
+    const updated = await getStudentDocuments();
+    setStudentDocs(updated);
+  };
+
+  const handleDelete = async () => {
+    if (!deletingItem) return;
+    await removePeerSupportItem(deletingItem.id);
+    const updated = await getStudentDocuments();
+    setStudentDocs(updated);
+  };
+
   const isMobileScreen = useIsMobile();
+
   // filter state — multi-select string[]
-  const [selectedYear, setSelectedYear] = useState<string[]>([]); 
+  const [selectedYear, setSelectedYear] = useState<string[]>([]);
   const [selectedGeneration, setSelectedGeneration] = useState<string[]>([]);
   const [selectedBlock, setSelectedBlock] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string[]>([]);
@@ -270,112 +324,146 @@ export function PeerSupportSection({
   }, [filteredItems]);
 
   return (
-    <div className="pb-20 lg:pb-8">
-      {/* Header */}
-      <div className="mb-6 sm:mb-8">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
-          <h1 className="text-slate-900 font-bold text-[24px]">
-            Peer Support Resources
-          </h1>
-          {isAdmin && (
-            <Button
-              size="sm"
-              onClick={() => console.log("Add")}
-              className="bg-[#E5007D] hover:bg-[#c00069] text-white"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add New Resource
-            </Button>
-          )}
-        </div>
-        <p className="text-slate-600 text-sm sm:text-base">
-          Browse and access peer-created academic materials
-        </p>
+  <div className="pb-20 lg:pb-8">
+    {/* Header */}
+    <div className="mb-6 sm:mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
+        <h1 className="text-slate-900 font-bold text-[24px]">
+          Peer Support Resources
+        </h1>
+        {isAdmin && (
+          <Button
+            size="sm"
+            onClick={() => setAddDialogOpen(true)}
+            className="bg-[#E5007D] hover:bg-[#c00069] text-white"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add New Resource
+          </Button>
+        )}
       </div>
+      <p className="text-slate-600 text-sm sm:text-base">
+        Browse and access peer-created academic materials
+      </p>
+    </div>
 
-      {/* Main layout */}
+    {/* Main layout */}
+    <div
+      style={{
+        display: "flex",
+        flexDirection: isMobileScreen ? "column" : "row",
+        gap: 20,
+        alignItems: "flex-start",
+      }}
+    >
+      {/* Filter sidebar */}
       <div
         style={{
-          display: "flex",
-          flexDirection: isMobileScreen ? "column" : "row",
-          gap: 20,
-          alignItems: "flex-start",
+          width: isMobileScreen ? "100%" : 230,
+          flexShrink: 0,
+          position: isMobileScreen ? "static" : "sticky",
+          top: 20,
+          maxHeight: isMobileScreen ? "auto" : "calc(100vh - 40px)",
+          overflowY: isMobileScreen ? "visible" : "auto",
         }}
       >
-        {/* Filter sidebar */}
-        <div
-          style={{
-            width: isMobileScreen ? "100%" : 230,
-            flexShrink: 0,
-            position: isMobileScreen ? "static" : "sticky",
-            top: 20,
-            maxHeight: isMobileScreen ? "auto" : "calc(100vh - 40px)",
-            overflowY: isMobileScreen ? "visible" : "auto",
-          }}
-        >
-          {" "}
-          <FilterBar
-            generationOptions={filterOptions.generations}
-            blockOptions={filterOptions.blocks}
-            categoryOptions={filterOptions.types}
-            selectedGeneration={selectedGeneration}
-            selectedBlock={selectedBlock}
-            selectedCategory={selectedCategory}
-            onGenerationChange={setSelectedGeneration}
-            onBlockChange={setSelectedBlock}
-            onCategoryChange={setSelectedCategory}
-            isMobile={isMobileScreen}
-            selectedYear={selectedYear}
-            onYearChange={setSelectedYear}
-          />
-        </div>
+        <FilterBar
+          generationOptions={filterOptions.generations}
+          blockOptions={filterOptions.blocks}
+          categoryOptions={filterOptions.types}
+          selectedGeneration={selectedGeneration}
+          selectedBlock={selectedBlock}
+          selectedCategory={selectedCategory}
+          onGenerationChange={setSelectedGeneration}
+          onBlockChange={setSelectedBlock}
+          onCategoryChange={setSelectedCategory}
+          isMobile={isMobileScreen}
+          selectedYear={selectedYear}
+          onYearChange={setSelectedYear}
+        />
+      </div>
 
-        {/* Results */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          {(isLoading || isLoadingDrive) && (
-            <div className="flex justify-center items-center py-12">
-              <RefreshCcw className="w-6 h-6 text-[#E5007D] animate-spin mr-2" />
-              <div className="text-slate-600">
-                {isLoading ? "Loading..." : "Syncing Drive files..."}
-              </div>
+      {/* Results */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        {(isLoading || isLoadingDrive) && (
+          <div className="flex justify-center items-center py-12">
+            <RefreshCcw className="w-6 h-6 text-[#E5007D] animate-spin mr-2" />
+            <div className="text-slate-600">
+              {isLoading ? "Loading..." : "Syncing Drive files..."}
             </div>
-          )}
+          </div>
+        )}
 
-          {!isLoading && (
-            <div className="text-xs text-slate-400 mb-3">
-              พบ {filteredItems.length} รายการ จาก {groupedBySubject.length}{" "}
-              วิชา
-              {isLoadingDrive && (
-                <span className="ml-2 text-[#E5007D]">
-                  ⟳ กำลังโหลด Drive files...
-                </span>
-              )}
-            </div>
-          )}
+        {!isLoading && (
+          <div className="text-xs text-slate-400 mb-3">
+            พบ {filteredItems.length} รายการ จาก {groupedBySubject.length} วิชา
+            {isLoadingDrive && (
+              <span className="ml-2 text-[#E5007D]">
+                ⟳ กำลังโหลด Drive files...
+              </span>
+            )}
+          </div>
+        )}
 
-          {!isLoading &&
-            (groupedBySubject.length > 0
-              ? groupedBySubject.map(({ subject, items }) => (
-                  <SubjectCard
-                    key={subject}
-                    subject={subject}
-                    items={items}
-                    isAdmin={isAdmin}
-                  />
-                ))
-              : !isLoadingDrive && (
-                  <div className="text-center py-20 bg-white rounded-xl border border-dashed border-slate-300">
-                    <Search className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                    <h3 className="text-slate-900 font-medium">
-                      No resources found
-                    </h3>
-                    <p className="text-slate-500 text-sm">
-                      Try adjusting your filters.
-                    </p>
-                  </div>
-                ))}
-        </div>
+        {!isLoading &&
+          (groupedBySubject.length > 0
+            ? groupedBySubject.map(({ subject, items }) => (
+                <SubjectCard
+                  key={subject}
+                  subject={subject}
+                  items={items}
+                  isAdmin={isAdmin}
+                  onEdit={(item) => {
+                    setEditingItem({
+                      id: item.id,
+                      blockName: item.block_name,
+                      blockCode: '',
+                      generation: item.generation,
+                      block: item.block,
+                      category: item.category,
+                      driveLink: item.drive_link,
+                      thumbnail: item.thumbnail,
+                    });
+                    setEditDialogOpen(true);
+                  }}
+                  onDelete={(item) => {
+                    setDeletingItem({ id: item.id, name: item.block_name });
+                    setDeleteDialogOpen(true);
+                  }}
+                />
+              ))
+            : !isLoadingDrive && (
+                <div className="text-center py-20 bg-white rounded-xl border border-dashed border-slate-300">
+                  <Search className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                  <h3 className="text-slate-900 font-medium">
+                    No resources found
+                  </h3>
+                  <p className="text-slate-500 text-sm">
+                    Try adjusting your filters.
+                  </p>
+                </div>
+              ))}
       </div>
     </div>
-  );
+
+    {/* Dialogs */}
+    <AddResourceDialog
+      open={addDialogOpen}
+      onOpenChange={setAddDialogOpen}
+      onSubmit={handleAdd}
+    />
+    <EditResourceDialog
+      open={editDialogOpen}
+      onOpenChange={setEditDialogOpen}
+      onSubmit={handleEdit}
+      initialData={editingItem ?? undefined}
+    />
+    <DeleteConfirmDialog
+      open={deleteDialogOpen}
+      onOpenChange={setDeleteDialogOpen}
+      onConfirm={handleDelete}
+      itemName={deletingItem?.name ?? ''}
+    />
+  </div>
+);
 }
