@@ -395,7 +395,7 @@ export function FilterBar({
   const safeBlockOptions = blockOptions ?? [];
   const filteredBlockOptions = [
     ...filterBlocksByYear(safeBlockOptions, selectedYear),
-    "other",
+    // "other",
   ];
   // const filteredBlockOptions = filterBlocksByYear(blockOptions, selectedYear);
 
