@@ -393,10 +393,10 @@ export function FilterBar({
 
   // กรอง block ตาม year ที่เลือก
   const safeBlockOptions = blockOptions ?? [];
-  const filteredBlockOptions = filterBlocksByYear(
-    safeBlockOptions,
-    selectedYear,
-  );
+  const filteredBlockOptions = [
+    ...filterBlocksByYear(safeBlockOptions, selectedYear),
+    "other",
+  ];
   // const filteredBlockOptions = filterBlocksByYear(blockOptions, selectedYear);
 
   // ถ้า year เปลี่ยน → clear block ที่ไม่ได้อยู่ใน filtered แล้ว
@@ -521,7 +521,7 @@ export function FilterBar({
 
           <CheckboxGroup
             label="เลือกประเภท"
-            options={categoryOptions}
+            options={[...(categoryOptions ?? DEFAULT_CATEGORIES), "other"]}
             selected={selectedCategory}
             onChange={onCategoryChange}
             colorMap={TYPE_COLORS}
@@ -529,7 +529,7 @@ export function FilterBar({
 
           <CheckboxGroup
             label="เลือกรุ่น"
-            options={generationOptions}
+            options={[...(generationOptions ?? DEFAULT_GENERATIONS), "other"]}
             selected={selectedGeneration}
             onChange={onGenerationChange}
           />

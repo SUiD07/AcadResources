@@ -72,12 +72,26 @@ function SubjectCard({
 }: SubjectCardProps) {
   const [expanded, setExpanded] = useState(false);
 
-  const typesPresent = DOC_TYPE_ORDER.filter((t) =>
-    items.some((i) => i.category === t),
-  );
+  const typesPresent = [
+    ...DOC_TYPE_ORDER.filter((t) => items.some((i) => i.category === t)),
+    // เพิ่ม "ไม่ระบุประเภท" ถ้ามี item ที่ category ไม่อยู่ใน DOC_TYPE_ORDER
+    ...(items.some(
+      (i) =>
+        !i.category ||
+        i.category === "Unknown" ||
+        !DOC_TYPE_ORDER.includes(i.category),
+    )
+      ? ["ไม่ระบุประเภท"]
+      : []),
+  ];
+
   const gens = [...new Set(items.map((i) => i.generation))]
     .filter((g) => g !== "Auto-Detected")
     .sort((a, b) => b.localeCompare(a));
+
+  const hasUnknownGen = items.some(
+    (i) => !i.generation || i.generation === "Auto-Detected",
+  );
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden mb-3">
@@ -100,7 +114,16 @@ function SubjectCard({
                   color: TYPE_COLORS[t] ?? "#6B7280",
                 }}
               >
-                {t} ({items.filter((i) => i.category === t).length})
+                {t} (
+                {t === "ไม่ระบุประเภท"
+                  ? items.filter(
+                      (i) =>
+                        !i.category ||
+                        i.category === "Unknown" ||
+                        !DOC_TYPE_ORDER.includes(i.category),
+                    ).length
+                  : items.filter((i) => i.category === t).length}
+                ){" "}
               </span>
             ))}
             {gens.map((g) => (
@@ -112,6 +135,14 @@ function SubjectCard({
                 {g}
               </span>
             ))}
+            {hasUnknownGen && (
+              <span
+                className="text-xs px-2 py-0.5 rounded-full"
+                style={{ background: "#F1F5F9", color: "#94A3B8" }}
+              >
+                ไม่ระบุรุ่น
+              </span>
+            )}
           </div>
         </div>
         <span className="text-slate-400 ml-4 shrink-0">
@@ -130,7 +161,16 @@ function SubjectCard({
             <ContentCategory
               key={type}
               categoryName={type}
-              items={items.filter((i) => i.category === type)}
+              items={
+                type === "ไม่ระบุประเภท"
+                  ? items.filter(
+                      (i) =>
+                        !i.category ||
+                        i.category === "Unknown" ||
+                        !DOC_TYPE_ORDER.includes(i.category),
+                    )
+                  : items.filter((i) => i.category === type)
+              }
               isAdmin={isAdmin}
               defaultExpanded={type === "Precourse"}
               onEdit={onEdit}
@@ -289,16 +329,42 @@ export function PeerSupportSection({
           if (!selectedYear.includes(yearStr)) return false;
         }
 
+        // Generation
+        const genVal =
+          !item.generation || item.generation === "Auto-Detected"
+            ? "other"
+            : item.generation;
         const genMatch =
           selectedGeneration.length === 0 ||
-          selectedGeneration.some((g) =>
-            item.generation.includes(g.replace("MDCU ", "")),
-          );
+          (genVal === "other"
+            ? selectedGeneration.includes("other") ||
+              selectedGeneration.length === 0
+            : selectedGeneration.some((g) =>
+                genVal.includes(g.replace("MDCU ", "")),
+              ));
+
+        // Block
+        const blockVal =
+          !item.block || item.block === "Unclassified" ? "other" : item.block;
         const blockMatch =
-          selectedBlock.length === 0 || selectedBlock.includes(item.block);
+          selectedBlock.length === 0 ||
+          (blockVal === "other"
+            ? selectedBlock.includes("other") || selectedBlock.length === 0
+            : selectedBlock.includes(blockVal));
+
+        // Category
+        const catVal =
+          !item.category ||
+          item.category === "Unknown" ||
+          !DOC_TYPE_ORDER.includes(item.category) // ← เพิ่ม: category ที่ไม่อยู่ใน DOC_TYPE_ORDER ก็เป็น other
+            ? "other"
+            : item.category;
         const catMatch =
           selectedCategory.length === 0 ||
-          selectedCategory.includes(item.category);
+          (catVal === "other"
+            ? selectedCategory.includes("other") ||
+              selectedCategory.length === 0
+            : selectedCategory.includes(catVal));
 
         return genMatch && blockMatch && catMatch;
       }),
@@ -315,155 +381,164 @@ export function PeerSupportSection({
   const groupedBySubject = useMemo(() => {
     const map: Record<string, PeerSupportItem[]> = {};
     filteredItems.forEach((item) => {
-      if (!map[item.block]) map[item.block] = [];
-      map[item.block].push(item);
+      const key =
+        item.block && item.block !== "Unclassified"
+          ? item.block
+          : "ไม่ระบุวิชา"; // ← รวม block ที่ขาดข้อมูลไว้กลุ่มเดียวกัน
+      if (!map[key]) map[key] = [];
+      map[key].push(item);
     });
     return Object.entries(map)
-      .sort(([a], [b]) => a.localeCompare(b))
+      .sort(([a], [b]) => {
+        if (a === "ไม่ระบุวิชา") return 1; // ← ดันลงท้ายเสมอ
+        if (b === "ไม่ระบุวิชา") return -1;
+        return a.localeCompare(b);
+      })
       .map(([subject, items]) => ({ subject, items }));
   }, [filteredItems]);
 
   return (
-  <div className="pb-20 lg:pb-8">
-    {/* Header */}
-    <div className="mb-6 sm:mb-8">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
-        <h1 className="text-slate-900 font-bold text-[24px]">
-          Peer Support Resources
-        </h1>
-        {isAdmin && (
-          <Button
-            size="sm"
-            onClick={() => setAddDialogOpen(true)}
-            className="bg-[#E5007D] hover:bg-[#c00069] text-white"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add New Resource
-          </Button>
-        )}
+    <div className="pb-20 lg:pb-8">
+      {/* Header */}
+      <div className="mb-6 sm:mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
+          <h1 className="text-slate-900 font-bold text-[24px]">
+            Peer Support Resources
+          </h1>
+          {isAdmin && (
+            <Button
+              size="sm"
+              onClick={() => setAddDialogOpen(true)}
+              className="bg-[#E5007D] hover:bg-[#c00069] text-white"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add New Resource
+            </Button>
+          )}
+        </div>
+        <p className="text-slate-600 text-sm sm:text-base">
+          Browse and access peer-created academic materials
+        </p>
       </div>
-      <p className="text-slate-600 text-sm sm:text-base">
-        Browse and access peer-created academic materials
-      </p>
-    </div>
 
-    {/* Main layout */}
-    <div
-      style={{
-        display: "flex",
-        flexDirection: isMobileScreen ? "column" : "row",
-        gap: 20,
-        alignItems: "flex-start",
-      }}
-    >
-      {/* Filter sidebar */}
+      {/* Main layout */}
       <div
         style={{
-          width: isMobileScreen ? "100%" : 230,
-          flexShrink: 0,
-          position: isMobileScreen ? "static" : "sticky",
-          top: 20,
-          maxHeight: isMobileScreen ? "auto" : "calc(100vh - 40px)",
-          overflowY: isMobileScreen ? "visible" : "auto",
+          display: "flex",
+          flexDirection: isMobileScreen ? "column" : "row",
+          gap: 20,
+          alignItems: "flex-start",
         }}
       >
-        <FilterBar
-          generationOptions={filterOptions.generations}
-          blockOptions={filterOptions.blocks}
-          categoryOptions={filterOptions.types}
-          selectedGeneration={selectedGeneration}
-          selectedBlock={selectedBlock}
-          selectedCategory={selectedCategory}
-          onGenerationChange={setSelectedGeneration}
-          onBlockChange={setSelectedBlock}
-          onCategoryChange={setSelectedCategory}
-          isMobile={isMobileScreen}
-          selectedYear={selectedYear}
-          onYearChange={setSelectedYear}
-        />
-      </div>
+        {/* Filter sidebar */}
+        <div
+          style={{
+            width: isMobileScreen ? "100%" : 230,
+            flexShrink: 0,
+            position: isMobileScreen ? "static" : "sticky",
+            top: 20,
+            maxHeight: isMobileScreen ? "auto" : "calc(100vh - 40px)",
+            overflowY: isMobileScreen ? "visible" : "auto",
+          }}
+        >
+          <FilterBar
+            generationOptions={filterOptions.generations}
+            blockOptions={filterOptions.blocks}
+            categoryOptions={filterOptions.types}
+            selectedGeneration={selectedGeneration}
+            selectedBlock={selectedBlock}
+            selectedCategory={selectedCategory}
+            onGenerationChange={setSelectedGeneration}
+            onBlockChange={setSelectedBlock}
+            onCategoryChange={setSelectedCategory}
+            isMobile={isMobileScreen}
+            selectedYear={selectedYear}
+            onYearChange={setSelectedYear}
+          />
+        </div>
 
-      {/* Results */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        {(isLoading || isLoadingDrive) && (
-          <div className="flex justify-center items-center py-12">
-            <RefreshCcw className="w-6 h-6 text-[#E5007D] animate-spin mr-2" />
-            <div className="text-slate-600">
-              {isLoading ? "Loading..." : "Syncing Drive files..."}
+        {/* Results */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {(isLoading || isLoadingDrive) && (
+            <div className="flex justify-center items-center py-12">
+              <RefreshCcw className="w-6 h-6 text-[#E5007D] animate-spin mr-2" />
+              <div className="text-slate-600">
+                {isLoading ? "Loading..." : "Syncing Drive files..."}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {!isLoading && (
-          <div className="text-xs text-slate-400 mb-3">
-            พบ {filteredItems.length} รายการ จาก {groupedBySubject.length} วิชา
-            {isLoadingDrive && (
-              <span className="ml-2 text-[#E5007D]">
-                ⟳ กำลังโหลด Drive files...
-              </span>
-            )}
-          </div>
-        )}
+          {!isLoading && (
+            <div className="text-xs text-slate-400 mb-3">
+              พบ {filteredItems.length} รายการ จาก {groupedBySubject.length}{" "}
+              วิชา
+              {isLoadingDrive && (
+                <span className="ml-2 text-[#E5007D]">
+                  ⟳ กำลังโหลด Drive files...
+                </span>
+              )}
+            </div>
+          )}
 
-        {!isLoading &&
-          (groupedBySubject.length > 0
-            ? groupedBySubject.map(({ subject, items }) => (
-                <SubjectCard
-                  key={subject}
-                  subject={subject}
-                  items={items}
-                  isAdmin={isAdmin}
-                  onEdit={(item) => {
-                    setEditingItem({
-                      id: item.id,
-                      blockName: item.block_name,
-                      blockCode: '',
-                      generation: item.generation,
-                      block: item.block,
-                      category: item.category,
-                      driveLink: item.drive_link,
-                      thumbnail: item.thumbnail,
-                    });
-                    setEditDialogOpen(true);
-                  }}
-                  onDelete={(item) => {
-                    setDeletingItem({ id: item.id, name: item.block_name });
-                    setDeleteDialogOpen(true);
-                  }}
-                />
-              ))
-            : !isLoadingDrive && (
-                <div className="text-center py-20 bg-white rounded-xl border border-dashed border-slate-300">
-                  <Search className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                  <h3 className="text-slate-900 font-medium">
-                    No resources found
-                  </h3>
-                  <p className="text-slate-500 text-sm">
-                    Try adjusting your filters.
-                  </p>
-                </div>
-              ))}
+          {!isLoading &&
+            (groupedBySubject.length > 0
+              ? groupedBySubject.map(({ subject, items }) => (
+                  <SubjectCard
+                    key={subject}
+                    subject={subject}
+                    items={items}
+                    isAdmin={isAdmin}
+                    onEdit={(item) => {
+                      setEditingItem({
+                        id: item.id,
+                        blockName: item.block_name,
+                        blockCode: "",
+                        generation: item.generation,
+                        block: item.block,
+                        category: item.category,
+                        driveLink: item.drive_link,
+                        thumbnail: item.thumbnail,
+                      });
+                      setEditDialogOpen(true);
+                    }}
+                    onDelete={(item) => {
+                      setDeletingItem({ id: item.id, name: item.block_name });
+                      setDeleteDialogOpen(true);
+                    }}
+                  />
+                ))
+              : !isLoadingDrive && (
+                  <div className="text-center py-20 bg-white rounded-xl border border-dashed border-slate-300">
+                    <Search className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                    <h3 className="text-slate-900 font-medium">
+                      No resources found
+                    </h3>
+                    <p className="text-slate-500 text-sm">
+                      Try adjusting your filters.
+                    </p>
+                  </div>
+                ))}
+        </div>
       </div>
-    </div>
 
-    {/* Dialogs */}
-    <AddResourceDialog
-      open={addDialogOpen}
-      onOpenChange={setAddDialogOpen}
-      onSubmit={handleAdd}
-    />
-    <EditResourceDialog
-      open={editDialogOpen}
-      onOpenChange={setEditDialogOpen}
-      onSubmit={handleEdit}
-      initialData={editingItem ?? undefined}
-    />
-    <DeleteConfirmDialog
-      open={deleteDialogOpen}
-      onOpenChange={setDeleteDialogOpen}
-      onConfirm={handleDelete}
-      itemName={deletingItem?.name ?? ''}
-    />
-  </div>
-);
+      {/* Dialogs */}
+      <AddResourceDialog
+        open={addDialogOpen}
+        onOpenChange={setAddDialogOpen}
+        onSubmit={handleAdd}
+      />
+      <EditResourceDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        onSubmit={handleEdit}
+        initialData={editingItem ?? undefined}
+      />
+      <DeleteConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleDelete}
+        itemName={deletingItem?.name ?? ""}
+      />
+    </div>
+  );
 }
