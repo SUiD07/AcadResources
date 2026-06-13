@@ -2,8 +2,9 @@
 
 import * as React from "react";
 import { Filter } from "lucide-react";
+import { SUBJECT_YEAR_MAP } from "./categorize";
 
-// ─── TYPE_COLORS matches v5 artifact ─────────────────────────────────────────
+// ─── TYPE_COLORS ──────────────────────────────────────────────────────────────
 const TYPE_COLORS: Record<string, string> = {
   Precourse: "#0EA5E9",
   AC: "#3B82F6",
@@ -17,26 +18,46 @@ const TYPE_COLORS: Record<string, string> = {
   "Survival Guide": "#84CC16",
 };
 
-// ─── PROPS — multi-select (string[]) instead of single string ─────────────────
+const YEAR_COLORS: Record<string, string> = {
+  "1": "#3B82F6",
+  "2": "#10B981",
+  "3": "#8B5CF6",
+  "4": "#F59E0B",
+  "5": "#F43F5E",
+  "6": "#EC4899",
+  other: "#94A3B8",
+};
+
+const YEAR_LABELS: Record<string, string> = {
+  "1": "ปี 1",
+  "2": "ปี 2",
+  "3": "ปี 3",
+  "4": "ปี 4",
+  "5": "ปี 5",
+  "6": "ปี 6",
+  other: "Other",
+};
+
+// ─── PROPS ────────────────────────────────────────────────────────────────────
 export interface FilterBarProps {
-  // options derived from DB (pass [] to use built-in defaults)
   generationOptions?: string[];
   blockOptions?: string[];
   categoryOptions?: string[];
 
+  selectedYear: string[]; // ← ใหม่
   selectedGeneration: string[];
   selectedBlock: string[];
   selectedCategory: string[];
 
+  onYearChange: (value: string[]) => void; // ← ใหม่
   onGenerationChange: (value: string[]) => void;
   onBlockChange: (value: string[]) => void;
   onCategoryChange: (value: string[]) => void;
 
-  // mobile: filter panel collapsible
   isMobile?: boolean;
 }
 
-// ─── DEFAULT OPTIONS (fallback when not passed from DB) ───────────────────────
+// ─── DEFAULT OPTIONS ──────────────────────────────────────────────────────────
 const DEFAULT_GENERATIONS = [
   "MDCU 81",
   "MDCU 80",
@@ -44,15 +65,6 @@ const DEFAULT_GENERATIONS = [
   "MDCU 78",
   "MDCU 77",
   "MDCU 76",
-];
-const DEFAULT_BLOCKS = [
-  "Block 1.1",
-  "Block 1.2",
-  "Block 2.1",
-  "Block 2.2",
-  "Block 3.1",
-  "Clinical Neuroscience",
-  "Cardiovascular System",
 ];
 const DEFAULT_CATEGORIES = [
   "Precourse",
@@ -67,6 +79,24 @@ const DEFAULT_CATEGORIES = [
   "Survival Guide",
 ];
 
+// ─── YEAR OPTIONS (เสมอ 1-6 + other) ────────────────────────────────────────
+const YEAR_OPTIONS = ["1", "2", "3", "4", "5", "6", "other"];
+
+// ─── helper: กรอง blockOptions ตาม selectedYear ──────────────────────────────
+export function filterBlocksByYear(
+  blockOptions: string[] | undefined,
+  selectedYear: string[] | undefined,
+): string[] {
+  const safeBlocks = blockOptions ?? [];
+  const safeYears = selectedYear ?? [];
+  if (safeYears.length === 0) return safeBlocks;
+  return safeBlocks.filter((block) => {
+    const year = SUBJECT_YEAR_MAP[block];
+    if (year === undefined) return safeYears.includes("other");
+    return safeYears.includes(String(year));
+  });
+}
+
 // ─── CHECKBOX GROUP ───────────────────────────────────────────────────────────
 interface CheckboxGroupProps {
   label: string;
@@ -74,7 +104,9 @@ interface CheckboxGroupProps {
   selected: string[];
   onChange: (val: string[]) => void;
   colorMap?: Record<string, string>;
+  labelMap?: Record<string, string>;
   emptyMsg?: string;
+  chipStyle?: boolean; // แสดงเป็น pill แทน checkbox เล็กๆ
 }
 
 function CheckboxGroup({
@@ -83,7 +115,9 @@ function CheckboxGroup({
   selected,
   onChange,
   colorMap,
+  labelMap,
   emptyMsg,
+  chipStyle = false,
 }: CheckboxGroupProps) {
   const [open, setOpen] = React.useState(true);
 
@@ -100,7 +134,6 @@ function CheckboxGroup({
         marginBottom: 14,
       }}
     >
-      {/* Header row */}
       <div
         onClick={() => setOpen((o) => !o)}
         style={{
@@ -145,7 +178,6 @@ function CheckboxGroup({
         </div>
       </div>
 
-      {/* Options */}
       {open &&
         (options.length === 0 ? (
           <span style={{ fontSize: 12, color: "#CBD5E1", fontStyle: "italic" }}>
@@ -156,6 +188,34 @@ function CheckboxGroup({
             {options.map((opt) => {
               const isActive = selected.includes(opt);
               const color = colorMap?.[opt] ?? "#475569";
+              const displayLabel = labelMap?.[opt] ?? opt;
+
+              if (chipStyle) {
+                // Year pill style — ใหญ่กว่า มี border radius เต็ม
+                return (
+                  <button
+                    key={opt}
+                    type="button"
+                    onClick={() => toggle(opt)}
+                    style={{
+                      padding: "5px 14px",
+                      borderRadius: 999,
+                      border: isActive
+                        ? `2px solid ${color}`
+                        : "2px solid #E2E8F0",
+                      background: isActive ? color : "white",
+                      color: isActive ? "white" : "#64748B",
+                      fontSize: 13,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      transition: "all 0.15s",
+                    }}
+                  >
+                    {displayLabel}
+                  </button>
+                );
+              }
+
               return (
                 <button
                   key={opt}
@@ -177,7 +237,6 @@ function CheckboxGroup({
                     cursor: "pointer",
                   }}
                 >
-                  {/* Checkbox box */}
                   <span
                     style={{
                       width: 13,
@@ -201,7 +260,7 @@ function CheckboxGroup({
                       </span>
                     )}
                   </span>
-                  {opt}
+                  {displayLabel}
                 </button>
               );
             })}
@@ -212,26 +271,33 @@ function CheckboxGroup({
 }
 
 // ─── ACTIVE CHIPS ─────────────────────────────────────────────────────────────
-interface ActiveChipsProps {
-  gens: string[];
-  blocks: string[];
-  types: string[];
-  setGens: (v: string[]) => void;
-  setBlocks: (v: string[]) => void;
-  setTypes: (v: string[]) => void;
-  clearAll: () => void;
-}
-
 function ActiveChips({
+  years,
   gens,
   blocks,
   types,
+  setYears,
   setGens,
   setBlocks,
   setTypes,
   clearAll,
-}: ActiveChipsProps) {
+}: {
+  years: string[];
+  gens: string[];
+  blocks: string[];
+  types: string[];
+  setYears: (v: string[]) => void;
+  setGens: (v: string[]) => void;
+  setBlocks: (v: string[]) => void;
+  setTypes: (v: string[]) => void;
+  clearAll: () => void;
+}) {
   const chips = [
+    ...years.map((v) => ({
+      label: YEAR_LABELS[v] ?? v,
+      color: YEAR_COLORS[v] ?? "#64748B",
+      rm: () => setYears(years.filter((x) => x !== v)),
+    })),
     ...gens.map((v) => ({
       label: v,
       color: "#E5007D",
@@ -311,11 +377,13 @@ function ActiveChips({
 // ─── FILTERBAR (main export) ──────────────────────────────────────────────────
 export function FilterBar({
   generationOptions = DEFAULT_GENERATIONS,
-  blockOptions = DEFAULT_BLOCKS,
+  blockOptions,
   categoryOptions = DEFAULT_CATEGORIES,
+  selectedYear,
   selectedGeneration,
   selectedBlock,
   selectedCategory,
+  onYearChange,
   onGenerationChange,
   onBlockChange,
   onCategoryChange,
@@ -323,9 +391,32 @@ export function FilterBar({
 }: FilterBarProps) {
   const [open, setOpen] = React.useState(!isMobile);
 
+  // กรอง block ตาม year ที่เลือก
+  const safeBlockOptions = blockOptions ?? [];
+  const filteredBlockOptions = [
+    ...filterBlocksByYear(safeBlockOptions, selectedYear),
+    "other",
+  ];
+  // const filteredBlockOptions = filterBlocksByYear(blockOptions, selectedYear);
+
+  // ถ้า year เปลี่ยน → clear block ที่ไม่ได้อยู่ใน filtered แล้ว
+  React.useEffect(() => {
+    if (selectedYear.length === 0) return;
+    const validBlocks = filteredBlockOptions;
+    const stillValid = selectedBlock.filter((b) => validBlocks.includes(b));
+    if (stillValid.length !== selectedBlock.length) {
+      onBlockChange(stillValid);
+    }
+  }, [selectedYear]);
+
   const activeCount =
-    selectedGeneration.length + selectedBlock.length + selectedCategory.length;
+    selectedYear.length +
+    selectedGeneration.length +
+    selectedBlock.length +
+    selectedCategory.length;
+
   const clearAll = () => {
+    onYearChange([]);
     onGenerationChange([]);
     onBlockChange([]);
     onCategoryChange([]);
@@ -397,38 +488,62 @@ export function FilterBar({
         </div>
       </div>
 
-      {/* Filter groups */}
       {open && (
-        <div style={{ padding: "16px 16px 4px" }}>
+        <div
+          style={{
+            padding: "16px 16px 4px",
+            maxHeight: "60vh",
+            overflowY: "scroll",
+          }}
+        >
+          {/* ── Year filter (บนสุด) ── */}
           <CheckboxGroup
-            label="เลือกรุ่น"
-            options={generationOptions}
-            selected={selectedGeneration}
-            onChange={onGenerationChange}
+            label="เลือกชั้นปี"
+            options={YEAR_OPTIONS}
+            selected={selectedYear}
+            onChange={onYearChange}
+            colorMap={YEAR_COLORS}
+            labelMap={YEAR_LABELS}
           />
+
+          {/* Block — แสดงเฉพาะวิชาในปีที่เลือก */}
           <CheckboxGroup
             label="เลือก Block"
-            options={blockOptions}
+            options={filteredBlockOptions}
             selected={selectedBlock}
             onChange={onBlockChange}
+            emptyMsg={
+              selectedYear.length > 0
+                ? "ไม่มีรายวิชาในชั้นปีนี้"
+                : "— (เลือกชั้นปีเพื่อกรองรายวิชา)"
+            }
           />
+
           <CheckboxGroup
             label="เลือกประเภท"
-            options={categoryOptions}
+            options={[...(categoryOptions ?? DEFAULT_CATEGORIES), "other"]}
             selected={selectedCategory}
             onChange={onCategoryChange}
             colorMap={TYPE_COLORS}
           />
+
+          <CheckboxGroup
+            label="เลือกรุ่น"
+            options={[...(generationOptions ?? DEFAULT_GENERATIONS), "other"]}
+            selected={selectedGeneration}
+            onChange={onGenerationChange}
+          />
         </div>
       )}
 
-      {/* Active chips — shown inside the panel */}
       {activeCount > 0 && (
         <div style={{ padding: "0 16px 14px" }}>
           <ActiveChips
+            years={selectedYear}
             gens={selectedGeneration}
             blocks={selectedBlock}
             types={selectedCategory}
+            setYears={onYearChange}
             setGens={onGenerationChange}
             setBlocks={onBlockChange}
             setTypes={onCategoryChange}
@@ -439,89 +554,3 @@ export function FilterBar({
     </div>
   );
 }
-
-// import * as React from 'react';
-// import { Filter, Check, ChevronsUpDown } from 'lucide-react';
-// import { cn } from "../lib/utils";
-// import { Button } from "../components/ui/button";
-// import {
-//   Command,
-//   CommandEmpty,
-//   CommandGroup,
-//   CommandInput,
-//   CommandItem,
-//   CommandList,
-// } from "../components/ui/command";
-// import {
-//   Popover,
-//   PopoverContent,
-//   PopoverTrigger,
-// } from "../components/ui/popover";
-
-// interface FilterBarProps {
-//   selectedGeneration: string;
-//   selectedBlock: string;
-//   onGenerationChange: (value: string) => void;
-//   onBlockChange: (value: string) => void;
-// }
-
-// interface FilterBarProps {
-//   selectedGeneration: string;
-//   selectedBlock: string;
-//   onGenerationChange: (value: string) => void;
-//   onBlockChange: (value: string) => void;
-// }
-
-// export function FilterBar({
-//   selectedGeneration,
-//   selectedBlock,
-//   onGenerationChange,
-//   onBlockChange,
-// }: FilterBarProps) {
-//   const generations = ['MDCU 81', 'MDCU 80', 'MDCU 79', 'MDCU 78', 'MDCU 77', 'MDCU 76', 'ทั้งหมด'];
-//   const blocks = [
-//     'Block 1.1', 'Block 1.2', 'Block 2.1', 'Block 2.2', 'Block 3.1',
-//     'Clinical Neuroscience', 'Cardiovascular System', 'ทั้งหมด',
-//   ];
-
-//   return (
-//     <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-6 shadow-sm">
-//       <div className="flex items-center gap-2 mb-4">
-//         <Filter className="w-5 h-5 text-slate-600" />
-//         <h2 className="text-slate-900 font-medium">Filter Resources</h2>
-//       </div>
-
-//       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-//         {/* เลือกปี/รุ่น */}
-//         <div className="flex flex-col">
-//           <label className="block text-sm text-slate-700 mb-2 font-[Sarabun]">เลือกรุ่น (พิมพ์ค้นหาได้)</label>
-//           <input
-//             list="gen-list"
-//             value={selectedGeneration}
-//             onChange={(e) => onGenerationChange(e.target.value)}
-//             placeholder="พิมพ์หรือเลือก..."
-//             className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-//           />
-//           <datalist id="gen-list">
-//             {generations.map(gen => <option key={gen} value={gen} />)}
-//           </datalist>
-//         </div>
-
-//         {/* เลือก Block */}
-//         <div className="flex flex-col">
-//           <label className="block text-sm text-slate-700 mb-2 font-[Sarabun]">เลือก Block (พิมพ์ค้นหาได้)</label>
-//           <input
-//             list="block-list"
-//             value={selectedBlock}
-//             onChange={(e) => onBlockChange(e.target.value)}
-//             placeholder="พิมพ์หรือเลือก..."
-//             className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-//           />
-//           <datalist id="block-list">
-//             {blocks.map(block => <option key={block} value={block} />)}
-//           </datalist>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// }

@@ -35,9 +35,9 @@ export interface Activity {
   id: string;
   title: string;
   description: string;
-  icon: string; // Icon name as string for Supabase storage
   date: string;
-  status: string;
+  status: "Upcoming" | "Ongoing" | "Completed";
+  icon: string;
 }
 
 export interface ResourceCategory {

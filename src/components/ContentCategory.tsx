@@ -42,6 +42,8 @@ interface ContentCategoryProps {
   isAdmin?: boolean;
   // ── ใหม่: เปิด accordion ตั้งแต่แรกหรือไม่ (default: false) ──
   defaultExpanded?: boolean;
+  onEdit?: (item: ContentItem) => void;
+  onDelete?: (item: ContentItem) => void;
 }
 
 function getDriveThumbnail(driveLink: string): string {
@@ -57,6 +59,8 @@ export function ContentCategory({
   items,
   isAdmin = false,
   defaultExpanded = false,
+  onEdit,
+  onDelete,
 }: ContentCategoryProps) {
   const [expanded, setExpanded] = useState(defaultExpanded);
 
@@ -297,7 +301,7 @@ export function ContentCategory({
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleEdit(item.id)}
+                          onClick={() => onEdit?.(item)} // ← แก้จาก handleEdit(item.id)
                           className="border-[#E5007D] text-[#E5007D] hover:bg-pink-50"
                         >
                           <Pencil className="w-3 h-3" />
@@ -305,7 +309,7 @@ export function ContentCategory({
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleDelete(item.id)}
+                          onClick={() => onDelete?.(item)} //
                           className="border-red-300 text-red-600 hover:bg-red-50"
                         >
                           <Trash2 className="w-3 h-3" />

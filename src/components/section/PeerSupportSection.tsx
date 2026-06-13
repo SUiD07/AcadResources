@@ -1,13 +1,25 @@
 import { useState, useMemo, useEffect } from "react";
-import { FilterBar } from "./FilterBar";
-import { ContentCategory } from "./ContentCategory";
-import { getStudentDocuments } from "../lib/dataService";
-import type { StudentDocument, PeerSupportItem } from "../lib/types";
-import * as googleDrive from "../lib/googleDriveService";
-import { detectDocType, detectBlock } from "./categorize";
-import { Button } from "./ui/button";
+import { FilterBar, filterBlocksByYear } from "../FilterBar";
+import { ContentCategory } from "../ContentCategory";
+import {
+  getStudentDocuments,
+  addPeerSupportItem,
+  editPeerSupportItem,
+  removePeerSupportItem,
+} from "../../lib/dataService";
+import type { StudentDocument, PeerSupportItem } from "../../lib/types";
+import * as googleDrive from "../../lib/googleDriveService";
+import { detectDocType, detectBlock, SUBJECT_YEAR_MAP } from "../categorize";
+import { Button } from "../ui/button";
 import { Plus, Search, RefreshCcw, ChevronDown, ChevronUp } from "lucide-react";
-import { useIsMobile } from "./ui/use-mobile";
+import { useIsMobile } from "../ui/use-mobile";
+import {
+  AddResourceDialog,
+  type ResourceFormData,
+} from "../admin/AddResourceDialog";
+import { EditResourceDialog } from "../admin/EditResourceDialog";
+import { DeleteConfirmDialog } from "../admin/DeleteConfirmDialog";
+// import { addStudentDocument, updateStudentDocument, deleteStudentDocument } from '../../lib/dataService';
 
 // ─── TYPE ORDER (Precourse ขึ้นก่อนเสมอ) ─────────────────────────────────────
 const DOC_TYPE_ORDER = [
@@ -47,17 +59,39 @@ interface SubjectCardProps {
   subject: string;
   items: PeerSupportItem[];
   isAdmin: boolean;
+  onEdit?: (item: PeerSupportItem) => void;
+  onDelete?: (item: PeerSupportItem) => void;
 }
 
-function SubjectCard({ subject, items, isAdmin }: SubjectCardProps) {
+function SubjectCard({
+  subject,
+  items,
+  isAdmin,
+  onEdit,
+  onDelete,
+}: SubjectCardProps) {
   const [expanded, setExpanded] = useState(false);
 
-  const typesPresent = DOC_TYPE_ORDER.filter((t) =>
-    items.some((i) => i.category === t),
-  );
+  const typesPresent = [
+    ...DOC_TYPE_ORDER.filter((t) => items.some((i) => i.category === t)),
+    // เพิ่ม "ไม่ระบุประเภท" ถ้ามี item ที่ category ไม่อยู่ใน DOC_TYPE_ORDER
+    ...(items.some(
+      (i) =>
+        !i.category ||
+        i.category === "Unknown" ||
+        !DOC_TYPE_ORDER.includes(i.category),
+    )
+      ? ["ไม่ระบุประเภท"]
+      : []),
+  ];
+
   const gens = [...new Set(items.map((i) => i.generation))]
     .filter((g) => g !== "Auto-Detected")
     .sort((a, b) => b.localeCompare(a));
+
+  const hasUnknownGen = items.some(
+    (i) => !i.generation || i.generation === "Auto-Detected",
+  );
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden mb-3">
@@ -80,7 +114,16 @@ function SubjectCard({ subject, items, isAdmin }: SubjectCardProps) {
                   color: TYPE_COLORS[t] ?? "#6B7280",
                 }}
               >
-                {t} ({items.filter((i) => i.category === t).length})
+                {t} (
+                {t === "ไม่ระบุประเภท"
+                  ? items.filter(
+                      (i) =>
+                        !i.category ||
+                        i.category === "Unknown" ||
+                        !DOC_TYPE_ORDER.includes(i.category),
+                    ).length
+                  : items.filter((i) => i.category === t).length}
+                ){" "}
               </span>
             ))}
             {gens.map((g) => (
@@ -92,9 +135,17 @@ function SubjectCard({ subject, items, isAdmin }: SubjectCardProps) {
                 {g}
               </span>
             ))}
+            {hasUnknownGen && (
+              <span
+                className="text-xs px-2 py-0.5 rounded-full"
+                style={{ background: "#F1F5F9", color: "#94A3B8" }}
+              >
+                ไม่ระบุรุ่น
+              </span>
+            )}
           </div>
         </div>
-        <span className="text-slate-400 ml-4 flex-shrink-0">
+        <span className="text-slate-400 ml-4 shrink-0">
           {expanded ? (
             <ChevronUp className="w-5 h-5" />
           ) : (
@@ -110,9 +161,20 @@ function SubjectCard({ subject, items, isAdmin }: SubjectCardProps) {
             <ContentCategory
               key={type}
               categoryName={type}
-              items={items.filter((i) => i.category === type)}
+              items={
+                type === "ไม่ระบุประเภท"
+                  ? items.filter(
+                      (i) =>
+                        !i.category ||
+                        i.category === "Unknown" ||
+                        !DOC_TYPE_ORDER.includes(i.category),
+                    )
+                  : items.filter((i) => i.category === type)
+              }
               isAdmin={isAdmin}
               defaultExpanded={type === "Precourse"}
+              onEdit={onEdit}
+              onDelete={onDelete}
             />
           ))}
         </div>
@@ -126,8 +188,41 @@ export function PeerSupportSection({
   isAdmin = false,
   isMobile = false,
 }: PeerSupportSectionProps) {
+  // Dialog states
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<
+    (ResourceFormData & { id: string }) | null
+  >(null);
+  const [deletingItem, setDeletingItem] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+
+  const handleAdd = async (data: ResourceFormData) => {
+    await addPeerSupportItem(data);
+    const updated = await getStudentDocuments();
+    setStudentDocs(updated);
+  };
+
+  const handleEdit = async (data: ResourceFormData & { id: string }) => {
+    await editPeerSupportItem(data);
+    const updated = await getStudentDocuments();
+    setStudentDocs(updated);
+  };
+
+  const handleDelete = async () => {
+    if (!deletingItem) return;
+    await removePeerSupportItem(deletingItem.id);
+    const updated = await getStudentDocuments();
+    setStudentDocs(updated);
+  };
+
   const isMobileScreen = useIsMobile();
+
   // filter state — multi-select string[]
+  const [selectedYear, setSelectedYear] = useState<string[]>([]);
   const [selectedGeneration, setSelectedGeneration] = useState<string[]>([]);
   const [selectedBlock, setSelectedBlock] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string[]>([]);
@@ -199,7 +294,7 @@ export function PeerSupportSection({
     [studentDocs, driveFiles],
   );
 
-  // dynamic filter options จากข้อมูลจริง
+  // dynamic filter options จากข้อมูลจริง (ไม่แสดงตัวเลือกที่ไม่มีในข้อมูล)
   const filterOptions = useMemo(() => {
     const genSet = new Set(
       allItems.map((d) => d.generation).filter((g) => g !== "Auto-Detected"),
@@ -213,34 +308,92 @@ export function PeerSupportSection({
     };
   }, [allItems]);
 
+  // ── clear selectedBlock ถ้าปีเปลี่ยนแล้ว block นั้นไม่อยู่ในปีที่เลือกแล้ว ──
+  useEffect(() => {
+    if (selectedYear.length === 0) return;
+    const validBlocks = filterBlocksByYear(filterOptions.blocks, selectedYear);
+    const stillValid = selectedBlock.filter((b) => validBlocks.includes(b));
+    if (stillValid.length !== selectedBlock.length) {
+      setSelectedBlock(stillValid);
+    }
+  }, [selectedYear]);
+
   // filter — OR within, AND across
   const filteredItems = useMemo(
     () =>
       allItems.filter((item) => {
+        // Year filter
+        if (selectedYear.length > 0) {
+          const year = SUBJECT_YEAR_MAP[item.block];
+          const yearStr = year === undefined ? "other" : String(year);
+          if (!selectedYear.includes(yearStr)) return false;
+        }
+
+        // Generation
+        const genVal =
+          !item.generation || item.generation === "Auto-Detected"
+            ? "other"
+            : item.generation;
         const genMatch =
           selectedGeneration.length === 0 ||
-          selectedGeneration.some((g) =>
-            item.generation.includes(g.replace("MDCU ", "")),
-          );
+          (genVal === "other"
+            ? selectedGeneration.includes("other") ||
+              selectedGeneration.length === 0
+            : selectedGeneration.some((g) =>
+                genVal.includes(g.replace("MDCU ", "")),
+              ));
+
+        // Block
+        const blockVal =
+          !item.block || item.block === "Unclassified" ? "other" : item.block;
         const blockMatch =
-          selectedBlock.length === 0 || selectedBlock.includes(item.block);
+          selectedBlock.length === 0 ||
+          (blockVal === "other"
+            ? selectedBlock.includes("other") || selectedBlock.length === 0
+            : selectedBlock.includes(blockVal));
+
+        // Category
+        const catVal =
+          !item.category ||
+          item.category === "Unknown" ||
+          !DOC_TYPE_ORDER.includes(item.category) // ← เพิ่ม: category ที่ไม่อยู่ใน DOC_TYPE_ORDER ก็เป็น other
+            ? "other"
+            : item.category;
         const catMatch =
           selectedCategory.length === 0 ||
-          selectedCategory.includes(item.category);
+          (catVal === "other"
+            ? selectedCategory.includes("other") ||
+              selectedCategory.length === 0
+            : selectedCategory.includes(catVal));
+
         return genMatch && blockMatch && catMatch;
       }),
-    [allItems, selectedGeneration, selectedBlock, selectedCategory],
+    [
+      allItems,
+      selectedYear,
+      selectedGeneration,
+      selectedBlock,
+      selectedCategory,
+    ],
   );
 
   // จัดกลุ่มตาม Block/วิชา
   const groupedBySubject = useMemo(() => {
     const map: Record<string, PeerSupportItem[]> = {};
     filteredItems.forEach((item) => {
-      if (!map[item.block]) map[item.block] = [];
-      map[item.block].push(item);
+      const key =
+        item.block && item.block !== "Unclassified"
+          ? item.block
+          : "ไม่ระบุวิชา"; // ← รวม block ที่ขาดข้อมูลไว้กลุ่มเดียวกัน
+      if (!map[key]) map[key] = [];
+      map[key].push(item);
     });
     return Object.entries(map)
-      .sort(([a], [b]) => a.localeCompare(b))
+      .sort(([a], [b]) => {
+        if (a === "ไม่ระบุวิชา") return 1; // ← ดันลงท้ายเสมอ
+        if (b === "ไม่ระบุวิชา") return -1;
+        return a.localeCompare(b);
+      })
       .map(([subject, items]) => ({ subject, items }));
   }, [filteredItems]);
 
@@ -255,7 +408,7 @@ export function PeerSupportSection({
           {isAdmin && (
             <Button
               size="sm"
-              onClick={() => console.log("Add")}
+              onClick={() => setAddDialogOpen(true)}
               className="bg-[#E5007D] hover:bg-[#c00069] text-white"
             >
               <Plus className="w-4 h-4 mr-2" />
@@ -288,7 +441,6 @@ export function PeerSupportSection({
             overflowY: isMobileScreen ? "visible" : "auto",
           }}
         >
-          {" "}
           <FilterBar
             generationOptions={filterOptions.generations}
             blockOptions={filterOptions.blocks}
@@ -300,6 +452,8 @@ export function PeerSupportSection({
             onBlockChange={setSelectedBlock}
             onCategoryChange={setSelectedCategory}
             isMobile={isMobileScreen}
+            selectedYear={selectedYear}
+            onYearChange={setSelectedYear}
           />
         </div>
 
@@ -334,6 +488,23 @@ export function PeerSupportSection({
                     subject={subject}
                     items={items}
                     isAdmin={isAdmin}
+                    onEdit={(item) => {
+                      setEditingItem({
+                        id: item.id,
+                        blockName: item.block_name,
+                        blockCode: "",
+                        generation: item.generation,
+                        block: item.block,
+                        category: item.category,
+                        driveLink: item.drive_link,
+                        thumbnail: item.thumbnail,
+                      });
+                      setEditDialogOpen(true);
+                    }}
+                    onDelete={(item) => {
+                      setDeletingItem({ id: item.id, name: item.block_name });
+                      setDeleteDialogOpen(true);
+                    }}
                   />
                 ))
               : !isLoadingDrive && (
@@ -349,6 +520,25 @@ export function PeerSupportSection({
                 ))}
         </div>
       </div>
+
+      {/* Dialogs */}
+      <AddResourceDialog
+        open={addDialogOpen}
+        onOpenChange={setAddDialogOpen}
+        onSubmit={handleAdd}
+      />
+      <EditResourceDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        onSubmit={handleEdit}
+        initialData={editingItem ?? undefined}
+      />
+      <DeleteConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleDelete}
+        itemName={deletingItem?.name ?? ""}
+      />
     </div>
   );
 }

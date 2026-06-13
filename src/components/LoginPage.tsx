@@ -156,7 +156,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
             <CardContent className="space-y-6">
               {error && (
                 <Alert variant="destructive" className="bg-red-50 text-red-900 border-red-200">
-                  <AlertCircle className="h-4 h-4" />
+                  <AlertCircle className="h-4" />
                   <AlertTitle>Error</AlertTitle>
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
