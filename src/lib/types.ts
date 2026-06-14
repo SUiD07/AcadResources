@@ -55,3 +55,34 @@ export interface ResourceItem {
 }
 
 export type Section = 'peer-support' | 'academic-activities' | 'academic-resources';
+
+// ใช้สำหรับBoard
+export interface Generation {
+  id: string;
+  name: string;
+  slug: string;
+  color: string | null;
+  order_index: number;
+  created_at: string;
+}
+
+export interface Board {
+  id: string;
+  generation_id: string;
+  title: string;
+  icon: string | null;
+  cover_url: string | null;
+  order_index: number;
+  is_published: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BoardContent {
+  id: string;
+  board_id: string;
+  content: object;        // TipTap JSON
+  updated_at: string;
+  updated_by: string | null;
+}

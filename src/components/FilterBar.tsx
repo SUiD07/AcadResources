@@ -35,7 +35,19 @@ const YEAR_LABELS: Record<string, string> = {
   "4": "ปี 4",
   "5": "ปี 5",
   "6": "ปี 6",
-  other: "Other",
+  other: "ไม่ระบุชั้นปี",
+};
+
+const CATEGORY_LABELS: Record<string, string> = {
+  other: "ไม่ระบุประเภท",
+};
+
+const GENERATION_LABELS: Record<string, string> = {
+  other: "ไม่ระบุรุ่น",
+};
+
+const BLOCK_LABELS: Record<string, string> = {
+  other: "ไม่ระบุ Block",
 };
 
 // ─── PROPS ────────────────────────────────────────────────────────────────────
@@ -44,12 +56,12 @@ export interface FilterBarProps {
   blockOptions?: string[];
   categoryOptions?: string[];
 
-  selectedYear: string[]; // ← ใหม่
+  selectedYear: string[];
   selectedGeneration: string[];
   selectedBlock: string[];
   selectedCategory: string[];
 
-  onYearChange: (value: string[]) => void; // ← ใหม่
+  onYearChange: (value: string[]) => void;
   onGenerationChange: (value: string[]) => void;
   onBlockChange: (value: string[]) => void;
   onCategoryChange: (value: string[]) => void;
@@ -299,17 +311,17 @@ function ActiveChips({
       rm: () => setYears(years.filter((x) => x !== v)),
     })),
     ...gens.map((v) => ({
-      label: v,
+      label: GENERATION_LABELS[v] ?? v,
       color: "#E5007D",
       rm: () => setGens(gens.filter((x) => x !== v)),
     })),
     ...blocks.map((v) => ({
-      label: v,
+      label: BLOCK_LABELS[v] ?? v,
       color: "#7C3AED",
       rm: () => setBlocks(blocks.filter((x) => x !== v)),
     })),
     ...types.map((v) => ({
-      label: v,
+      label: CATEGORY_LABELS[v] ?? v,
       color: TYPE_COLORS[v] ?? "#6B7280",
       rm: () => setTypes(types.filter((x) => x !== v)),
     })),
@@ -512,6 +524,7 @@ export function FilterBar({
             options={filteredBlockOptions}
             selected={selectedBlock}
             onChange={onBlockChange}
+            labelMap={BLOCK_LABELS}
             emptyMsg={
               selectedYear.length > 0
                 ? "ไม่มีรายวิชาในชั้นปีนี้"
@@ -525,6 +538,7 @@ export function FilterBar({
             selected={selectedCategory}
             onChange={onCategoryChange}
             colorMap={TYPE_COLORS}
+            labelMap={CATEGORY_LABELS}
           />
 
           <CheckboxGroup
@@ -532,6 +546,7 @@ export function FilterBar({
             options={[...(generationOptions ?? DEFAULT_GENERATIONS), "other"]}
             selected={selectedGeneration}
             onChange={onGenerationChange}
+            labelMap={GENERATION_LABELS}
           />
         </div>
       )}

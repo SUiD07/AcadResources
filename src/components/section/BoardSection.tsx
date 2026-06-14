@@ -1,307 +1,287 @@
-import { useState, useRef, useEffect } from 'react';
-import { Plus, Edit, Trash2, Calendar, Pin, ChevronDown } from 'lucide-react';
-import { Button } from '../ui/button';
-import { AddAnnouncementDialog } from '../admin/AddAnnouncementDialog';
-import { EditAnnouncementDialog } from '../admin/EditAnnouncementDialog';
-import { DeleteAnnouncementDialog } from '../admin/DeleteAnnouncementDialog';
-import { format } from 'date-fns';
+import { useState, useEffect } from 'react';
+import { Plus, Trash2 } from 'lucide-react';
+import { useGenerations } from '../../hooks/useGenerations';
+import { getBoards, addBoard, removeBoard, removeGeneration } from '../../lib/dataService';
+import { useBoard } from '../../hooks/useBoard';
+import { Editor } from '../board/Editor';
+import type { Board, Generation } from '../../lib/types';
 
-export interface Announcement {
-  id: string;
-  generation: string;
-  title: string;
-  content: string;
-  author: string;
-  createdAt: Date;
-  isPinned: boolean;
+interface Props {
+  isAdmin?: boolean;
 }
 
-const mockAnnouncements: Announcement[] = [
-  {
-    id: '1',
-    generation: 'MDCU 81',
-    title: 'Welcome to Block 1!',
-    content: '<h2>Welcome Everyone!</h2><p>This is your first announcement. Good luck with your studies!</p><ul><li>Orientation: Monday 9AM</li><li>First class: Tuesday 10AM</li></ul>',
-    author: 'Admin MDCU 81',
-    createdAt: new Date('2026-06-01'),
-    isPinned: true,
-  },
-  {
-    id: '2',
-    generation: 'MDCU 81',
-    title: 'Midterm Schedule Released',
-    content: '<p>The midterm exam schedule has been posted. Please check the academic calendar.</p><p><strong>Important dates:</strong></p><ul><li>Written exam: June 15</li><li>Practical exam: June 17</li></ul>',
-    author: 'Admin MDCU 81',
-    createdAt: new Date('2026-06-05'),
-    isPinned: false,
-  },
-  {
-    id: '3',
-    generation: 'MDCU 80',
-    title: 'Study Group Formation',
-    content: '<p>We are organizing study groups for the upcoming exams. If you are interested, please sign up using the form below.</p>',
-    author: 'Admin MDCU 80',
-    createdAt: new Date('2026-06-03'),
-    isPinned: false,
-  },
-  {
-    id: '4',
-    generation: 'MDCU 80',
-    title: 'Block 3 Resources Available',
-    content: '<p>All Block 3 resources have been uploaded to the shared drive. Check the Academic Resources section for updated files.</p>',
-    author: 'Admin MDCU 80',
-    createdAt: new Date('2026-06-08'),
-    isPinned: true,
-  },
-  {
-    id: '5',
-    generation: 'MDCU 79',
-    title: 'Clinical Rotation Schedule',
-    content: '<p>The updated clinical rotation schedule for the next semester is now available. Please review your assigned rotations carefully.</p><ul><li>Group A: Internal Medicine</li><li>Group B: Surgery</li><li>Group C: Pediatrics</li></ul>',
-    author: 'Admin MDCU 79',
-    createdAt: new Date('2026-06-07'),
-    isPinned: false,
-  },
-  {
-    id: '6',
-    generation: 'MDCU 78',
-    title: 'Final Exam Preparation Tips',
-    content: '<p>As finals approach, here are some key resources to help you prepare. The tutor schedule has been updated in the Peer Support section.</p>',
-    author: 'Admin MDCU 78',
-    createdAt: new Date('2026-06-06'),
-    isPinned: false,
-  },
-];
+export function BoardSection({ isAdmin = false }: Props) {
+  const { generations, loading: genLoading, createGeneration } = useGenerations();
 
-interface BoardSectionProps {
-  isAdmin: boolean;
-}
+  const [activeGenId, setActiveGenId] = useState<string | null>(null);
+  const [boards, setBoards] = useState<Board[]>([]);
+  const [activeBoardId, setActiveBoardId] = useState<string | null>(null);
+  const [boardsLoading, setBoardsLoading] = useState(false);
 
-export function BoardSection({ isAdmin }: BoardSectionProps) {
-  const [announcements] = useState<Announcement[]>(mockAnnouncements);
-  const [selectedGeneration, setSelectedGeneration] = useState<string>('all');
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
-  const [deletingAnnouncement, setDeletingAnnouncement] = useState<Announcement | null>(null);
+  // Adding states
+  const [addingGen, setAddingGen] = useState(false);
+  const [newGenName, setNewGenName] = useState('');
+  const [addingBoard, setAddingBoard] = useState(false);
+  const [newBoardTitle, setNewBoardTitle] = useState('');
 
-  const generations = ['MDCU 81', 'MDCU 80', 'MDCU 79', 'MDCU 78', 'MDCU 77', 'MDCU 76'];
+  // Set default generation
+  useEffect(() => {
+    if (!genLoading && generations.length > 0 && !activeGenId) {
+      setActiveGenId(generations[0].id);
+    }
+  }, [genLoading, generations]);
 
-  const filteredAnnouncements = selectedGeneration === 'all'
-    ? announcements
-    : announcements.filter(a => a.generation === selectedGeneration);
+  // Load boards when generation changes
+  useEffect(() => {
+    if (!activeGenId) return;
+    setBoardsLoading(true);
+    setActiveBoardId(null);
+    getBoards(activeGenId).then((data) => {
+      setBoards(data);
+      if (data.length > 0) setActiveBoardId(data[0].id);
+      setBoardsLoading(false);
+    });
+  }, [activeGenId]);
 
-  const pinnedAnnouncements = filteredAnnouncements.filter(a => a.isPinned);
-  const regularAnnouncements = filteredAnnouncements.filter(a => !a.isPinned);
+  const handleAddGen = async () => {
+    if (!newGenName.trim()) return;
+    const slug = newGenName.trim().toLowerCase().replace(/\s+/g, '-');
+    const gen = await createGeneration(newGenName.trim(), slug);
+    setActiveGenId(gen.id);
+    setNewGenName('');
+    setAddingGen(false);
+  };
+
+  const handleDeleteGen = async (e: React.MouseEvent, gen: Generation) => {
+  e.stopPropagation();
+  if (!confirm(`ลบรุ่น "${gen.name}" และทุก page ในรุ่นนี้?`)) return;
+  await removeGeneration(gen.id);
+  const remaining = generations.filter((g) => g.id !== gen.id);
+  // generations มาจาก hook ต้อง refetch หรือ update state
+  if (activeGenId === gen.id) {
+    setActiveGenId(remaining[0]?.id ?? null);
+  }
+};
+
+  const handleAddBoard = async () => {
+    if (!newBoardTitle.trim() || !activeGenId) return;
+    const maxOrder = boards.reduce((m, b) => Math.max(m, b.order_index), -1);
+    const board = await addBoard({
+      generation_id: activeGenId,
+      title: newBoardTitle.trim(),
+      icon: null,
+      cover_url: null,
+      order_index: maxOrder + 1,
+      is_published: false,
+      created_by: null,
+    });
+    setBoards((prev) => [...prev, board]);
+    setActiveBoardId(board.id);
+    setNewBoardTitle('');
+    setAddingBoard(false);
+  };
+
+  const handleDeleteBoard = async (e: React.MouseEvent, board: Board) => {
+    e.stopPropagation();
+    if (!confirm(`ลบ "${board.title}" ?`)) return;
+    await removeBoard(board.id);
+    const remaining = boards.filter((b) => b.id !== board.id);
+    setBoards(remaining);
+    if (activeBoardId === board.id) {
+      setActiveBoardId(remaining[0]?.id ?? null);
+    }
+  };
 
   return (
-    <div className="space-y-6">
+    <div className="pb-20 lg:pb-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div
+        className={`flex items-start justify-between mb-4 px-6 pt-6}`}
+      >
         <div>
           <h1 className="text-slate-900">Announcements Board</h1>
-          <p className="text-slate-600 mt-1">Stay updated with important announcements from your generation</p>
+          <p className="text-slate-500 mt-1">
+            Select your generation to see announcements
+          </p>
         </div>
-        {isAdmin && (
-          <Button
-            onClick={() => setIsAddDialogOpen(true)}
-            className="bg-[#E5007D] hover:bg-[#C1006A] text-white"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            New Announcement
-          </Button>
-        )}
       </div>
 
-      {/* Generation Tabs */}
-      <div className="border-b border-slate-200">
-        <div className="flex overflow-x-auto scrollbar-hide -mb-px">
+      {/* ── Generation Tabs ── */}
+      <div className="flex items-center gap-1 mb-4 flex-wrap">
+        {generations.map((gen) => (
           <button
-            onClick={() => setSelectedGeneration('all')}
-            className={`shrink-0 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-              selectedGeneration === 'all'
-                ? 'border-[#E5007D] text-[#E5007D]'
-                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-            }`}
+            key={gen.id}
+            onClick={() => setActiveGenId(gen.id)}
+            className={`
+              px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all
+              ${gen.id === activeGenId
+                ? 'text-white shadow-sm'
+                : 'text-slate-600 hover:bg-slate-100'
+              }
+            `}
+            style={gen.id === activeGenId ? { backgroundColor: gen.color ?? '#E5007D' } : {}}
           >
-            All
+            {gen.name}
           </button>
-          {generations.map(gen => {
-            const count = announcements.filter(a => a.generation === gen).length;
-            return (
+        ))}
+
+        {isAdmin && (
+          addingGen ? (
+            <div className="flex items-center gap-1">
+              <input
+                autoFocus
+                value={newGenName}
+                onChange={(e) => setNewGenName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleAddGen();
+                  if (e.key === 'Escape') setAddingGen(false);
+                }}
+                placeholder="ชื่อรุ่น..."
+                className="px-3 py-1 text-sm border border-[#E5007D] rounded-full outline-none w-28"
+              />
               <button
-                key={gen}
-                onClick={() => setSelectedGeneration(gen)}
-                className={`shrink-0 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 ${
-                  selectedGeneration === gen
-                    ? 'border-[#E5007D] text-[#E5007D]'
-                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-                }`}
+                onClick={handleAddGen}
+                className="px-3 py-1 text-sm bg-[#E5007D] text-white rounded-full hover:bg-[#c00069]"
               >
-                {gen}
-                {count > 0 && (
-                  <span className={`inline-flex items-center justify-center px-1.5 py-0.5 rounded-full text-xs ${
-                    selectedGeneration === gen ? 'bg-[#E5007D] text-white' : 'bg-slate-100 text-slate-500'
-                  }`}>
-                    {count}
-                  </span>
-                )}
+                เพิ่ม
               </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Pinned Announcements */}
-      {pinnedAnnouncements.length > 0 && (
-        <div className="space-y-3">
-          <h2 className="text-slate-700 flex items-center gap-2">
-            <Pin className="w-4 h-4 text-[#E5007D]" />
-            Pinned Announcements
-          </h2>
-          {pinnedAnnouncements.map(announcement => (
-            <AnnouncementCard
-              key={announcement.id}
-              announcement={announcement}
-              isAdmin={isAdmin}
-              onEdit={setEditingAnnouncement}
-              onDelete={setDeletingAnnouncement}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Regular Announcements */}
-      <div className="space-y-3">
-        {regularAnnouncements.length === 0 && pinnedAnnouncements.length === 0 ? (
-          <div className="bg-white rounded-lg border border-slate-200 p-12 text-center">
-            <p className="text-slate-500">No announcements found for this generation.</p>
-          </div>
-        ) : (
-          regularAnnouncements.map(announcement => (
-            <AnnouncementCard
-              key={announcement.id}
-              announcement={announcement}
-              isAdmin={isAdmin}
-              onEdit={setEditingAnnouncement}
-              onDelete={setDeletingAnnouncement}
-            />
-          ))
+              <button
+                onClick={() => { setAddingGen(false); setNewGenName(''); }}
+                className="px-2 py-1 text-sm text-slate-500 hover:text-slate-800"
+              >
+                ยกเลิก
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setAddingGen(true)}
+              className="flex items-center gap-1 px-3 py-1.5 text-sm text-slate-400 hover:text-[#E5007D] hover:bg-pink-50 rounded-full transition-all"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              เพิ่มรุ่น
+            </button>
+          )
         )}
       </div>
 
-      {/* Dialogs */}
-      <AddAnnouncementDialog
-        open={isAddDialogOpen}
-        onOpenChange={setIsAddDialogOpen}
-      />
-      {editingAnnouncement && (
-        <EditAnnouncementDialog
-          open={!!editingAnnouncement}
-          onOpenChange={(open) => !open && setEditingAnnouncement(null)}
-          announcement={editingAnnouncement}
-        />
+      {/* ── Page Tabs ── */}
+      {activeGenId && (
+        <div className="flex items-center gap-1 mb-6 border-b border-slate-200 pb-2 flex-wrap">
+          {boardsLoading ? (
+            <span className="text-xs text-slate-400 py-1">กำลังโหลด...</span>
+          ) : (
+            <>
+              {boards.map((board) => (
+                <div key={board.id} className="relative group">
+                  <button
+                    onClick={() => setActiveBoardId(board.id)}
+                    className={`
+                      px-3 py-1.5 text-sm rounded-t transition-all
+                      ${board.id === activeBoardId
+                        ? 'text-[#E5007D] border-b-2 border-[#E5007D] font-medium'
+                        : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
+                      }
+                    `}
+                  >
+                    {board.title}
+                  </button>
+
+                  {isAdmin && (
+                    <button
+                      onClick={(e) => handleDeleteBoard(e, board)}
+                      className="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 p-0.5 bg-white rounded-full shadow-sm hover:text-red-500 transition-all"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              ))}
+
+              {boards.length === 0 && !addingBoard && (
+                <span className="text-xs text-slate-400 py-1">ยังไม่มี page</span>
+              )}
+
+              {isAdmin && (
+                addingBoard ? (
+                  <div className="flex items-center gap-1 ml-1">
+                    <input
+                      autoFocus
+                      value={newBoardTitle}
+                      onChange={(e) => setNewBoardTitle(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleAddBoard();
+                        if (e.key === 'Escape') { setAddingBoard(false); setNewBoardTitle(''); }
+                      }}
+                      placeholder="ชื่อ page..."
+                      className="px-2 py-1 text-sm border border-[#E5007D] rounded outline-none w-28"
+                    />
+                    <button
+                      onClick={handleAddBoard}
+                      className="px-2 py-1 text-sm bg-[#E5007D] text-white rounded hover:bg-[#c00069]"
+                    >
+                      เพิ่ม
+                    </button>
+                    <button
+                      onClick={() => { setAddingBoard(false); setNewBoardTitle(''); }}
+                      className="text-sm text-slate-400 hover:text-slate-700"
+                    >
+                      ยกเลิก
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setAddingBoard(true)}
+                    className="flex items-center gap-1 px-2 py-1.5 text-sm text-slate-400 hover:text-[#E5007D] hover:bg-pink-50 rounded transition-all ml-1"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    เพิ่ม page
+                  </button>
+                )
+              )}
+            </>
+          )}
+        </div>
       )}
-      {deletingAnnouncement && (
-        <DeleteAnnouncementDialog
-          open={!!deletingAnnouncement}
-          onOpenChange={(open) => !open && setDeletingAnnouncement(null)}
-          announcement={deletingAnnouncement}
-        />
+
+      {/* ── Editor ── */}
+      {activeBoardId ? (
+        <BoardEditor boardId={activeBoardId} isAdmin={isAdmin} />
+      ) : (
+        !boardsLoading && activeGenId && (
+          <div className="flex items-center justify-center py-20 text-slate-400 text-sm">
+            {isAdmin ? 'กด "+ เพิ่ม page" เพื่อเริ่มต้น' : 'ยังไม่มีเนื้อหา'}
+          </div>
+        )
       )}
     </div>
   );
 }
 
-interface AnnouncementCardProps {
-  announcement: Announcement;
-  isAdmin: boolean;
-  onEdit: (announcement: Announcement) => void;
-  onDelete: (announcement: Announcement) => void;
-}
+// แยก component ย่อยเพื่อให้ useBoard re-run เมื่อ boardId เปลี่ยน
+function BoardEditor({ boardId, isAdmin }: { boardId: string; isAdmin: boolean }) {
+  const { content, loading, saving, save } = useBoard(boardId);
 
-const COLLAPSE_HEIGHT = 120;
-
-function AnnouncementCard({ announcement, isAdmin, onEdit, onDelete }: AnnouncementCardProps) {
-  const [expanded, setExpanded] = useState(false);
-  const [needsExpand, setNeedsExpand] = useState(false);
-  const contentRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (contentRef.current) {
-      setNeedsExpand(contentRef.current.scrollHeight > COLLAPSE_HEIGHT);
-    }
-  }, [announcement.content]);
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <div className="text-slate-600 text-sm">กำลังโหลด...</div>
+      </div>
+    );
+  }
 
   return (
-    <div className={`bg-white rounded-lg border ${announcement.isPinned ? 'border-[#E5007D]' : 'border-slate-200'} overflow-hidden`}>
-      {/* Header */}
-      <div className={`p-4 ${announcement.isPinned ? 'bg-pink-50' : 'bg-slate-50'} border-b ${announcement.isPinned ? 'border-[#E5007D]' : 'border-slate-200'} flex items-start justify-between`}>
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="inline-block px-2 py-1 bg-[#E5007D] text-white text-xs rounded">
-              {announcement.generation}
-            </span>
-            {announcement.isPinned && (
-              <Pin className="w-4 h-4 text-[#E5007D]" />
-            )}
-          </div>
-          <h3 className="text-slate-900">{announcement.title}</h3>
-          <div className="flex items-center gap-4 mt-2 text-xs text-slate-500">
-            <span className="flex items-center gap-1">
-              <Calendar className="w-3 h-3" />
-              {format(announcement.createdAt, 'MMM dd, yyyy')}
-            </span>
-            <span>By {announcement.author}</span>
-          </div>
-        </div>
-        {isAdmin && (
-          <div className="flex items-center gap-2 ml-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onEdit(announcement)}
-              className="text-slate-600 hover:text-[#E5007D]"
-            >
-              <Edit className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onDelete(announcement)}
-              className="text-slate-600 hover:text-red-600"
-            >
-              <Trash2 className="w-4 h-4" />
-            </Button>
-          </div>
-        )}
-      </div>
-
-      {/* Content */}
-      <div className="relative">
-        <div
-          style={{ maxHeight: expanded || !needsExpand ? undefined : COLLAPSE_HEIGHT, overflow: 'hidden', transition: 'max-height 0.3s ease' }}
-        >
-          <div
-            ref={contentRef}
-            className="p-4 prose prose-sm max-w-none"
-            dangerouslySetInnerHTML={{ __html: announcement.content }}
-          />
-        </div>
-
-        {needsExpand && !expanded && (
-          <div className="absolute bottom-0 left-0 right-0 h-16 bg-linear-to-t from-white to-transparent pointer-events-none" />
-        )}
-
-        {needsExpand && (
-          <button
-            onClick={() => setExpanded(prev => !prev)}
-            className="w-full flex items-center justify-center gap-1 py-2 text-xs text-[#E5007D] hover:text-[#C1006A] font-medium border-t border-slate-100 transition-colors"
-          >
-            <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${expanded ? 'rotate-180' : ''}`} />
-            {expanded ? 'Show less' : 'Show more'}
-          </button>
-        )}
-      </div>
+    <div className="relative">
+      {saving && (
+        <span className="absolute top-0 right-0 text-xs text-slate-400">
+          กำลังบันทึก...
+        </span>
+      )}
+      <Editor
+        boardId={boardId}
+        initialContent={content}
+        onSave={save}
+        isAdmin={isAdmin}
+      />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { SUPABASE_CONFIG } from './config';
 import type { PeerSupportItem, Activity, ResourceCategory, StudentDocument } from './types';
+import type { Generation, Board, BoardContent } from './types'
 
 // ============================================
 // SUPABASE CLIENT INITIALIZATION
@@ -215,6 +216,155 @@ export async function deleteResourceCategory(id: string): Promise<void> {
     .from('resource_categories')
     .delete()
     .eq('id', id);
+
+  if (error) throw error;
+}
+
+// ============================================
+// GENERATIONS
+// ============================================
+
+export async function fetchGenerations(): Promise<Generation[]> {
+  const { data, error } = await supabase
+    .from('generations')
+    .select('*')
+    .order('order_index', { ascending: true });
+
+  if (error) {
+    console.error('Fetch Error (Generations):', error.message);
+    return [];
+  }
+  return data ?? [];
+}
+
+export async function createGeneration(
+  gen: Omit<Generation, 'id' | 'created_at'>
+): Promise<Generation> {
+  const { data, error } = await supabase
+    .from('generations')
+    .insert(gen)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateGeneration(
+  id: string,
+  updates: Partial<Generation>
+): Promise<Generation> {
+  const { data, error } = await supabase
+    .from('generations')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteGeneration(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('generations')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw error;
+}
+
+// ============================================
+// BOARDS
+// ============================================
+
+export async function fetchBoardsByGeneration(
+  generationId: string
+): Promise<Board[]> {
+  const { data, error } = await supabase
+    .from('boards')
+    .select('*')
+    .eq('generation_id', generationId)
+    .order('order_index', { ascending: true });
+
+  if (error) {
+    console.error('Fetch Error (Boards):', error.message);
+    return [];
+  }
+  return data ?? [];
+}
+
+export async function createBoard(
+  board: Omit<Board, 'id' | 'created_at' | 'updated_at'>
+): Promise<Board> {
+  const { data, error } = await supabase
+    .from('boards')
+    .insert(board)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateBoard(
+  id: string,
+  updates: Partial<Board>
+): Promise<Board> {
+  const { data, error } = await supabase
+    .from('boards')
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteBoard(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('boards')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw error;
+}
+
+// ============================================
+// BOARD CONTENT
+// ============================================
+
+export async function fetchBoardContent(
+  boardId: string
+): Promise<BoardContent | null> {
+  const { data, error } = await supabase
+    .from('board_content')
+    .select('*')
+    .eq('board_id', boardId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Fetch Error (Board Content):', error.message);
+    return null;
+  }
+  return data;
+}
+
+export async function saveBoardContent(
+  boardId: string,
+  content: object
+): Promise<void> {
+  const { error } = await supabase
+    .from('board_content')
+    .upsert(
+      {
+        board_id: boardId,
+        content,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'board_id' }
+    );
 
   if (error) throw error;
 }

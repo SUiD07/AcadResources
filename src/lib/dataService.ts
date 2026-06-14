@@ -8,7 +8,7 @@
 import { USE_SUPABASE } from './config';
 import * as supabaseApi from './supabase';
 import type { PeerSupportItem, Activity, ResourceCategory, StudentDocument } from './types';
-
+import type { Generation, Board, BoardContent } from './types';
 // ============================================
 // PEER SUPPORT DATA SERVICE
 // ============================================
@@ -107,4 +107,78 @@ export async function removeResourceCategory(id: string): Promise<void> {
   if (USE_SUPABASE) {
     return await supabaseApi.deleteResourceCategory(id);
   }
+}
+
+// ============================================
+// GENERATIONS
+// ============================================
+
+export async function getGenerations(): Promise<Generation[]> {
+  if (USE_SUPABASE) return await supabaseApi.fetchGenerations();
+  return [];
+}
+
+export async function addGeneration(
+  gen: Omit<Generation, 'id' | 'created_at'>
+): Promise<Generation> {
+  if (USE_SUPABASE) return await supabaseApi.createGeneration(gen);
+  throw new Error('Supabase not enabled');
+}
+
+export async function editGeneration(
+  id: string,
+  updates: Partial<Generation>
+): Promise<Generation> {
+  if (USE_SUPABASE) return await supabaseApi.updateGeneration(id, updates);
+  throw new Error('Supabase not enabled');
+}
+
+export async function removeGeneration(id: string): Promise<void> {
+  if (USE_SUPABASE) return await supabaseApi.deleteGeneration(id);
+}
+
+// ============================================
+// BOARDS
+// ============================================
+
+export async function getBoards(generationId: string): Promise<Board[]> {
+  if (USE_SUPABASE) return await supabaseApi.fetchBoardsByGeneration(generationId);
+  return [];
+}
+
+export async function addBoard(
+  board: Omit<Board, 'id' | 'created_at' | 'updated_at'>
+): Promise<Board> {
+  if (USE_SUPABASE) return await supabaseApi.createBoard(board);
+  throw new Error('Supabase not enabled');
+}
+
+export async function editBoard(
+  id: string,
+  updates: Partial<Board>
+): Promise<Board> {
+  if (USE_SUPABASE) return await supabaseApi.updateBoard(id, updates);
+  throw new Error('Supabase not enabled');
+}
+
+export async function removeBoard(id: string): Promise<void> {
+  if (USE_SUPABASE) return await supabaseApi.deleteBoard(id);
+}
+
+// ============================================
+// BOARD CONTENT
+// ============================================
+
+export async function getBoardContent(
+  boardId: string
+): Promise<BoardContent | null> {
+  if (USE_SUPABASE) return await supabaseApi.fetchBoardContent(boardId);
+  return null;
+}
+
+export async function saveBoardContentData(
+  boardId: string,
+  content: object
+): Promise<void> {
+  if (USE_SUPABASE) return await supabaseApi.saveBoardContent(boardId, content);
 }
