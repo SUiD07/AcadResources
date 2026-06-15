@@ -1,17 +1,26 @@
-import { useState, useEffect } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
-import { useGenerations } from '../../hooks/useGenerations';
-import { getBoards, addBoard, removeBoard, removeGeneration } from '../../lib/dataService';
-import { useBoard } from '../../hooks/useBoard';
-import { Editor } from '../board/Editor';
-import type { Board, Generation } from '../../lib/types';
+import { useState, useEffect } from "react";
+import { Plus, Trash2 } from "lucide-react";
+import { useGenerations } from "../../hooks/useGenerations";
+import {
+  getBoards,
+  addBoard,
+  removeBoard,
+  removeGeneration,
+} from "../../lib/dataService";
+import { useBoard } from "../../hooks/useBoard";
+import { Editor } from "../board/Editor";
+import type { Board, Generation } from "../../lib/types";
 
 interface Props {
   isAdmin?: boolean;
 }
 
 export function BoardSection({ isAdmin = false }: Props) {
-  const { generations, loading: genLoading, createGeneration } = useGenerations();
+  const {
+    generations,
+    loading: genLoading,
+    createGeneration,
+  } = useGenerations();
 
   const [activeGenId, setActiveGenId] = useState<string | null>(null);
   const [boards, setBoards] = useState<Board[]>([]);
@@ -20,9 +29,9 @@ export function BoardSection({ isAdmin = false }: Props) {
 
   // Adding states
   const [addingGen, setAddingGen] = useState(false);
-  const [newGenName, setNewGenName] = useState('');
+  const [newGenName, setNewGenName] = useState("");
   const [addingBoard, setAddingBoard] = useState(false);
-  const [newBoardTitle, setNewBoardTitle] = useState('');
+  const [newBoardTitle, setNewBoardTitle] = useState("");
 
   // Set default generation
   useEffect(() => {
@@ -45,23 +54,23 @@ export function BoardSection({ isAdmin = false }: Props) {
 
   const handleAddGen = async () => {
     if (!newGenName.trim()) return;
-    const slug = newGenName.trim().toLowerCase().replace(/\s+/g, '-');
+    const slug = newGenName.trim().toLowerCase().replace(/\s+/g, "-");
     const gen = await createGeneration(newGenName.trim(), slug);
     setActiveGenId(gen.id);
-    setNewGenName('');
+    setNewGenName("");
     setAddingGen(false);
   };
 
   const handleDeleteGen = async (e: React.MouseEvent, gen: Generation) => {
-  e.stopPropagation();
-  if (!confirm(`ลบรุ่น "${gen.name}" และทุก page ในรุ่นนี้?`)) return;
-  await removeGeneration(gen.id);
-  const remaining = generations.filter((g) => g.id !== gen.id);
-  // generations มาจาก hook ต้อง refetch หรือ update state
-  if (activeGenId === gen.id) {
-    setActiveGenId(remaining[0]?.id ?? null);
-  }
-};
+    e.stopPropagation();
+    if (!confirm(`ลบรุ่น "${gen.name}" และทุก page ในรุ่นนี้?`)) return;
+    await removeGeneration(gen.id);
+    const remaining = generations.filter((g) => g.id !== gen.id);
+    // generations มาจาก hook ต้อง refetch หรือ update state
+    if (activeGenId === gen.id) {
+      setActiveGenId(remaining[0]?.id ?? null);
+    }
+  };
 
   const handleAddBoard = async () => {
     if (!newBoardTitle.trim() || !activeGenId) return;
@@ -77,7 +86,7 @@ export function BoardSection({ isAdmin = false }: Props) {
     });
     setBoards((prev) => [...prev, board]);
     setActiveBoardId(board.id);
-    setNewBoardTitle('');
+    setNewBoardTitle("");
     setAddingBoard(false);
   };
 
@@ -95,9 +104,7 @@ export function BoardSection({ isAdmin = false }: Props) {
   return (
     <div className="pb-20 lg:pb-8">
       {/* Header */}
-      <div
-        className={`flex items-start justify-between mb-4 px-6 pt-6}`}
-      >
+      <div className={`flex items-start justify-between mb-4 px-6 pt-6}`}>
         <div>
           <h1 className="text-slate-900">Announcements Board</h1>
           <p className="text-slate-500 mt-1">
@@ -114,27 +121,32 @@ export function BoardSection({ isAdmin = false }: Props) {
             onClick={() => setActiveGenId(gen.id)}
             className={`
               px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all
-              ${gen.id === activeGenId
-                ? 'text-white shadow-sm'
-                : 'text-slate-600 hover:bg-slate-100'
+              ${
+                gen.id === activeGenId
+                  ? "text-white shadow-sm"
+                  : "text-slate-600 hover:bg-slate-100"
               }
             `}
-            style={gen.id === activeGenId ? { backgroundColor: gen.color ?? '#E5007D' } : {}}
+            style={
+              gen.id === activeGenId
+                ? { backgroundColor: gen.color ?? "#E5007D" }
+                : {}
+            }
           >
             {gen.name}
           </button>
         ))}
 
-        {isAdmin && (
-          addingGen ? (
+        {isAdmin &&
+          (addingGen ? (
             <div className="flex items-center gap-1">
               <input
                 autoFocus
                 value={newGenName}
                 onChange={(e) => setNewGenName(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleAddGen();
-                  if (e.key === 'Escape') setAddingGen(false);
+                  if (e.key === "Enter") handleAddGen();
+                  if (e.key === "Escape") setAddingGen(false);
                 }}
                 placeholder="ชื่อรุ่น..."
                 className="px-3 py-1 text-sm border border-[#E5007D] rounded-full outline-none w-28"
@@ -146,7 +158,10 @@ export function BoardSection({ isAdmin = false }: Props) {
                 เพิ่ม
               </button>
               <button
-                onClick={() => { setAddingGen(false); setNewGenName(''); }}
+                onClick={() => {
+                  setAddingGen(false);
+                  setNewGenName("");
+                }}
                 className="px-2 py-1 text-sm text-slate-500 hover:text-slate-800"
               >
                 ยกเลิก
@@ -160,8 +175,7 @@ export function BoardSection({ isAdmin = false }: Props) {
               <Plus className="w-3.5 h-3.5" />
               เพิ่มรุ่น
             </button>
-          )
-        )}
+          ))}
       </div>
 
       {/* ── Page Tabs ── */}
@@ -177,9 +191,10 @@ export function BoardSection({ isAdmin = false }: Props) {
                     onClick={() => setActiveBoardId(board.id)}
                     className={`
                       px-3 py-1.5 text-sm rounded-t transition-all
-                      ${board.id === activeBoardId
-                        ? 'text-[#E5007D] border-b-2 border-[#E5007D] font-medium'
-                        : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
+                      ${
+                        board.id === activeBoardId
+                          ? "text-[#E5007D] border-b-2 border-[#E5007D] font-medium"
+                          : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"
                       }
                     `}
                   >
@@ -198,19 +213,24 @@ export function BoardSection({ isAdmin = false }: Props) {
               ))}
 
               {boards.length === 0 && !addingBoard && (
-                <span className="text-xs text-slate-400 py-1">ยังไม่มี page</span>
+                <span className="text-xs text-slate-400 py-1">
+                  ยังไม่มี page
+                </span>
               )}
 
-              {isAdmin && (
-                addingBoard ? (
+              {isAdmin &&
+                (addingBoard ? (
                   <div className="flex items-center gap-1 ml-1">
                     <input
                       autoFocus
                       value={newBoardTitle}
                       onChange={(e) => setNewBoardTitle(e.target.value)}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleAddBoard();
-                        if (e.key === 'Escape') { setAddingBoard(false); setNewBoardTitle(''); }
+                        if (e.key === "Enter") handleAddBoard();
+                        if (e.key === "Escape") {
+                          setAddingBoard(false);
+                          setNewBoardTitle("");
+                        }
                       }}
                       placeholder="ชื่อ page..."
                       className="px-2 py-1 text-sm border border-[#E5007D] rounded outline-none w-28"
@@ -222,7 +242,10 @@ export function BoardSection({ isAdmin = false }: Props) {
                       เพิ่ม
                     </button>
                     <button
-                      onClick={() => { setAddingBoard(false); setNewBoardTitle(''); }}
+                      onClick={() => {
+                        setAddingBoard(false);
+                        setNewBoardTitle("");
+                      }}
                       className="text-sm text-slate-400 hover:text-slate-700"
                     >
                       ยกเลิก
@@ -236,8 +259,7 @@ export function BoardSection({ isAdmin = false }: Props) {
                     <Plus className="w-3.5 h-3.5" />
                     เพิ่ม page
                   </button>
-                )
-              )}
+                ))}
             </>
           )}
         </div>
@@ -247,9 +269,10 @@ export function BoardSection({ isAdmin = false }: Props) {
       {activeBoardId ? (
         <BoardEditor boardId={activeBoardId} isAdmin={isAdmin} />
       ) : (
-        !boardsLoading && activeGenId && (
+        !boardsLoading &&
+        activeGenId && (
           <div className="flex items-center justify-center py-20 text-slate-400 text-sm">
-            {isAdmin ? 'กด "+ เพิ่ม page" เพื่อเริ่มต้น' : 'ยังไม่มีเนื้อหา'}
+            {isAdmin ? 'กด "+ เพิ่ม page" เพื่อเริ่มต้น' : "ยังไม่มีเนื้อหา"}
           </div>
         )
       )}
@@ -258,7 +281,13 @@ export function BoardSection({ isAdmin = false }: Props) {
 }
 
 // แยก component ย่อยเพื่อให้ useBoard re-run เมื่อ boardId เปลี่ยน
-function BoardEditor({ boardId, isAdmin }: { boardId: string; isAdmin: boolean }) {
+function BoardEditor({
+  boardId,
+  isAdmin,
+}: {
+  boardId: string;
+  isAdmin: boolean;
+}) {
   const { content, loading, saving, save } = useBoard(boardId);
 
   if (loading) {
@@ -276,12 +305,14 @@ function BoardEditor({ boardId, isAdmin }: { boardId: string; isAdmin: boolean }
           กำลังบันทึก...
         </span>
       )}
-      <Editor
-        boardId={boardId}
-        initialContent={content}
-        onSave={save}
-        isAdmin={isAdmin}
-      />
+      <div className="w-full overflow-hidden">
+        <Editor
+          boardId={boardId}
+          initialContent={content}
+          onSave={save}
+          isAdmin={isAdmin}
+        />
+      </div>
     </div>
   );
 }
