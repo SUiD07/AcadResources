@@ -8,6 +8,7 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { Button } from "./ui/button";
+import { ImageWithFallback } from "./figma/ImageWithFallback";
 
 // ─── TYPE COLORS ─────────────────────────────────────────────────────────────
 const TYPE_COLORS: Record<string, string> = {
@@ -161,17 +162,14 @@ export function ContentCategory({
                 className="w-full bg-slate-50 border-b border-slate-100 overflow-hidden relative"
                 style={{ aspectRatio: "16/9" }}
               >
-                <img
-                  src={getDriveThumbnail(item.drive_link)}
+                <ImageWithFallback
+                  src={item.thumbnail || getDriveThumbnail(item.drive_link)}
                   alt={item.block_name}
                   className="w-full h-full object-cover"
                   loading="lazy"
-                  onError={(e) => {
-                    e.currentTarget.style.display = "none";
-                    (e.currentTarget.nextElementSibling as HTMLElement)?.removeAttribute("hidden");
-                  }}
+                  style={{ display: "block" }}
                 />
-                <div hidden className="w-full h-full flex items-center justify-center">
+                <div className="absolute inset-0 flex items-center justify-center bg-slate-100 -z-10">
                   <FolderOpen className="w-10 h-10 text-slate-300" />
                 </div>
               </div>

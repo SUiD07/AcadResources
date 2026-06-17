@@ -3,6 +3,7 @@ import { FilterBar, filterBlocksByYear } from "../FilterBar";
 import { ContentCategory } from "../ContentCategory";
 import {
   getStudentDocuments,
+  getPeerSupportData,
   addPeerSupportItem,
   editPeerSupportItem,
   removePeerSupportItem,
@@ -188,14 +189,15 @@ export function PeerSupportSection({
   const [selectedCategory, setSelectedCategory] = useState<string[]>([]);
 
   const [studentDocs, setStudentDocs] = useState<StudentDocument[]>([]);
+  const [peerItems, setPeerItems] = useState<PeerSupportItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     async function loadData() {
       try {
         setIsLoading(true);
-        const data = await getStudentDocuments();
-        setStudentDocs(data);
+        const docs = await getStudentDocuments();
+        setStudentDocs(docs);
       } catch (error) {
         console.error("Error loading documents:", error);
       } finally {
@@ -206,8 +208,9 @@ export function PeerSupportSection({
   }, []);
 
   const allItems = useMemo<PeerSupportItem[]>(
-    () => 
-      studentDocs.map((doc) => {
+    () => {
+      // Convert student docs to PeerSupportItem format and auto-categorize
+      return studentDocs.map((doc) => {
         const finalBlock = doc.block && doc.block !== 'Other' && doc.block !== 'Unclassified'
           ? doc.block
           : detectBlock(doc.title, doc.folder_path);
@@ -217,9 +220,9 @@ export function PeerSupportSection({
           : detectDocType(doc.title);
 
         return {
-          id: doc.id.toString(),
+          id: `doc-${doc.id}`,
           block_name: doc.title,
-          thumbnail: "", // Will be calculated by ContentCategory
+          thumbnail: "", // Handled by ContentCategory fallback
           drive_link: doc.file_url,
           generation: doc.generation && doc.generation !== 0 
             ? `MDCU ${doc.generation}` 
@@ -227,7 +230,8 @@ export function PeerSupportSection({
           block: finalBlock,
           category: finalCategory,
         };
-      }),
+      });
+    },
     [studentDocs],
   );
 

@@ -15,10 +15,10 @@ export const supabase = createClient(
 // 1. PEER SUPPORT & STUDENT DOCUMENTS DATA FUNCTIONS
 // ============================================
 
-export async function fetchPeerSupportData(): Promise<StudentDocument[]> {
+export async function fetchPeerSupportData(): Promise<PeerSupportItem[]> {
   const PAGE_SIZE = 1000;
   let from = 0;
-  let allDocuments: StudentDocument[] = [];
+  let allDocuments: PeerSupportItem[] = [];
 
   while (true) {
     const { data, error } = await supabase
