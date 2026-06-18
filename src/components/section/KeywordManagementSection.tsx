@@ -131,7 +131,7 @@ export function KeywordManagementSection() {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+      <div className=" shadow-sm overflow-hidden flex flex-col">
         <div className="flex border-b border-slate-200">
           <button
             onClick={() => setActiveTab('doc_type')}
@@ -163,7 +163,7 @@ export function KeywordManagementSection() {
               {filteredConfigs.map((config) => {
                 const matchingFiles = getMatchingFiles(config);
                 return (
-                  <div key={config.id} className="p-6 border border-slate-200 rounded-2xl space-y-6 bg-slate-50/50 hover:border-pink-200 transition-colors">
+                  <div key={config.id} className="p-6 border border-slate-200 rounded-2xl space-y-6 bg-white hover:border-pink-200 transition-colors">
                     <div className="flex flex-col md:flex-row items-start justify-between gap-6">
                       <div className="flex-1 w-full grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
@@ -259,7 +259,6 @@ export function KeywordManagementSection() {
                           <ul className="divide-y divide-slate-100 overflow-y-auto" style={{ maxHeight: '10rem' }}>
                             {matchingFiles.map((doc) => (
                               <li key={doc.id} className="p-3 flex items-start gap-3 hover:bg-slate-50">
-                                <FileText className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
                                 <div>
                                   <p className="text-sm font-medium text-slate-900">{doc.title}</p>
                                   <p className="text-xs text-slate-500 font-mono truncate">{doc.folder_path}</p>
