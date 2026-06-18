@@ -170,7 +170,7 @@ export function PeerSupportSection({
   const handleEdit = async (data: ResourceFormData & { id: string }) => {
     // Strip "doc-" prefix and convert to number for student_documents
     const docId = parseInt(data.id.replace("doc-", ""), 10);
-    
+
     // Map ResourceFormData back to StudentDocument partial
     // This allows admins to "fix keys" in the database
     const updates: any = {
@@ -224,7 +224,7 @@ export function PeerSupportSection({
         const finalBlock = doc.block && doc.block !== 'Other' && doc.block !== 'Unclassified'
           ? doc.block
           : detectBlock(doc.title, doc.folder_path);
-          
+
         const finalCategory = doc.doc_type && doc.doc_type !== 'Other' && doc.doc_type !== 'Unknown'
           ? doc.doc_type
           : detectDocType(doc.title);
@@ -234,8 +234,8 @@ export function PeerSupportSection({
           block_name: doc.title,
           thumbnail: doc.thumbnail_url || "", // Use synced thumbnail if available
           drive_link: doc.file_url,
-          generation: doc.generation && doc.generation !== 0 
-            ? `MDCU ${doc.generation}` 
+          generation: doc.generation && doc.generation !== 0
+            ? `MDCU ${doc.generation}`
             : detectGeneration(doc.title, doc.folder_path),
           block: finalBlock,
           category: finalCategory,
@@ -351,30 +351,30 @@ export function PeerSupportSection({
           {!isLoading &&
             (groupedBySubject.length > 0
               ? groupedBySubject.map(({ subject, items }) => (
-                  <SubjectCard
-                    key={subject}
-                    subject={subject}
-                    items={items}
-                    isAdmin={isAdmin}
-                    onEdit={(item) => {
-                      setEditingItem({ id: item.id, blockName: item.block_name, blockCode: "", generation: item.generation, block: item.block, category: item.category, driveLink: item.drive_link, thumbnail: item.thumbnail });
-                      setEditDialogOpen(true);
-                    }}
-                    onDelete={(item) => {
-                      setDeletingItem({ id: item.id, name: item.block_name });
-                      setDeleteDialogOpen(true);
-                    }}
-                  />
-                ))
+                <SubjectCard
+                  key={subject}
+                  subject={subject}
+                  items={items}
+                  isAdmin={isAdmin}
+                  onEdit={(item) => {
+                    setEditingItem({ id: item.id, blockName: item.block_name, blockCode: "", generation: item.generation, block: item.block, category: item.category, driveLink: item.drive_link, thumbnail: item.thumbnail });
+                    setEditDialogOpen(true);
+                  }}
+                  onDelete={(item) => {
+                    setDeletingItem({ id: item.id, name: item.block_name });
+                    setDeleteDialogOpen(true);
+                  }}
+                />
+              ))
               : (
-                  <div className="text-center py-20 bg-white rounded-xl border border-dashed border-slate-300">
-                    <br />
-                    <Search className="w-12 h-12 text-slate-300 mx-auto " />
-                    <h3 className="text-slate-900 font-medium ">No resources found</h3>
-                    <p className="text-slate-500 text-sm">Try adjusting your filters.</p>
-                    <br />
-                  </div>
-                ))}
+                <div className="text-center py-20 bg-white rounded-xl border border-dashed border-slate-300">
+                  <br />
+                  <Search className="w-12 h-12 text-slate-300 mx-auto " />
+                  <h3 className="text-slate-900 font-medium ">No resources found</h3>
+                  <p className="text-slate-500 text-sm">Try adjusting your filters.</p>
+                  <br />
+                </div>
+              ))}
         </div>
       </div>
 

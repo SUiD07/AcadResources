@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { SUPABASE_CONFIG } from './config';
 import type { PeerSupportItem, Activity, ResourceCategory, StudentDocument } from './types';
-import type { Generation, Board, BoardContent } from './types'
+import type { Generation, Board, BoardContent, KeywordConfig } from './types'
 
 // ============================================
 // SUPABASE CLIENT INITIALIZATION
@@ -390,6 +390,55 @@ export async function saveBoardContent(
       },
       { onConflict: 'board_id' }
     );
+
+  if (error) throw error;
+}
+
+// ============================================
+// KEYWORD CONFIGURATIONS (for categorize.ts)
+// ============================================
+
+export async function fetchKeywordConfigs(): Promise<KeywordConfig[]> {
+  const { data, error } = await supabase
+    .from('keyword_configs')
+    .select('*')
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    console.error('Fetch Error (Keyword Configs):', error.message);
+    return [];
+  }
+  return data || [];
+}
+
+export async function createKeywordConfig(config: Omit<KeywordConfig, 'id'>): Promise<KeywordConfig> {
+  const { data, error } = await supabase
+    .from('keyword_configs')
+    .insert(config)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateKeywordConfig(id: string, updates: Partial<KeywordConfig>): Promise<KeywordConfig> {
+  const { data, error } = await supabase
+    .from('keyword_configs')
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteKeywordConfig(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('keyword_configs')
+    .delete()
+    .eq('id', id);
 
   if (error) throw error;
 }

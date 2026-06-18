@@ -1,7 +1,6 @@
-import { Home, Calendar, BookOpen, GraduationCap, Menu, X, LogOut, Users } from 'lucide-react';
+import { Home, Calendar, BookOpen, GraduationCap, Menu, X, LogOut, Users, Settings } from 'lucide-react';
 import { Button } from './ui/button';
-
-type Section = 'peer-support' | 'academic-activities' | 'academic-resources' | 'career-navigation' | 'board'  ;
+import { Section } from '../lib/types';
 
 interface MobileNavProps {
   activeSection: Section;
@@ -9,9 +8,10 @@ interface MobileNavProps {
   isOpen: boolean;
   onToggle: () => void;
   onLogout: () => void;
+  isAdmin?: boolean;
 }
 
-export function MobileNav({ activeSection, onSectionChange, isOpen, onToggle, onLogout }: MobileNavProps) {
+export function MobileNav({ activeSection, onSectionChange, isOpen, onToggle, onLogout, isAdmin }: MobileNavProps) {
   const navItems = [
     { id: 'peer-support' as Section, label: 'Peer Support', icon: Home },
     { id: 'academic-activities' as Section, label: 'Academic Activities', icon: Calendar },
@@ -20,12 +20,15 @@ export function MobileNav({ activeSection, onSectionChange, isOpen, onToggle, on
     { id: 'board' as Section, label: 'Board', icon: Users },
   ];
 
-  const activeItem = navItems.find(item => item.id === activeSection);
-  const ActiveIcon = activeItem?.icon || Home;
+  if (isAdmin) {
+    navItems.push({ id: 'keyword-management' as Section, label: 'Keywords', icon: Settings });
+  }
+
+  // ... (rest of component until drawer nav)
 
   return (
     <>
-      {/* Mobile Header */}
+      {/* ... (existing header) */}
       <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white border-b border-slate-200 z-40">
         <div className="flex items-center justify-between h-full px-4">
           <div className="flex items-center gap-3">
@@ -62,7 +65,7 @@ export function MobileNav({ activeSection, onSectionChange, isOpen, onToggle, on
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <nav className="p-4 space-y-2 flex-1">
+        <nav className="p-4 space-y-2 flex-1 overflow-y-auto">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeSection === item.id;

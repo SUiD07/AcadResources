@@ -55,7 +55,7 @@ export interface ResourceItem {
   type: string;
 }
 
-export type Section = 'peer-support' | 'academic-activities' | 'academic-resources';
+export type Section = 'peer-support' | 'academic-activities' | 'academic-resources' | 'career-navigation' | 'board' | 'keyword-management';
 
 // ใช้สำหรับBoard
 export interface Generation {
@@ -86,4 +86,14 @@ export interface BoardContent {
   content: object;        // TipTap JSON
   updated_at: string;
   updated_by: string | null;
+}
+
+export interface KeywordConfig {
+  id: string;
+  config_type: 'doc_type' | 'block_mapping';
+  label: string;
+  keys: string[];
+  year?: string;
+  created_at?: string;
+  updated_at?: string;
 }
