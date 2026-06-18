@@ -110,7 +110,7 @@ export function KeywordManagementSection() {
       config.keys.some(key =>
         key.trim() !== '' &&
         (doc.title.toLowerCase().includes(key.toLowerCase()) ||
-         doc.folder_path.toLowerCase().includes(key.toLowerCase()))
+          doc.folder_path.toLowerCase().includes(key.toLowerCase()))
       )
     );
   };
@@ -135,21 +135,19 @@ export function KeywordManagementSection() {
         <div className="flex border-b border-slate-200">
           <button
             onClick={() => setActiveTab('doc_type')}
-            className={`px-8 py-4 text-sm font-semibold border-b-2 transition-colors ${
-              activeTab === 'doc_type' 
-                ? 'border-[#E5007D] text-[#E5007D] bg-pink-50/30' 
+            className={`px-8 py-4 text-sm font-semibold border-b-2 transition-colors ${activeTab === 'doc_type'
+                ? 'border-[#E5007D] text-[#E5007D] bg-pink-50/30'
                 : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'
-            }`}
+              }`}
           >
             Document Types
           </button>
           <button
             onClick={() => setActiveTab('block_mapping')}
-            className={`px-8 py-4 text-sm font-semibold border-b-2 transition-colors ${
-              activeTab === 'block_mapping' 
-                ? 'border-[#E5007D] text-[#E5007D] bg-pink-50/30' 
+            className={`px-8 py-4 text-sm font-semibold border-b-2 transition-colors ${activeTab === 'block_mapping'
+                ? 'border-[#E5007D] text-[#E5007D] bg-pink-50/30'
                 : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'
-            }`}
+              }`}
           >
             Block Mappings
           </button>
@@ -170,17 +168,17 @@ export function KeywordManagementSection() {
                       <div className="flex-1 w-full grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
                           <Label className="text-sm font-semibold text-slate-700">Display Label</Label>
-                          <Input 
+                          <Input
                             className="bg-white"
-                            value={config.label} 
+                            value={config.label}
                             onChange={(e) => handleUpdateConfig(config.id, { label: e.target.value })}
                           />
                         </div>
                         {activeTab === 'block_mapping' && (
                           <div className="space-y-2">
                             <Label className="text-sm font-semibold text-slate-700">Curriculum Year</Label>
-                            <Select 
-                              value={config.year} 
+                            <Select
+                              value={config.year}
                               onValueChange={(val) => handleUpdateConfig(config.id, { year: val })}
                             >
                               <SelectTrigger className="bg-white">
@@ -200,14 +198,14 @@ export function KeywordManagementSection() {
                         )}
                       </div>
                       <div className="flex gap-3 shrink-0">
-                        <Button 
+                        <Button
                           variant="outline"
                           className="text-slate-500 hover:text-red-600 hover:bg-red-50 border-slate-200"
                           onClick={() => handleDeleteConfig(config.id)}
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
-                        <Button 
+                        <Button
                           className="bg-[#E5007D] hover:bg-[#c00069] text-white px-6"
                           onClick={() => handleSave(config)}
                           disabled={isSaving}
@@ -226,13 +224,13 @@ export function KeywordManagementSection() {
                       <div className="flex flex-wrap gap-2">
                         {config.keys.map((key, idx) => (
                           <div key={idx} className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg pl-3 pr-1 py-1 group focus-within:border-[#E5007D] transition-colors">
-                            <input 
+                            <input
                               className="bg-transparent text-sm focus:outline-none min-w-[120px] text-slate-600"
                               value={key}
                               onChange={(e) => handleUpdateKey(config.id, idx, e.target.value)}
                               placeholder="Type keyword..."
                             />
-                            <button 
+                            <button
                               onClick={() => handleRemoveKey(config.id, idx)}
                               className="p-1 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
                             >
@@ -240,9 +238,9 @@ export function KeywordManagementSection() {
                             </button>
                           </div>
                         ))}
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
+                        <Button
+                          variant="outline"
+                          size="sm"
                           className="h-9 border-dashed border-2 hover:border-[#E5007D] hover:text-[#E5007D] hover:bg-pink-50"
                           onClick={() => handleAddKey(config.id)}
                         >
@@ -258,9 +256,10 @@ export function KeywordManagementSection() {
                       </Label>
                       <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
                         {matchingFiles.length > 0 ? (
-                          <ul className="divide-y divide-slate-100 max-h-60 overflow-y-auto">
+                          <ul className="divide-y divide-slate-100 overflow-y-auto" style={{ maxHeight: '10rem' }}>
                             {matchingFiles.map((doc) => (
                               <li key={doc.id} className="p-3 flex items-start gap-3 hover:bg-slate-50">
+                                <FileText className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
                                 <div>
                                   <p className="text-sm font-medium text-slate-900">{doc.title}</p>
                                   <p className="text-xs text-slate-500 font-mono truncate">{doc.folder_path}</p>
@@ -276,9 +275,9 @@ export function KeywordManagementSection() {
                   </div>
                 );
               })}
-              
-              <Button 
-                variant="outline" 
+
+              <Button
+                variant="outline"
                 className="w-full py-10 border-dashed border-2 hover:bg-pink-50 hover:border-pink-300 hover:text-[#E5007D] rounded-2xl group transition-all"
                 onClick={handleAddNewCategory}
               >
