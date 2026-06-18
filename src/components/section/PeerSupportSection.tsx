@@ -3,10 +3,8 @@ import { FilterBar, filterBlocksByYear } from "../FilterBar";
 import { ContentCategory } from "../ContentCategory";
 import {
   getStudentDocuments,
-  getPeerSupportData,
-  addPeerSupportItem,
-  editPeerSupportItem,
-  removePeerSupportItem,
+  updateStudentDocument,
+  deleteStudentDocument,
 } from "../../lib/dataService";
 import type { StudentDocument, PeerSupportItem } from "../../lib/types";
 import * as googleDrive from "../../lib/googleDriveService";
@@ -164,20 +162,32 @@ export function PeerSupportSection({
   const [deletingItem, setDeletingItem] = useState<{ id: string; name: string } | null>(null);
 
   const handleAdd = async (data: ResourceFormData) => {
-    await addPeerSupportItem(data);
-    const updated = await getStudentDocuments();
-    setStudentDocs(updated);
+    // Manual additions are currently disabled for student_documents as they sync from Drive.
+    // To add a resource, upload it to the designated Google Drive folder.
+    console.log("Add ignored: New resources should be uploaded to Google Drive.", data);
   };
 
   const handleEdit = async (data: ResourceFormData & { id: string }) => {
-    await editPeerSupportItem(data);
+    // Strip "doc-" prefix and convert to number for student_documents
+    const docId = parseInt(data.id.replace("doc-", ""), 10);
+    
+    // Map ResourceFormData back to StudentDocument partial
+    // This allows admins to "fix keys" in the database
+    const updates: any = {
+      block: data.block,
+      doc_type: data.category,
+      generation: parseInt(data.generation.replace("MDCU ", ""), 10) || 0,
+    };
+
+    await updateStudentDocument(docId, updates);
     const updated = await getStudentDocuments();
     setStudentDocs(updated);
   };
 
   const handleDelete = async () => {
     if (!deletingItem) return;
-    await removePeerSupportItem(deletingItem.id);
+    const docId = parseInt(deletingItem.id.replace("doc-", ""), 10);
+    await deleteStudentDocument(docId);
     const updated = await getStudentDocuments();
     setStudentDocs(updated);
   };

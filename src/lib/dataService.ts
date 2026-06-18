@@ -47,6 +47,20 @@ export async function removePeerSupportItem(id: string): Promise<void> {
   }
 }
 
+export async function updateStudentDocument(id: number, updates: Partial<StudentDocument>): Promise<StudentDocument> {
+  if (USE_SUPABASE) {
+    return await supabaseApi.updateStudentDocument(id, updates);
+  }
+  throw new Error('Supabase not enabled');
+}
+
+export async function deleteStudentDocument(id: number): Promise<void> {
+  if (USE_SUPABASE) {
+    return await supabaseApi.deleteStudentDocument(id);
+  }
+  throw new Error('Supabase not enabled');
+}
+
 // ============================================
 // ACTIVITIES DATA SERVICE
 // ============================================
