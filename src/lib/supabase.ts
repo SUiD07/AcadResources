@@ -15,10 +15,10 @@ export const supabase = createClient(
 // 1. PEER SUPPORT & STUDENT DOCUMENTS DATA FUNCTIONS
 // ============================================
 
-export async function fetchPeerSupportData(): Promise<StudentDocument[]> {
+export async function fetchPeerSupportData(): Promise<PeerSupportItem[]> {
   const PAGE_SIZE = 1000;
   let from = 0;
-  let allDocuments: StudentDocument[] = [];
+  let allDocuments: PeerSupportItem[] = [];
 
   while (true) {
     const { data, error } = await supabase
@@ -115,6 +115,31 @@ export async function updatePeerSupportItem(id: string, updates: Partial<PeerSup
 export async function deletePeerSupportItem(id: string): Promise<void> {
   const { error } = await supabase
     .from('peer_support')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw error;
+}
+
+// ============================================
+// 1.1 STUDENT DOCUMENTS ADMIN FUNCTIONS
+// ============================================
+
+export async function updateStudentDocument(id: number, updates: Partial<StudentDocument>): Promise<StudentDocument> {
+  const { data, error } = await supabase
+    .from('student_documents')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteStudentDocument(id: number): Promise<void> {
+  const { error } = await supabase
+    .from('student_documents')
     .delete()
     .eq('id', id);
 

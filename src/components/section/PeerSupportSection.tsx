@@ -3,13 +3,12 @@ import { FilterBar, filterBlocksByYear } from "../FilterBar";
 import { ContentCategory } from "../ContentCategory";
 import {
   getStudentDocuments,
-  addPeerSupportItem,
-  editPeerSupportItem,
-  removePeerSupportItem,
+  updateStudentDocument,
+  deleteStudentDocument,
 } from "../../lib/dataService";
 import type { StudentDocument, PeerSupportItem } from "../../lib/types";
 import * as googleDrive from "../../lib/googleDriveService";
-import { detectDocType, detectBlock, SUBJECT_YEAR_MAP } from "../categorize";
+import { detectDocType, detectBlock, detectGeneration, SUBJECT_YEAR_MAP } from "../categorize";
 import { Button } from "../ui/button";
 import { Plus, Search, RefreshCcw, ChevronDown, ChevronUp } from "lucide-react";
 import { useIsMobile } from "../ui/use-mobile";
@@ -19,9 +18,8 @@ import {
 } from "../admin/AddResourceDialog";
 import { EditResourceDialog } from "../admin/EditResourceDialog";
 import { DeleteConfirmDialog } from "../admin/DeleteConfirmDialog";
-// import { addStudentDocument, updateStudentDocument, deleteStudentDocument } from '../../lib/dataService';
 
-// ─── TYPE ORDER (Precourse ขึ้นก่อนเสมอ) ─────────────────────────────────────
+// ─── TYPE ORDER ─────────────────────────────────────────────────────────────
 const DOC_TYPE_ORDER = [
   "Precourse",
   "AC",
@@ -53,8 +51,6 @@ interface PeerSupportSectionProps {
   isMobile?: boolean;
 }
 
-// ─── SUBJECT CARD ─────────────────────────────────────────────────────────────
-// accordion ระดับวิชา → ข้างในมี ContentCategory แยกตาม doc type
 interface SubjectCardProps {
   subject: string;
   items: PeerSupportItem[];
@@ -74,7 +70,6 @@ function SubjectCard({
 
   const typesPresent = [
     ...DOC_TYPE_ORDER.filter((t) => items.some((i) => i.category === t)),
-    // เพิ่ม "ไม่ระบุประเภท" ถ้ามี item ที่ category ไม่อยู่ใน DOC_TYPE_ORDER
     ...(items.some(
       (i) =>
         !i.category ||
@@ -95,7 +90,6 @@ function SubjectCard({
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden mb-3">
-      {/* Subject header */}
       <div
         role="button"
         aria-expanded={expanded}
@@ -114,47 +108,26 @@ function SubjectCard({
                   color: TYPE_COLORS[t] ?? "#6B7280",
                 }}
               >
-                {t} (
-                {t === "ไม่ระบุประเภท"
-                  ? items.filter(
-                      (i) =>
-                        !i.category ||
-                        i.category === "Unknown" ||
-                        !DOC_TYPE_ORDER.includes(i.category),
-                    ).length
-                  : items.filter((i) => i.category === t).length}
-                ){" "}
+                {t} ({items.filter((i) => i.category === t || (t === "ไม่ระบุประเภท" && (!i.category || i.category === "Unknown"))).length}){" "}
               </span>
             ))}
             {gens.map((g) => (
-              <span
-                key={g}
-                className="text-xs px-2 py-0.5 rounded-full"
-                style={{ background: "#F1F5F9", color: "#64748B" }}
-              >
+              <span key={g} className="text-xs px-2 py-0.5 rounded-full" style={{ background: "#F1F5F9", color: "#64748B" }}>
                 {g}
               </span>
             ))}
             {hasUnknownGen && (
-              <span
-                className="text-xs px-2 py-0.5 rounded-full"
-                style={{ background: "#F1F5F9", color: "#94A3B8" }}
-              >
+              <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "#F1F5F9", color: "#94A3B8" }}>
                 ไม่ระบุรุ่น
               </span>
             )}
           </div>
         </div>
         <span className="text-slate-400 ml-4 shrink-0">
-          {expanded ? (
-            <ChevronUp className="w-5 h-5" />
-          ) : (
-            <ChevronDown className="w-5 h-5" />
-          )}
+          {expanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
         </span>
       </div>
 
-      {/* ข้างใน: ContentCategory accordion แยกตาม doc type */}
       {expanded && (
         <div className="border-t border-slate-100 px-4 sm:px-6 py-4 space-y-3 bg-slate-50/50">
           {typesPresent.map((type) => (
@@ -163,12 +136,7 @@ function SubjectCard({
               categoryName={type}
               items={
                 type === "ไม่ระบุประเภท"
-                  ? items.filter(
-                      (i) =>
-                        !i.category ||
-                        i.category === "Unknown" ||
-                        !DOC_TYPE_ORDER.includes(i.category),
-                    )
+                  ? items.filter((i) => !i.category || i.category === "Unknown")
                   : items.filter((i) => i.category === type)
               }
               isAdmin={isAdmin}
@@ -183,69 +151,63 @@ function SubjectCard({
   );
 }
 
-// ─── PEER SUPPORT SECTION ─────────────────────────────────────────────────────
 export function PeerSupportSection({
   isAdmin = false,
   isMobile = false,
 }: PeerSupportSectionProps) {
-  // Dialog states
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<
-    (ResourceFormData & { id: string }) | null
-  >(null);
-  const [deletingItem, setDeletingItem] = useState<{
-    id: string;
-    name: string;
-  } | null>(null);
+  const [editingItem, setEditingItem] = useState<(ResourceFormData & { id: string }) | null>(null);
+  const [deletingItem, setDeletingItem] = useState<{ id: string; name: string } | null>(null);
 
   const handleAdd = async (data: ResourceFormData) => {
-    await addPeerSupportItem(data);
-    const updated = await getStudentDocuments();
-    setStudentDocs(updated);
+    // Manual additions are currently disabled for student_documents as they sync from Drive.
+    // To add a resource, upload it to the designated Google Drive folder.
+    console.log("Add ignored: New resources should be uploaded to Google Drive.", data);
   };
 
   const handleEdit = async (data: ResourceFormData & { id: string }) => {
-    await editPeerSupportItem(data);
+    // Strip "doc-" prefix and convert to number for student_documents
+    const docId = parseInt(data.id.replace("doc-", ""), 10);
+    
+    // Map ResourceFormData back to StudentDocument partial
+    // This allows admins to "fix keys" in the database
+    const updates: any = {
+      block: data.block,
+      doc_type: data.category,
+      generation: parseInt(data.generation.replace("MDCU ", ""), 10) || 0,
+    };
+
+    await updateStudentDocument(docId, updates);
     const updated = await getStudentDocuments();
     setStudentDocs(updated);
   };
 
   const handleDelete = async () => {
     if (!deletingItem) return;
-    await removePeerSupportItem(deletingItem.id);
+    const docId = parseInt(deletingItem.id.replace("doc-", ""), 10);
+    await deleteStudentDocument(docId);
     const updated = await getStudentDocuments();
     setStudentDocs(updated);
   };
 
   const isMobileScreen = useIsMobile();
-
-  // filter state — multi-select string[]
   const [selectedYear, setSelectedYear] = useState<string[]>([]);
   const [selectedGeneration, setSelectedGeneration] = useState<string[]>([]);
   const [selectedBlock, setSelectedBlock] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string[]>([]);
 
-  // data state (ไม่เปลี่ยน)
   const [studentDocs, setStudentDocs] = useState<StudentDocument[]>([]);
-  const [driveFiles, setDriveFiles] = useState<googleDrive.DriveFile[]>([]);
+  const [peerItems, setPeerItems] = useState<PeerSupportItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingDrive, setIsLoadingDrive] = useState(false);
 
-  // Fetch data on component mount
   useEffect(() => {
     async function loadData() {
       try {
         setIsLoading(true);
-        // Fetch DB data
-        const data = await getStudentDocuments();
-        setStudentDocs(data);
-
-        // Fetch Drive data
-        if (googleDrive.getAccessToken()) {
-          fetchDriveFiles();
-        }
+        const docs = await getStudentDocuments();
+        setStudentDocs(docs);
       } catch (error) {
         console.error("Error loading documents:", error);
       } finally {
@@ -255,50 +217,36 @@ export function PeerSupportSection({
     loadData();
   }, []);
 
-  const fetchDriveFiles = async () => {
-    try {
-      setIsLoadingDrive(true);
-      const files = await googleDrive.listDriveFiles();
-      setDriveFiles(files);
-    } catch (error) {
-      console.error("Error loading Drive files:", error);
-    } finally {
-      setIsLoadingDrive(false);
-    }
-  };
-
-  // combine DB + Drive
   const allItems = useMemo<PeerSupportItem[]>(
-    () => [
-      ...studentDocs.map((doc) => ({
-        id: doc.id.toString(),
-        block_name: doc.title,
-        thumbnail:
-          "https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=100&h=100&fit=crop",
-        drive_link: doc.file_url,
-        generation: `MDCU ${doc.generation}`,
-        block: doc.block,
-        category: doc.doc_type,
-      })),
-      ...driveFiles.map((file) => ({
-        id: file.id,
-        block_name: file.name,
-        thumbnail:
-          "https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=100&h=100&fit=crop",
-        drive_link: file.webViewLink,
-        generation: "Auto-Detected",
-        block: detectBlock(file.name),
-        category: detectDocType(file.name),
-      })),
-    ],
-    [studentDocs, driveFiles],
+    () => {
+      // Convert student docs to PeerSupportItem format and auto-categorize
+      return studentDocs.map((doc) => {
+        const finalBlock = doc.block && doc.block !== 'Other' && doc.block !== 'Unclassified'
+          ? doc.block
+          : detectBlock(doc.title, doc.folder_path);
+          
+        const finalCategory = doc.doc_type && doc.doc_type !== 'Other' && doc.doc_type !== 'Unknown'
+          ? doc.doc_type
+          : detectDocType(doc.title);
+
+        return {
+          id: `doc-${doc.id}`,
+          block_name: doc.title,
+          thumbnail: doc.thumbnail_url || "", // Use synced thumbnail if available
+          drive_link: doc.file_url,
+          generation: doc.generation && doc.generation !== 0 
+            ? `MDCU ${doc.generation}` 
+            : detectGeneration(doc.title, doc.folder_path),
+          block: finalBlock,
+          category: finalCategory,
+        };
+      });
+    },
+    [studentDocs],
   );
 
-  // dynamic filter options จากข้อมูลจริง (ไม่แสดงตัวเลือกที่ไม่มีในข้อมูล)
   const filterOptions = useMemo(() => {
-    const genSet = new Set(
-      allItems.map((d) => d.generation).filter((g) => g !== "Auto-Detected"),
-    );
+    const genSet = new Set(allItems.map((d) => d.generation).filter((g) => g !== "Auto-Detected"));
     const blockSet = new Set(allItems.map((d) => d.block));
     const typeSet = new Set(allItems.map((d) => d.category));
     return {
@@ -308,89 +256,46 @@ export function PeerSupportSection({
     };
   }, [allItems]);
 
-  // ── clear selectedBlock ถ้าปีเปลี่ยนแล้ว block นั้นไม่อยู่ในปีที่เลือกแล้ว ──
   useEffect(() => {
     if (selectedYear.length === 0) return;
     const validBlocks = filterBlocksByYear(filterOptions.blocks, selectedYear);
     const stillValid = selectedBlock.filter((b) => validBlocks.includes(b));
-    if (stillValid.length !== selectedBlock.length) {
-      setSelectedBlock(stillValid);
-    }
+    if (stillValid.length !== selectedBlock.length) setSelectedBlock(stillValid);
   }, [selectedYear]);
 
-  // filter — OR within, AND across
   const filteredItems = useMemo(
     () =>
       allItems.filter((item) => {
-        // Year filter
         if (selectedYear.length > 0) {
           const year = SUBJECT_YEAR_MAP[item.block];
           const yearStr = year === undefined ? "other" : String(year);
           if (!selectedYear.includes(yearStr)) return false;
         }
 
-        // Generation
-        const genVal =
-          !item.generation || item.generation === "Auto-Detected"
-            ? "other"
-            : item.generation;
-        const genMatch =
-          selectedGeneration.length === 0 ||
-          (genVal === "other"
-            ? selectedGeneration.includes("other") ||
-              selectedGeneration.length === 0
-            : selectedGeneration.some((g) =>
-                genVal.includes(g.replace("MDCU ", "")),
-              ));
+        const genVal = !item.generation || item.generation === "Auto-Detected" ? "other" : item.generation;
+        const genMatch = selectedGeneration.length === 0 || (genVal === "other" ? selectedGeneration.includes("other") || selectedGeneration.length === 0 : selectedGeneration.some((g) => genVal.includes(g.replace("MDCU ", ""))));
 
-        // Block
-        const blockVal =
-          !item.block || item.block === "Unclassified" ? "other" : item.block;
-        const blockMatch =
-          selectedBlock.length === 0 ||
-          (blockVal === "other"
-            ? selectedBlock.includes("other") || selectedBlock.length === 0
-            : selectedBlock.includes(blockVal));
+        const blockVal = !item.block || item.block === "Unclassified" ? "other" : item.block;
+        const blockMatch = selectedBlock.length === 0 || (blockVal === "other" ? selectedBlock.includes("other") || selectedBlock.length === 0 : selectedBlock.includes(blockVal));
 
-        // Category
-        const catVal =
-          !item.category ||
-          item.category === "Unknown" ||
-          !DOC_TYPE_ORDER.includes(item.category) // ← เพิ่ม: category ที่ไม่อยู่ใน DOC_TYPE_ORDER ก็เป็น other
-            ? "other"
-            : item.category;
-        const catMatch =
-          selectedCategory.length === 0 ||
-          (catVal === "other"
-            ? selectedCategory.includes("other") ||
-              selectedCategory.length === 0
-            : selectedCategory.includes(catVal));
+        const catVal = !item.category || item.category === "Unknown" || !DOC_TYPE_ORDER.includes(item.category) ? "other" : item.category;
+        const catMatch = selectedCategory.length === 0 || (catVal === "other" ? selectedCategory.includes("other") || selectedCategory.length === 0 : selectedCategory.includes(catVal));
 
         return genMatch && blockMatch && catMatch;
       }),
-    [
-      allItems,
-      selectedYear,
-      selectedGeneration,
-      selectedBlock,
-      selectedCategory,
-    ],
+    [allItems, selectedYear, selectedGeneration, selectedBlock, selectedCategory],
   );
 
-  // จัดกลุ่มตาม Block/วิชา
   const groupedBySubject = useMemo(() => {
     const map: Record<string, PeerSupportItem[]> = {};
     filteredItems.forEach((item) => {
-      const key =
-        item.block && item.block !== "Unclassified"
-          ? item.block
-          : "ไม่ระบุวิชา"; // ← รวม block ที่ขาดข้อมูลไว้กลุ่มเดียวกัน
+      const key = item.block && item.block !== "Unclassified" ? item.block : "ไม่ระบุวิชา";
       if (!map[key]) map[key] = [];
       map[key].push(item);
     });
     return Object.entries(map)
       .sort(([a], [b]) => {
-        if (a === "ไม่ระบุวิชา") return 1; // ← ดันลงท้ายเสมอ
+        if (a === "ไม่ระบุวิชา") return 1;
         if (b === "ไม่ระบุวิชา") return -1;
         return a.localeCompare(b);
       })
@@ -399,48 +304,20 @@ export function PeerSupportSection({
 
   return (
     <div className="pb-20 lg:pb-8">
-      {/* Header */}
       <div className="mb-6 sm:mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
-          <h1 className="text-slate-900 font-bold text-[24px]">
-            Peer Support Resources
-          </h1>
+          <h1 className="text-slate-900 font-bold text-[24px]">Peer Support Resources</h1>
           {isAdmin && (
-            <Button
-              size="sm"
-              onClick={() => setAddDialogOpen(true)}
-              className="bg-[#E5007D] hover:bg-[#c00069] text-white"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add New Resource
+            <Button size="sm" onClick={() => setAddDialogOpen(true)} className="bg-[#E5007D] hover:bg-[#c00069] text-white">
+              <Plus className="w-4 h-4 mr-2" /> Add New Resource
             </Button>
           )}
         </div>
-        <p className="text-slate-600 text-sm sm:text-base">
-          Browse and access peer-created academic materials
-        </p>
+        <p className="text-slate-600 text-sm sm:text-base">Browse and access peer-created academic materials</p>
       </div>
 
-      {/* Main layout */}
-      <div
-        style={{
-          display: "flex",
-          flexDirection: isMobileScreen ? "column" : "row",
-          gap: 20,
-          alignItems: "flex-start",
-        }}
-      >
-        {/* Filter sidebar */}
-        <div
-          style={{
-            width: isMobileScreen ? "100%" : 230,
-            flexShrink: 0,
-            position: isMobileScreen ? "static" : "sticky",
-            top: 20,
-            maxHeight: isMobileScreen ? "auto" : "calc(100vh - 40px)",
-            overflowY: isMobileScreen ? "visible" : "auto",
-          }}
-        >
+      <div style={{ display: "flex", flexDirection: isMobileScreen ? "column" : "row", gap: 20, alignItems: "flex-start" }}>
+        <div style={{ width: isMobileScreen ? "100%" : 230, flexShrink: 0, position: isMobileScreen ? "static" : "sticky", top: 20, maxHeight: isMobileScreen ? "auto" : "calc(100vh - 40px)", overflowY: isMobileScreen ? "visible" : "auto" }}>
           <FilterBar
             generationOptions={filterOptions.generations}
             blockOptions={filterOptions.blocks}
@@ -457,26 +334,17 @@ export function PeerSupportSection({
           />
         </div>
 
-        {/* Results */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          {(isLoading || isLoadingDrive) && (
+          {isLoading && (
             <div className="flex justify-center items-center py-12">
               <RefreshCcw className="w-6 h-6 text-[#E5007D] animate-spin mr-2" />
-              <div className="text-slate-600">
-                {isLoading ? "Loading..." : "Syncing Drive files..."}
-              </div>
+              <div className="text-slate-600">Loading...</div>
             </div>
           )}
 
           {!isLoading && (
             <div className="text-xs text-slate-400 mb-3">
-              พบ {filteredItems.length} รายการ จาก {groupedBySubject.length}{" "}
-              วิชา
-              {isLoadingDrive && (
-                <span className="ml-2 text-[#E5007D]">
-                  ⟳ กำลังโหลด Drive files...
-                </span>
-              )}
+              พบ {filteredItems.length} รายการ จาก {groupedBySubject.length} วิชา
             </div>
           )}
 
@@ -489,16 +357,7 @@ export function PeerSupportSection({
                     items={items}
                     isAdmin={isAdmin}
                     onEdit={(item) => {
-                      setEditingItem({
-                        id: item.id,
-                        blockName: item.block_name,
-                        blockCode: "",
-                        generation: item.generation,
-                        block: item.block,
-                        category: item.category,
-                        driveLink: item.drive_link,
-                        thumbnail: item.thumbnail,
-                      });
+                      setEditingItem({ id: item.id, blockName: item.block_name, blockCode: "", generation: item.generation, block: item.block, category: item.category, driveLink: item.drive_link, thumbnail: item.thumbnail });
                       setEditDialogOpen(true);
                     }}
                     onDelete={(item) => {
@@ -507,38 +366,21 @@ export function PeerSupportSection({
                     }}
                   />
                 ))
-              : !isLoadingDrive && (
+              : (
                   <div className="text-center py-20 bg-white rounded-xl border border-dashed border-slate-300">
-                    <Search className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                    <h3 className="text-slate-900 font-medium">
-                      No resources found
-                    </h3>
-                    <p className="text-slate-500 text-sm">
-                      Try adjusting your filters.
-                    </p>
+                    <br />
+                    <Search className="w-12 h-12 text-slate-300 mx-auto " />
+                    <h3 className="text-slate-900 font-medium ">No resources found</h3>
+                    <p className="text-slate-500 text-sm">Try adjusting your filters.</p>
+                    <br />
                   </div>
                 ))}
         </div>
       </div>
 
-      {/* Dialogs */}
-      <AddResourceDialog
-        open={addDialogOpen}
-        onOpenChange={setAddDialogOpen}
-        onSubmit={handleAdd}
-      />
-      <EditResourceDialog
-        open={editDialogOpen}
-        onOpenChange={setEditDialogOpen}
-        onSubmit={handleEdit}
-        initialData={editingItem ?? undefined}
-      />
-      <DeleteConfirmDialog
-        open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-        onConfirm={handleDelete}
-        itemName={deletingItem?.name ?? ""}
-      />
+      <AddResourceDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} onSubmit={handleAdd} />
+      <EditResourceDialog open={editDialogOpen} onOpenChange={setEditDialogOpen} onSubmit={handleEdit} initialData={editingItem ?? undefined} />
+      <DeleteConfirmDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen} onConfirm={handleDelete} itemName={deletingItem?.name ?? ""} />
     </div>
   );
 }

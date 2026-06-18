@@ -29,6 +29,7 @@ export interface StudentDocument {
   description?: string;
   uploaded_by: string;
   upload_date: string;
+  thumbnail_url?: string;
 }
 
 export interface Activity {
