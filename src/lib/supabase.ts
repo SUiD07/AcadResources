@@ -199,40 +199,89 @@ export async function deleteActivity(id: string): Promise<void> {
 // 3. ACADEMIC RESOURCES FUNCTIONS
 // ============================================
 
+type ResourceItemInput = { name: string; type: string };
+
 export async function fetchResourceCategories(): Promise<ResourceCategory[]> {
   const { data, error } = await supabase
-    .from('resources')
-    .select('*')
+    .from('resource_categories')
+    .select('*, items:resource_items(*)')
     .order('title', { ascending: true });
 
   if (error) {
     console.error('Fetch Error (Resources):', error.message);
     return [];
   }
-  console.log(`Fetched ${data?.length || 0} resource categories`);
   return data || [];
 }
 
-export async function createResourceCategory(category: Omit<ResourceCategory, 'id'>): Promise<ResourceCategory> {
+export async function createResourceCategory(
+  category: { title: string; description: string; icon: string; link: string; items?: ResourceItemInput[] }
+): Promise<ResourceCategory> {
+  const { items, ...categoryData } = category;
+
   const { data, error } = await supabase
     .from('resource_categories')
-    .insert(category)
+    .insert(categoryData)
     .select()
     .single();
 
   if (error) throw error;
+
+  if (items && items.length > 0) {
+    const itemsToInsert = items.map((item) => ({
+      name: item.name,
+      type: item.type,
+      category_id: data.id,
+    }));
+
+    const { error: itemsError } = await supabase
+      .from('resource_items')
+      .insert(itemsToInsert);
+
+    if (itemsError) throw itemsError;
+  }
+
   return data;
 }
 
-export async function updateResourceCategory(id: string, updates: Partial<ResourceCategory>): Promise<ResourceCategory> {
+export async function updateResourceCategory(
+  id: string,
+  updates: { id?: string; title?: string; description?: string; icon?: string; link?: string; items?: ResourceItemInput[] }
+): Promise<ResourceCategory> {
+  const { items, id: _ignoredId, ...categoryUpdates } = updates;
+
   const { data, error } = await supabase
     .from('resource_categories')
-    .update(updates)
+    .update(categoryUpdates)
     .eq('id', id)
     .select()
     .maybeSingle();
 
   if (error) throw error;
+
+  if (items) {
+    const { error: deleteError } = await supabase
+      .from('resource_items')
+      .delete()
+      .eq('category_id', id);
+
+    if (deleteError) throw deleteError;
+
+    if (items.length > 0) {
+      const itemsToInsert = items.map((item) => ({
+        name: item.name,
+        type: item.type,
+        category_id: id,
+      }));
+
+      const { error: insertError } = await supabase
+        .from('resource_items')
+        .insert(itemsToInsert);
+
+      if (insertError) throw insertError;
+    }
+  }
+
   return data;
 }
 

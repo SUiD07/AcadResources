@@ -104,13 +104,15 @@ export function BoardSection({ isAdmin = false }: Props) {
   return (
     <div className="pb-20 lg:pb-8">
       {/* Header */}
-      <div className={`flex items-start justify-between mb-4 px-6 pt-6}`}>
-        <div>
-          <h1 className="text-slate-900">Announcements Board</h1>
-          <p className="text-slate-500 mt-1">
-            Select your generation to see announcements
-          </p>
+      <div className="mb-6 sm:mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
+          <h1 className="text-slate-900 text-[24px] font-bold">
+            Board
+          </h1>
         </div>
+        <p className="text-slate-600 text-sm sm:text-base">
+          Stay informed with academic updates and community-shared resources
+        </p>
       </div>
 
       {/* ── Generation Tabs ── */}

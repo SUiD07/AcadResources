@@ -103,14 +103,19 @@ export async function getResourceCategories(): Promise<ResourceCategory[]> {
   return [];
 }
 
-export async function addResourceCategory(category: Omit<ResourceCategory, 'id'>): Promise<ResourceCategory> {
+export async function addResourceCategory(
+  category: { title: string; description: string; icon: string; link: string; items?: { name: string; type: string }[] }
+): Promise<ResourceCategory> {
   if (USE_SUPABASE) {
     return await supabaseApi.createResourceCategory(category);
   }
   throw new Error('Supabase not enabled');
 }
 
-export async function editResourceCategory(id: string, updates: Partial<ResourceCategory>): Promise<ResourceCategory> {
+export async function editResourceCategory(
+  id: string,
+  updates: { id?: string; title?: string; description?: string; icon?: string; link?: string; items?: { name: string; type: string }[] }
+): Promise<ResourceCategory> {
   if (USE_SUPABASE) {
     return await supabaseApi.updateResourceCategory(id, updates);
   }

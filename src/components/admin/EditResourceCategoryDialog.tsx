@@ -1,12 +1,25 @@
-import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Textarea } from '../ui/textarea';
-import { Loader2, Plus, X } from 'lucide-react';
-import type { ResourceCategoryFormData } from './AddResourceCategoryDialog';
+import { useState, useEffect } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../ui/dialog";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
+import { Textarea } from "../ui/textarea";
+import { Loader2, Plus, X } from "lucide-react";
+import type { ResourceCategoryFormData } from "./AddResourceCategoryDialog";
 
 interface EditResourceCategoryDialogProps {
   open: boolean;
@@ -15,15 +28,22 @@ interface EditResourceCategoryDialogProps {
   initialData?: ResourceCategoryFormData & { id: string };
 }
 
-export function EditResourceCategoryDialog({ open, onOpenChange, onSubmit, initialData }: EditResourceCategoryDialogProps) {
+export function EditResourceCategoryDialog({
+  open,
+  onOpenChange,
+  onSubmit,
+  initialData,
+}: EditResourceCategoryDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState<ResourceCategoryFormData & { id: string }>({
-    id: '',
-    title: '',
-    description: '',
-    icon: 'BookOpen',
-    link: '',
-    items: [{ name: '', type: 'PDF' }],
+  const [formData, setFormData] = useState<
+    ResourceCategoryFormData & { id: string }
+  >({
+    id: "",
+    title: "",
+    description: "",
+    icon: "BookOpen",
+    link: "",
+    items: [{ name: "", type: "PDF" }],
   });
 
   // Update form when initialData changes
@@ -40,7 +60,7 @@ export function EditResourceCategoryDialog({ open, onOpenChange, onSubmit, initi
       await onSubmit(formData);
       onOpenChange(false);
     } catch (error) {
-      console.error('Error submitting form:', error);
+      console.error("Error submitting form:", error);
     } finally {
       setIsLoading(false);
     }
@@ -49,7 +69,7 @@ export function EditResourceCategoryDialog({ open, onOpenChange, onSubmit, initi
   const addItem = () => {
     setFormData({
       ...formData,
-      items: [...formData.items, { name: '', type: 'PDF' }],
+      items: [...formData.items, { name: "", type: "PDF" }],
     });
   };
 
@@ -60,7 +80,7 @@ export function EditResourceCategoryDialog({ open, onOpenChange, onSubmit, initi
     });
   };
 
-  const updateItem = (index: number, field: 'name' | 'type', value: string) => {
+  const updateItem = (index: number, field: "name" | "type", value: string) => {
     const newItems = [...formData.items];
     newItems[index][field] = value;
     setFormData({ ...formData, items: newItems });
@@ -75,7 +95,7 @@ export function EditResourceCategoryDialog({ open, onOpenChange, onSubmit, initi
             Update the details for this academic resource category.
           </DialogDescription>
         </DialogHeader>
-        
+
         <form onSubmit={handleSubmit}>
           <div className="space-y-4 py-4">
             {/* Title */}
@@ -85,7 +105,9 @@ export function EditResourceCategoryDialog({ open, onOpenChange, onSubmit, initi
                 id="edit-category-title"
                 placeholder="e.g., Textbooks & References"
                 value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, title: e.target.value })
+                }
                 required
               />
             </div>
@@ -97,7 +119,9 @@ export function EditResourceCategoryDialog({ open, onOpenChange, onSubmit, initi
                 id="edit-category-description"
                 placeholder="Brief description of this category..."
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
                 rows={2}
                 required
               />
@@ -107,20 +131,19 @@ export function EditResourceCategoryDialog({ open, onOpenChange, onSubmit, initi
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="edit-category-icon">Icon *</Label>
-                <Select
+                <select
+                  id="edit-category-icon"
                   value={formData.icon}
-                  onValueChange={(value:any) => setFormData({ ...formData, icon: value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, icon: e.target.value })
+                  }
+                  className="w-full border border-input bg-background rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 >
-                  <SelectTrigger id="edit-category-icon">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="BookOpen">Book Open</SelectItem>
-                    <SelectItem value="FileText">File Text</SelectItem>
-                    <SelectItem value="Video">Video</SelectItem>
-                    <SelectItem value="LinkIcon">Link</SelectItem>
-                  </SelectContent>
-                </Select>
+                  <option value="BookOpen">Book Open</option>
+                  <option value="FileText">File Text</option>
+                  <option value="Video">Video</option>
+                  <option value="LinkIcon">Link</option>
+                </select>
               </div>
 
               <div className="space-y-2">
@@ -130,7 +153,9 @@ export function EditResourceCategoryDialog({ open, onOpenChange, onSubmit, initi
                   type="url"
                   placeholder="https://..."
                   value={formData.link}
-                  onChange={(e) => setFormData({ ...formData, link: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, link: e.target.value })
+                  }
                   required
                 />
               </div>
@@ -158,24 +183,24 @@ export function EditResourceCategoryDialog({ open, onOpenChange, onSubmit, initi
                     <Input
                       placeholder="Item name"
                       value={item.name}
-                      onChange={(e) => updateItem(index, 'name', e.target.value)}
+                      onChange={(e) =>
+                        updateItem(index, "name", e.target.value)
+                      }
                       required
                       className="flex-1"
                     />
-                    <Select
+                    <select
                       value={item.type}
-                      onValueChange={(value:any) => updateItem(index, 'type', value)}
+                      onChange={(e) =>
+                        updateItem(index, "type", e.target.value)
+                      }
+                      className="w-24 border border-input bg-background rounded-md px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                     >
-                      <SelectTrigger className="w-24">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="PDF">PDF</SelectItem>
-                        <SelectItem value="Video">Video</SelectItem>
-                        <SelectItem value="Link">Link</SelectItem>
-                        <SelectItem value="Doc">Doc</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      <option value="PDF">PDF</option>
+                      <option value="Video">Video</option>
+                      <option value="Link">Link</option>
+                      <option value="Doc">Doc</option>
+                    </select>
                     {formData.items.length > 1 && (
                       <Button
                         type="button"
@@ -213,7 +238,7 @@ export function EditResourceCategoryDialog({ open, onOpenChange, onSubmit, initi
                   Saving...
                 </>
               ) : (
-                'Save Changes'
+                "Save Changes"
               )}
             </Button>
           </DialogFooter>

@@ -199,8 +199,11 @@ export function AcademicResourcesSection({
         </div>
       )}
 
-      {/* ✅ Dialogs เชื่อมกับ state จริง */}
-      {/* <AddResourceDialog open={addOpen} onOpenChange={setAddOpen} onSubmit={handleAddResource} /> */}
+      <AddResourceCategoryDialog
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        onSubmit={handleAddResource}
+      />
 
       {selectedCategory && (
         <EditResourceCategoryDialog
