@@ -7,8 +7,8 @@ import { AcademicActivitiesSection } from './components/section/AcademicActiviti
 import { AcademicResourcesSection } from './components/section/AcademicResourcesSection';
 import CareerNavigationSection from './components/section/CareerNavigationSection';
 import { BoardSection } from './components/section/BoardSection';
-
-type Section = 'peer-support' | 'academic-activities' | 'academic-resources' | 'career-navigation' | 'board';
+import { KeywordManagementSection } from './components/section/KeywordManagementSection';
+import { Section } from './lib/types';
 
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -33,6 +33,7 @@ export default function App() {
           <Sidebar 
             activeSection={activeSection} 
             onSectionChange={setActiveSection}
+            isAdmin={isAdmin}
             onLogout={() => {
               setIsLoggedIn(false);
               setIsAdmin(false);
@@ -49,6 +50,7 @@ export default function App() {
           }}
           isOpen={mobileMenuOpen}
           onToggle={() => setMobileMenuOpen(!mobileMenuOpen)}
+          isAdmin={isAdmin}
           onLogout={() => {
             setIsLoggedIn(false);
             setIsAdmin(false);
@@ -62,6 +64,7 @@ export default function App() {
             {activeSection === 'academic-resources' && <AcademicResourcesSection isAdmin={isAdmin} />}
             {activeSection === 'career-navigation' && <CareerNavigationSection />}
             {activeSection === 'board' && <BoardSection isAdmin={isAdmin} />}
+            {activeSection === 'keyword-management' && <KeywordManagementSection />}
           </div>
         </main>
       </div>

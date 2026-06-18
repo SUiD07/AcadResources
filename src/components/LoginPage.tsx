@@ -10,14 +10,21 @@ import * as googleDrive from '../lib/googleDriveService';
 
 interface LoginPageProps {
   onLogin: (isAdmin: boolean) => void;
+  initialAdminMode?: boolean;
 }
 
-export function LoginPage({ onLogin }: LoginPageProps) {
+export function LoginPage({ onLogin, initialAdminMode = false }: LoginPageProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isAdminLogin, setIsAdminLogin] = useState(false);
+  const [isAdminLogin, setIsAdminLogin] = useState(initialAdminMode);
   const [error, setError] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
+
+  useEffect(() => {
+    if (initialAdminMode) {
+      setIsAdminLogin(true);
+    }
+  }, [initialAdminMode]);
 
   useEffect(() => {
     // Wait for the Google script to load before initializing
@@ -42,7 +49,9 @@ export function LoginPage({ onLogin }: LoginPageProps) {
             const hasAccess = await googleDrive.checkDriveAccess();
 
             if (hasAccess) {
-              onLogin(isAdminLogin);
+              // Automatically grant admin if email is admin@docchula.com
+              const isActuallyAdmin = isAdminLogin || userInfo.email === 'admin@docchula.com';
+              onLogin(isActuallyAdmin);
             } else {
               setError('Access Denied: Your @docchula.com account does not have permission to access the required Drive folder.');
             }
@@ -60,20 +69,21 @@ export function LoginPage({ onLogin }: LoginPageProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // For demo/mock admin login
-    if (isAdminLogin) {
-      if (email === "admin@docchula.com" && password === "admin") {
+    // Automatically detect admin email
+    if (email === "admin@docchula.com") {
+      if (password === "admin") {
         onLogin(true);
       } else {
         setError("Invalid admin credentials.");
       }
+      return;
+    }
+
+    // For demo/mock user login
+    if (email.endsWith("@docchula.com")) {
+      onLogin(false);
     } else {
-      //for demo User: เช็คแค่ว่าเป็น @docchula.com
-      if (email.endsWith("@docchula.com")) {
-        onLogin(false);
-      } else {
-        setError("Please use your @docchula.com account.");
-      }
+      setError("Please use your @docchula.com account.");
     }
   };
 
@@ -118,7 +128,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
 
           <div className="bg-white/80 backdrop-blur-sm p-6 rounded-xl border border-slate-200">
             <p className="text-slate-700 text-sm leading-relaxed">
-              Access peer-created study materials, academic activities, and essential resources 
+              Access peer-created study materials, academic activities, and essential resources
               curated by your fellow medical students and faculty.
             </p>
           </div>
@@ -148,7 +158,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
               </CardTitle>
               <CardDescription className="text-sm">
                 {isAdminLogin
-                  ? 'Admin Sign In (docchula account)' 
+                  ? 'Admin Sign In (docchula account)'
                   : 'Sign in with your docchula account to access academic resources'
                 }
               </CardDescription>

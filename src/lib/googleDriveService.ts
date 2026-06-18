@@ -12,6 +12,7 @@ export interface DriveFile {
   thumbnailLink?: string;
   modifiedTime?: string;
   size?: string;
+  parentPath?: string;
 }
 
 export interface UserInfo {

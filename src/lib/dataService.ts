@@ -8,7 +8,7 @@
 import { USE_SUPABASE } from './config';
 import * as supabaseApi from './supabase';
 import type { PeerSupportItem, Activity, ResourceCategory, StudentDocument } from './types';
-import type { Generation, Board, BoardContent } from './types';
+import type { Generation, Board, BoardContent, KeywordConfig } from './types';
 // ============================================
 // PEER SUPPORT DATA SERVICE
 // ============================================
@@ -200,4 +200,35 @@ export async function saveBoardContentData(
   content: object
 ): Promise<void> {
   if (USE_SUPABASE) return await supabaseApi.saveBoardContent(boardId, content);
+}
+
+// ============================================
+// KEYWORD CONFIGURATIONS
+// ============================================
+
+export async function getKeywordConfigs(): Promise<KeywordConfig[]> {
+  if (USE_SUPABASE) {
+    return await supabaseApi.fetchKeywordConfigs();
+  }
+  return [];
+}
+
+export async function addKeywordConfig(config: Omit<KeywordConfig, 'id'>): Promise<KeywordConfig> {
+  if (USE_SUPABASE) {
+    return await supabaseApi.createKeywordConfig(config);
+  }
+  throw new Error('Supabase not enabled');
+}
+
+export async function editKeywordConfig(id: string, updates: Partial<KeywordConfig>): Promise<KeywordConfig> {
+  if (USE_SUPABASE) {
+    return await supabaseApi.updateKeywordConfig(id, updates);
+  }
+  throw new Error('Supabase not enabled');
+}
+
+export async function removeKeywordConfig(id: string): Promise<void> {
+  if (USE_SUPABASE) {
+    await supabaseApi.deleteKeywordConfig(id);
+  }
 }
