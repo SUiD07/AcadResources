@@ -18,6 +18,8 @@ import {
 } from "../admin/AddResourceDialog";
 import { EditResourceDialog } from "../admin/EditResourceDialog";
 import { DeleteConfirmDialog } from "../admin/DeleteConfirmDialog";
+import { SearchBar, createEmptyBox, evaluateSearch } from "../SearchBar";
+import type { SearchBox, LogicOp } from "../SearchBar";
 
 // ─── TYPE ORDER ─────────────────────────────────────────────────────────────
 const DOC_TYPE_ORDER = [
@@ -198,6 +200,9 @@ export function PeerSupportSection({
   const [selectedBlock, setSelectedBlock] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string[]>([]);
 
+  const [searchBoxes, setSearchBoxes] = useState<SearchBox[]>([createEmptyBox("name")]);
+  const [searchOperators, setSearchOperators] = useState<LogicOp[]>([]);
+
   const [studentDocs, setStudentDocs] = useState<StudentDocument[]>([]);
   const [peerItems, setPeerItems] = useState<PeerSupportItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -281,9 +286,10 @@ export function PeerSupportSection({
         const catVal = !item.category || item.category === "Unknown" || !DOC_TYPE_ORDER.includes(item.category) ? "other" : item.category;
         const catMatch = selectedCategory.length === 0 || (catVal === "other" ? selectedCategory.includes("other") || selectedCategory.length === 0 : selectedCategory.includes(catVal));
 
-        return genMatch && blockMatch && catMatch;
+        if (!genMatch || !blockMatch || !catMatch) return false;
+        return evaluateSearch(item, searchBoxes, searchOperators);
       }),
-    [allItems, selectedYear, selectedGeneration, selectedBlock, selectedCategory],
+    [allItems, selectedYear, selectedGeneration, selectedBlock, selectedCategory, searchBoxes, searchOperators],
   );
 
   const groupedBySubject = useMemo(() => {
@@ -315,6 +321,14 @@ export function PeerSupportSection({
         </div>
         <p className="text-slate-600 text-sm sm:text-base">Browse and access peer-created academic materials</p>
       </div>
+      <SearchBar
+        boxes={searchBoxes}
+        operators={searchOperators}
+        onChange={(boxes, ops) => {
+        setSearchBoxes(boxes);
+        setSearchOperators(ops);
+        }}
+      />
 
       <div style={{ display: "flex", flexDirection: isMobileScreen ? "column" : "row", gap: 20, alignItems: "flex-start" }}>
         <div style={{ width: isMobileScreen ? "100%" : 230, flexShrink: 0, position: isMobileScreen ? "static" : "sticky", top: 20, maxHeight: isMobileScreen ? "auto" : "calc(100vh - 40px)", overflowY: isMobileScreen ? "visible" : "auto" }}>
