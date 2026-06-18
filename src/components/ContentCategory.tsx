@@ -169,9 +169,9 @@ export function ContentCategory({
                   loading="lazy"
                   style={{ display: "block" }}
                 />
-                <div className="absolute inset-0 flex items-center justify-center bg-slate-100 -z-10">
+                {/* <div className="absolute inset-0 flex items-center justify-center bg-slate-100 -z-10">
                   <FolderOpen className="w-10 h-10 text-slate-300" />
-                </div>
+                </div> */}
               </div>
 
               {/* Content Section */}
