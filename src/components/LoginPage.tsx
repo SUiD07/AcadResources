@@ -128,7 +128,7 @@ export function LoginPage({ onLogin, initialAdminMode = false }: LoginPageProps)
 
           <div className="bg-white/80 backdrop-blur-sm p-6 rounded-xl border border-slate-200">
             <p className="text-slate-700 text-sm leading-relaxed">
-              Access peer-created study materials, academic activities, and essential resources 
+              Access peer-created study materials, academic activities, and essential resources
               curated by your fellow medical students and faculty.
             </p>
           </div>
@@ -158,7 +158,7 @@ export function LoginPage({ onLogin, initialAdminMode = false }: LoginPageProps)
               </CardTitle>
               <CardDescription className="text-sm">
                 {isAdminLogin
-                  ? 'Admin Sign In (docchula account)' 
+                  ? 'Admin Sign In (docchula account)'
                   : 'Sign in with your docchula account to access academic resources'
                 }
               </CardDescription>
