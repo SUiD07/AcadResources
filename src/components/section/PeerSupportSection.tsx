@@ -232,7 +232,7 @@ export function PeerSupportSection({
         return {
           id: `doc-${doc.id}`,
           block_name: doc.title,
-          thumbnail: "", // Handled by ContentCategory fallback
+          thumbnail: doc.thumbnail_url || "", // Use synced thumbnail if available
           drive_link: doc.file_url,
           generation: doc.generation && doc.generation !== 0 
             ? `MDCU ${doc.generation}` 
