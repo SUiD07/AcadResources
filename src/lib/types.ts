@@ -25,7 +25,6 @@ export interface StudentDocument {
   block: string;
   doc_type: string;
   generation: number;
-  is_precourse: boolean;
   description?: string;
   uploaded_by: string;
   upload_date: string;
