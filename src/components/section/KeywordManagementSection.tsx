@@ -3,8 +3,8 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Loader2, Plus, Trash2, Save, X, Settings, FileText } from 'lucide-react';
-import { getKeywordConfigs, editKeywordConfig, addKeywordConfig, removeKeywordConfig, getStudentDocuments } from '../../lib/dataService';
+import { Loader2, Plus, Trash2, Save, X, Settings } from 'lucide-react';
+import { getKeywordConfigs, editKeywordConfig, addKeywordConfig, removeKeywordConfig, getStudentDocuments, updateStudentDocument } from '../../lib/dataService';
 import type { KeywordConfig, StudentDocument } from '../../lib/types';
 import { initializeCategorizer } from '../categorize';
 
@@ -61,12 +61,51 @@ export function KeywordManagementSection() {
   const handleSave = async (config: KeywordConfig) => {
     setIsSaving(true);
     try {
+      const matchingDocs = getMatchingFiles(config);
+      const matchingDocIds = new Set(matchingDocs.map(d => d.id));
+
+      const staleDocs = documents
+        .filter(doc => !matchingDocIds.has(doc.id))
+        .filter(doc => {
+          if (config.config_type === 'doc_type') return doc.doc_type === config.label;
+          if (config.config_type === 'block_mapping') return doc.block === config.label;
+          return false;
+        });
+
+      // Save the keyword config
       if (config.id.startsWith('new-')) {
         const { id, ...rest } = config;
         await addKeywordConfig(rest);
       } else {
         await editKeywordConfig(config.id, config);
       }
+
+      // Clear stale docs
+      const staleDocUpdates = staleDocs.map(doc => {
+        const resets: Partial<StudentDocument> = {};
+        if (config.config_type === 'doc_type') resets.doc_type = '';
+        if (config.config_type === 'block_mapping') {
+          resets.block = '';
+          resets.student_year = undefined;
+        }
+        return updateStudentDocument(doc.id, resets);
+      });
+
+      // Update matching docs
+      const newDocUpdates = Array.from(matchingDocIds).map(id => {
+        const updates: Partial<StudentDocument> = {};
+        if (config.config_type === 'doc_type') {
+          updates.doc_type = config.label;
+        } else if (config.config_type === 'block_mapping') {
+          updates.block = config.label;
+          if (config.year && config.year !== 'other') {
+            updates.student_year = Number(config.year);
+          }
+        }
+        return updateStudentDocument(id, updates);
+      });
+
+      await Promise.all([...staleDocUpdates, ...newDocUpdates]);
       await loadData();
     } catch (error) {
       console.error('Error saving config:', error);
@@ -136,8 +175,8 @@ export function KeywordManagementSection() {
           <button
             onClick={() => setActiveTab('doc_type')}
             className={`px-8 py-4 text-sm font-semibold border-b-2 transition-colors ${activeTab === 'doc_type'
-                ? 'border-[#E5007D] text-[#E5007D] bg-pink-50/30'
-                : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+              ? 'border-[#E5007D] text-[#E5007D] bg-pink-50/30'
+              : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'
               }`}
           >
             Document Types
@@ -145,8 +184,8 @@ export function KeywordManagementSection() {
           <button
             onClick={() => setActiveTab('block_mapping')}
             className={`px-8 py-4 text-sm font-semibold border-b-2 transition-colors ${activeTab === 'block_mapping'
-                ? 'border-[#E5007D] text-[#E5007D] bg-pink-50/30'
-                : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+              ? 'border-[#E5007D] text-[#E5007D] bg-pink-50/30'
+              : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'
               }`}
           >
             Block Mappings
