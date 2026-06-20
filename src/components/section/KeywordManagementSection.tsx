@@ -14,6 +14,7 @@ export function KeywordManagementSection() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'doc_type' | 'block_mapping'>('doc_type');
+  const [focusedKey, setFocusedKey] = useState<{ configId: string; keyIndex: number } | null>(null);
 
   useEffect(() => {
     loadData();
@@ -144,9 +145,14 @@ export function KeywordManagementSection() {
     setConfigs(prev => [...prev, newConfig]);
   };
 
-  const getMatchingFiles = (config: KeywordConfig) => {
+  const getMatchingFiles = (config: KeywordConfig, onlyKeyIndex?: number) => {
+    const keysToCheck =
+      onlyKeyIndex !== undefined
+        ? [config.keys[onlyKeyIndex] ?? '']
+        : config.keys;
+
     return documents.filter(doc =>
-      config.keys.some(key =>
+      keysToCheck.some(key =>
         key.trim() !== '' &&
         (doc.title.toLowerCase().includes(key.toLowerCase()) ||
           doc.folder_path.toLowerCase().includes(key.toLowerCase()))
@@ -200,7 +206,11 @@ export function KeywordManagementSection() {
           ) : (
             <div className="grid gap-6">
               {filteredConfigs.map((config) => {
-                const matchingFiles = getMatchingFiles(config);
+                const isFocusedHere = focusedKey?.configId === config.id;
+                const matchingFiles = getMatchingFiles(
+                  config,
+                  isFocusedHere ? focusedKey.keyIndex : undefined
+                );
                 return (
                   <div key={config.id} className="p-6 border border-slate-200 rounded-2xl space-y-6 bg-white hover:border-pink-200 transition-colors">
                     <div className="flex flex-col md:flex-row items-start justify-between gap-6">
@@ -267,6 +277,8 @@ export function KeywordManagementSection() {
                               className="bg-transparent text-sm focus:outline-none min-w-[120px] text-slate-600"
                               value={key}
                               onChange={(e) => handleUpdateKey(config.id, idx, e.target.value)}
+                              onFocus={() => setFocusedKey({ configId: config.id, keyIndex: idx })}
+                              onBlur={() => setFocusedKey(null)}
                               placeholder="Type keyword..."
                             />
                             <button
@@ -292,6 +304,11 @@ export function KeywordManagementSection() {
                     <div className="space-y-3 pt-4 border-t border-slate-200">
                       <Label className="text-sm font-semibold text-slate-700">
                         Matching Files ({matchingFiles.length})
+                        {focusedKey?.configId === config.id && (
+                          <span className="ml-2 text-xs font-normal text-slate-400 italic">
+                            — for "{config.keys[focusedKey.keyIndex] || '...'}"
+                          </span>
+                        )}
                       </Label>
                       <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
                         {matchingFiles.length > 0 ? (
