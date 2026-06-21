@@ -14,6 +14,7 @@ export interface PeerSupportItem {
   generation: string;
   block: string;
   category: string;
+  folder_path?: string;
 }
 
 export interface StudentDocument {

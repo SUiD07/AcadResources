@@ -5,10 +5,12 @@ import {
   getStudentDocuments,
   updateStudentDocument,
   deleteStudentDocument,
+  getKeywordConfigs,
 } from "../../lib/dataService";
-import type { StudentDocument, PeerSupportItem } from "../../lib/types";
+import type { StudentDocument, PeerSupportItem, KeywordConfig } from "../../lib/types";
 import * as googleDrive from "../../lib/googleDriveService";
-import { detectDocType, detectBlock, detectGeneration, SUBJECT_YEAR_MAP } from "../categorize";
+import { initializeCategorizer } from "../categorize";
+import { classifyDocument } from "../../lib/KeywordMatching";
 import { Button } from "../ui/button";
 import { Plus, Search, RefreshCcw, ChevronDown, ChevronUp } from "lucide-react";
 import { useIsMobile } from "../ui/use-mobile";
@@ -204,6 +206,7 @@ export function PeerSupportSection({
   const [searchOperators, setSearchOperators] = useState<LogicOp[]>([]);
 
   const [studentDocs, setStudentDocs] = useState<StudentDocument[]>([]);
+  const [configs, setConfigs] = useState<KeywordConfig[]>([]);
   const [peerItems, setPeerItems] = useState<PeerSupportItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -211,8 +214,10 @@ export function PeerSupportSection({
     async function loadData() {
       try {
         setIsLoading(true);
-        const docs = await getStudentDocuments();
+        const [docs, cfgs] = await Promise.all([getStudentDocuments(), getKeywordConfigs()]);
+        initializeCategorizer(cfgs);
         setStudentDocs(docs);
+        setConfigs(cfgs);
       } catch (error) {
         console.error("Error loading documents:", error);
       } finally {
@@ -224,30 +229,28 @@ export function PeerSupportSection({
 
   const allItems = useMemo<PeerSupportItem[]>(
     () => {
-      // Convert student docs to PeerSupportItem format and auto-categorize
       return studentDocs.map((doc) => {
-        const finalBlock = doc.block && doc.block !== 'Other' && doc.block !== 'Unclassified'
-          ? doc.block
-          : detectBlock(doc.title, doc.folder_path);
+        const blockConfig = classifyDocument(doc, configs, 'block_mapping');
+        const typeConfig = classifyDocument(doc, configs, 'doc_type');
 
-        const finalCategory = doc.doc_type && doc.doc_type !== 'Other' && doc.doc_type !== 'Unknown'
-          ? doc.doc_type
-          : detectDocType(doc.title);
+        const finalBlock = blockConfig ? blockConfig.label : 'Unclassified';
+        const finalCategory = typeConfig ? typeConfig.label : 'Unknown';
 
         return {
           id: `doc-${doc.id}`,
           block_name: doc.title,
-          thumbnail: doc.thumbnail_url || "", // Use synced thumbnail if available
+          thumbnail: doc.thumbnail_url || "",
           drive_link: doc.file_url,
           generation: doc.generation && doc.generation !== 0
             ? `MDCU ${doc.generation}`
-            : detectGeneration(doc.title, doc.folder_path),
+            : 'Auto-Detected',
           block: finalBlock,
           category: finalCategory,
+          folder_path: doc.folder_path,
         };
       });
     },
-    [studentDocs],
+    [studentDocs, configs],
   );
 
   const filterOptions = useMemo(() => {
@@ -261,6 +264,16 @@ export function PeerSupportSection({
     };
   }, [allItems]);
 
+  const yearMap = useMemo(() => {
+    const map: Record<string, number | 'other'> = {};
+    configs
+      .filter(c => c.config_type === 'block_mapping')
+      .forEach(c => {
+        map[c.label] = c.year === 'other' || !c.year ? 'other' : Number(c.year);
+      });
+    return map;
+  }, [configs]);
+
   useEffect(() => {
     if (selectedYear.length === 0) return;
     const validBlocks = filterBlocksByYear(filterOptions.blocks, selectedYear);
@@ -272,7 +285,7 @@ export function PeerSupportSection({
     () =>
       allItems.filter((item) => {
         if (selectedYear.length > 0) {
-          const year = SUBJECT_YEAR_MAP[item.block];
+          const year = yearMap[item.block];
           const yearStr = year === undefined ? "other" : String(year);
           if (!selectedYear.includes(yearStr)) return false;
         }
@@ -289,7 +302,7 @@ export function PeerSupportSection({
         if (!genMatch || !blockMatch || !catMatch) return false;
         return evaluateSearch(item, searchBoxes, searchOperators);
       }),
-    [allItems, selectedYear, selectedGeneration, selectedBlock, selectedCategory, searchBoxes, searchOperators],
+    [allItems, selectedYear, selectedGeneration, selectedBlock, selectedCategory, searchBoxes, searchOperators, yearMap],
   );
 
   const groupedBySubject = useMemo(() => {
@@ -325,8 +338,8 @@ export function PeerSupportSection({
         boxes={searchBoxes}
         operators={searchOperators}
         onChange={(boxes, ops) => {
-        setSearchBoxes(boxes);
-        setSearchOperators(ops);
+          setSearchBoxes(boxes);
+          setSearchOperators(ops);
         }}
       />
 
