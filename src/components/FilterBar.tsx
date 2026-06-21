@@ -50,21 +50,37 @@ const BLOCK_LABELS: Record<string, string> = {
   other: "ไม่ระบุ Block",
 };
 
+const BOARD_EXAM_COLORS: Record<string, string> = {
+  NLE1: "#0EA5E9",
+  NLE2: "#3B82F6",
+  Compre1: "#8B5CF6",
+  Compre2: "#A855F7",
+  OSCE: "#F59E0B",
+  other: "#94A3B8",
+};
+
+const BOARD_EXAM_LABELS: Record<string, string> = {
+  other: "ไม่ระบุข้อสอบ",
+};
+
 // ─── PROPS ────────────────────────────────────────────────────────────────────
 export interface FilterBarProps {
   generationOptions?: string[];
   blockOptions?: string[];
   categoryOptions?: string[];
+  boardExamOptions?: string[];
 
   selectedYear: string[];
   selectedGeneration: string[];
   selectedBlock: string[];
   selectedCategory: string[];
+  selectedBoardExam: string[];
 
   onYearChange: (value: string[]) => void;
   onGenerationChange: (value: string[]) => void;
   onBlockChange: (value: string[]) => void;
   onCategoryChange: (value: string[]) => void;
+  onBoardExamChange: (values: string[]) => void;
 
   isMobile?: boolean;
 }
@@ -90,6 +106,8 @@ const DEFAULT_CATEGORIES = [
   "Resources",
   "Survival Guide",
 ];
+
+const DEFAULT_BOARD_EXAMS: string[] = [];
 
 // ─── YEAR OPTIONS (เสมอ 1-6 + other) ────────────────────────────────────────
 const YEAR_OPTIONS = ["1", "2", "3", "4", "5", "6", "other"];
@@ -288,20 +306,24 @@ function ActiveChips({
   gens,
   blocks,
   types,
+  boardExams,
   setYears,
   setGens,
   setBlocks,
   setTypes,
+  setBoardExams,
   clearAll,
 }: {
   years: string[];
   gens: string[];
   blocks: string[];
   types: string[];
+  boardExams: string[];
   setYears: (v: string[]) => void;
   setGens: (v: string[]) => void;
   setBlocks: (v: string[]) => void;
   setTypes: (v: string[]) => void;
+  setBoardExams: (v: string[]) => void;
   clearAll: () => void;
 }) {
   const chips = [
@@ -324,6 +346,11 @@ function ActiveChips({
       label: CATEGORY_LABELS[v] ?? v,
       color: TYPE_COLORS[v] ?? "#6B7280",
       rm: () => setTypes(types.filter((x) => x !== v)),
+    })),
+    ...boardExams.map((v) => ({
+      label: BOARD_EXAM_LABELS[v] ?? v,
+      color: BOARD_EXAM_COLORS[v] ?? "#6B7280",
+      rm: () => setBoardExams(boardExams.filter((x) => x !== v)),
     })),
   ];
   if (!chips.length) return null;
@@ -391,14 +418,17 @@ export function FilterBar({
   generationOptions = DEFAULT_GENERATIONS,
   blockOptions,
   categoryOptions = DEFAULT_CATEGORIES,
+  boardExamOptions = DEFAULT_BOARD_EXAMS,
   selectedYear,
   selectedGeneration,
   selectedBlock,
   selectedCategory,
+  selectedBoardExam,
   onYearChange,
   onGenerationChange,
   onBlockChange,
   onCategoryChange,
+  onBoardExamChange,
   isMobile = false,
 }: FilterBarProps) {
   const [open, setOpen] = React.useState(!isMobile);
@@ -425,13 +455,15 @@ export function FilterBar({
     selectedYear.length +
     selectedGeneration.length +
     selectedBlock.length +
-    selectedCategory.length;
+    selectedCategory.length +
+    selectedBoardExam.length;
 
   const clearAll = () => {
     onYearChange([]);
     onGenerationChange([]);
     onBlockChange([]);
     onCategoryChange([]);
+    onBoardExamChange([]);
   };
 
   return (
@@ -541,6 +573,17 @@ export function FilterBar({
             labelMap={CATEGORY_LABELS}
           />
 
+          {/* Board Exam — เฉพาะไฟล์ที่เกี่ยวกับข้อสอบ NLE/Compre/OSCE */}
+          <CheckboxGroup
+            label="เลือกข้อสอบ"
+            options={[...(boardExamOptions ?? DEFAULT_BOARD_EXAMS), "other"]}
+            selected={selectedBoardExam}
+            onChange={onBoardExamChange}
+            colorMap={BOARD_EXAM_COLORS}
+            labelMap={BOARD_EXAM_LABELS}
+            emptyMsg="— ไม่มีไฟล์ที่ระบุข้อสอบ"
+          />
+
           <CheckboxGroup
             label="เลือกรุ่น"
             options={[...(generationOptions ?? DEFAULT_GENERATIONS), "other"]}
@@ -558,10 +601,12 @@ export function FilterBar({
             gens={selectedGeneration}
             blocks={selectedBlock}
             types={selectedCategory}
+            boardExams={selectedBoardExam}
             setYears={onYearChange}
             setGens={onGenerationChange}
             setBlocks={onBlockChange}
             setTypes={onCategoryChange}
+            setBoardExams={onBoardExamChange}
             clearAll={clearAll}
           />
         </div>

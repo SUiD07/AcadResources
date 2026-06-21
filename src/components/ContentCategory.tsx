@@ -36,6 +36,7 @@ interface ContentItem {
   block: string;
   category: string;
   folder_path?: string;
+  board_exam?: string;
 }
 
 interface ContentCategoryProps {

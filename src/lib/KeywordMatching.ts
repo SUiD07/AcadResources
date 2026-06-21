@@ -28,7 +28,7 @@ function configMatchesDocument(doc: StudentDocument, config: KeywordConfig): boo
 export function classifyDocument(
   doc: StudentDocument,
   configs: KeywordConfig[],
-  configType: 'doc_type' | 'block_mapping',
+  configType: KeywordConfig['config_type'],
 ): KeywordConfig | null {
   const relevant = configs.filter((c) => c.config_type === configType);
   for (const config of relevant) {

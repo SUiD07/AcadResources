@@ -11,8 +11,8 @@ interface QuickAddKeywordBarProps {
   configs: KeywordConfig[];
   keyword: string;
   onKeywordChange: (value: string) => void;
-  type: 'doc_type' | 'block_mapping';
-  onTypeChange: (value: 'doc_type' | 'block_mapping') => void;
+  type: KeywordConfig['config_type'];
+  onTypeChange: (value: KeywordConfig['config_type']) => void;
   categoryId: string; // '' = unselected, 'NEW' = new category
   onCategoryIdChange: (value: string) => void;
   newLabel: string;
@@ -61,7 +61,7 @@ export function QuickAddKeywordBar({
         <div className="w-full md:w-48">
           <Select
             value={type}
-            onValueChange={(val) => onTypeChange(val as 'doc_type' | 'block_mapping')}
+            onValueChange={(val) => onTypeChange(val as KeywordConfig['config_type'])}
           >
             <SelectTrigger className="bg-white">
               <SelectValue />
@@ -69,6 +69,7 @@ export function QuickAddKeywordBar({
             <SelectContent>
               <SelectItem value="doc_type">Document Type</SelectItem>
               <SelectItem value="block_mapping">Block Mapping</SelectItem>
+              <SelectItem value="board_exam">Board Exam</SelectItem>
             </SelectContent>
           </Select>
         </div>

@@ -14,7 +14,7 @@ interface FocusedKey {
 interface KeywordCategoryCardProps {
   config: KeywordConfig;
   documents: StudentDocument[];
-  activeTab: 'doc_type' | 'block_mapping';
+  activeTab: KeywordConfig['config_type'];
   isSaving: boolean;
   focusedKey: FocusedKey | null;
   onUpdateConfig: (id: string, updates: Partial<KeywordConfig>) => void;

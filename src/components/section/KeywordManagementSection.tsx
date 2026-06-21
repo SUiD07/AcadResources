@@ -12,8 +12,8 @@ import {
 import type { KeywordConfig, StudentDocument } from '../../lib/types';
 import { initializeCategorizer } from '../categorize';
 import { getMatchingFiles } from '../../lib/KeywordMatching';
-import { QuickAddKeywordBar } from '../keyword/Quickaddkeywordbar';
-import { KeywordCategoryCard } from '../keyword/KeywordCategoryCard';
+import { QuickAddKeywordBar } from '../../components/keyword/Quickaddkeywordbar';
+import { KeywordCategoryCard } from '../../components/keyword/KeywordCategoryCard';
 
 interface FocusedKey {
   configId: string;
@@ -25,12 +25,12 @@ export function KeywordManagementSection() {
   const [documents, setDocuments] = useState<StudentDocument[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'doc_type' | 'block_mapping'>('doc_type');
+  const [activeTab, setActiveTab] = useState<KeywordConfig['config_type']>('doc_type');
   const [focusedKey, setFocusedKey] = useState<FocusedKey | null>(null);
 
   // Quick-add bar state
   const [quickAddKeyword, setQuickAddKeyword] = useState('');
-  const [quickAddType, setQuickAddType] = useState<'doc_type' | 'block_mapping'>('doc_type');
+  const [quickAddType, setQuickAddType] = useState<KeywordConfig['config_type']>('doc_type');
   const [quickAddCategoryId, setQuickAddCategoryId] = useState<string>(''); // '' = unselected, 'NEW' = new category
   const [quickAddNewLabel, setQuickAddNewLabel] = useState('');
   const [quickAddNewYear, setQuickAddNewYear] = useState('1');
@@ -91,6 +91,7 @@ export function KeywordManagementSection() {
         .filter((doc) => {
           if (config.config_type === 'doc_type') return doc.doc_type === config.label;
           if (config.config_type === 'block_mapping') return doc.block === config.label;
+          if (config.config_type === 'board_exam') return doc.board_exam === config.label;
           return false;
         });
 
@@ -108,6 +109,7 @@ export function KeywordManagementSection() {
           resets.block = '';
           resets.student_year = undefined;
         }
+        if (config.config_type === 'board_exam') resets.board_exam = '';
         return updateStudentDocument(doc.id, resets);
       });
 
@@ -120,6 +122,8 @@ export function KeywordManagementSection() {
           if (config.year && config.year !== 'other') {
             updates.student_year = Number(config.year);
           }
+        } else if (config.config_type === 'board_exam') {
+          updates.board_exam = config.label;
         }
         return updateStudentDocument(id, updates);
       });
@@ -209,7 +213,7 @@ export function KeywordManagementSection() {
     }
   };
 
-  const handleQuickAddTypeChange = (val: 'doc_type' | 'block_mapping') => {
+  const handleQuickAddTypeChange = (val: KeywordConfig['config_type']) => {
     setQuickAddType(val);
     setQuickAddCategoryId(''); // category list depends on type, so reset
   };
@@ -269,6 +273,16 @@ export function KeywordManagementSection() {
           >
             Block Mappings
           </button>
+          <button
+            onClick={() => setActiveTab('board_exam')}
+            className={`px-8 py-4 text-sm font-semibold border-b-2 transition-colors ${
+              activeTab === 'board_exam'
+                ? 'border-[#E5007D] text-[#E5007D] bg-pink-50/30'
+                : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+            }`}
+          >
+            Board Exam
+          </button>
         </div>
 
         <div className="p-6 space-y-6">
@@ -305,7 +319,7 @@ export function KeywordManagementSection() {
                 <div className="flex flex-col items-center gap-2">
                   <Plus className="w-8 h-8 text-slate-300 group-hover:text-[#E5007D] transition-colors" />
                   <span className="text-lg font-medium">
-                    Add New {activeTab === 'doc_type' ? 'Document Type' : 'Block Mapping'}
+                    Add New {activeTab === 'doc_type' ? 'Document Type' : activeTab === 'block_mapping' ? 'Block Mapping' : 'Board Exam'}
                   </span>
                 </div>
               </Button>

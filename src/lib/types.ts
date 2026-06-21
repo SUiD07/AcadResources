@@ -14,6 +14,7 @@ export interface PeerSupportItem {
   generation: string;
   block: string;
   category: string;
+  board_exam?: string;
   folder_path?: string;
 }
 
@@ -30,6 +31,7 @@ export interface StudentDocument {
   uploaded_by: string;
   upload_date: string;
   thumbnail_url?: string;
+  board_exam?: string; 
 }
 
 export interface Activity {
@@ -90,7 +92,7 @@ export interface BoardContent {
 
 export interface KeywordConfig {
   id: string;
-  config_type: 'doc_type' | 'block_mapping';
+  config_type: 'doc_type' | 'block_mapping' | 'board_exam';
   label: string;
   keys: string[];
   year?: string;

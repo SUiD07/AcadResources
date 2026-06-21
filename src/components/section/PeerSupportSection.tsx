@@ -201,6 +201,7 @@ export function PeerSupportSection({
   const [selectedGeneration, setSelectedGeneration] = useState<string[]>([]);
   const [selectedBlock, setSelectedBlock] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string[]>([]);
+  const [selectedBoardExam, setSelectedBoardExam] = useState<string[]>([]);
 
   const [searchBoxes, setSearchBoxes] = useState<SearchBox[]>([createEmptyBox("name")]);
   const [searchOperators, setSearchOperators] = useState<LogicOp[]>([]);
@@ -232,9 +233,11 @@ export function PeerSupportSection({
       return studentDocs.map((doc) => {
         const blockConfig = classifyDocument(doc, configs, 'block_mapping');
         const typeConfig = classifyDocument(doc, configs, 'doc_type');
+        const boardConfig = classifyDocument(doc, configs, 'board_exam');
 
         const finalBlock = blockConfig ? blockConfig.label : 'Unclassified';
         const finalCategory = typeConfig ? typeConfig.label : 'Unknown';
+        const finalBoardExam = boardConfig ? boardConfig.label : 'None';
 
         return {
           id: `doc-${doc.id}`,
@@ -246,6 +249,7 @@ export function PeerSupportSection({
             : 'Auto-Detected',
           block: finalBlock,
           category: finalCategory,
+          board_exam: finalBoardExam,
           folder_path: doc.folder_path,
         };
       });
@@ -257,10 +261,16 @@ export function PeerSupportSection({
     const genSet = new Set(allItems.map((d) => d.generation).filter((g) => g !== "Auto-Detected"));
     const blockSet = new Set(allItems.map((d) => d.block));
     const typeSet = new Set(allItems.map((d) => d.category));
+    const boardExamSet = new Set(
+      allItems
+        .map((d) => d.board_exam)
+        .filter((b): b is string => Boolean(b) && b !== "None")
+    );
     return {
       generations: [...genSet].sort((a, b) => b.localeCompare(a)),
       blocks: [...blockSet].sort(),
       types: DOC_TYPE_ORDER.filter((t) => typeSet.has(t)),
+      boardExams: [...boardExamSet].sort(),
     };
   }, [allItems]);
 
@@ -299,10 +309,13 @@ export function PeerSupportSection({
         const catVal = !item.category || item.category === "Unknown" || !DOC_TYPE_ORDER.includes(item.category) ? "other" : item.category;
         const catMatch = selectedCategory.length === 0 || (catVal === "other" ? selectedCategory.includes("other") || selectedCategory.length === 0 : selectedCategory.includes(catVal));
 
-        if (!genMatch || !blockMatch || !catMatch) return false;
+        const boardVal = !item.board_exam || item.board_exam === "None" ? "other" : item.board_exam;
+        const boardMatch = selectedBoardExam.length === 0 || (boardVal === "other" ? selectedBoardExam.includes("other") || selectedBoardExam.length === 0 : selectedBoardExam.includes(boardVal));
+
+        if (!genMatch || !blockMatch || !catMatch || !boardMatch) return false;
         return evaluateSearch(item, searchBoxes, searchOperators);
       }),
-    [allItems, selectedYear, selectedGeneration, selectedBlock, selectedCategory, searchBoxes, searchOperators, yearMap],
+    [allItems, selectedYear, selectedGeneration, selectedBlock, selectedCategory, selectedBoardExam, searchBoxes, searchOperators, yearMap],
   );
 
   const groupedBySubject = useMemo(() => {
@@ -349,12 +362,15 @@ export function PeerSupportSection({
             generationOptions={filterOptions.generations}
             blockOptions={filterOptions.blocks}
             categoryOptions={filterOptions.types}
+            boardExamOptions={filterOptions.boardExams}
             selectedGeneration={selectedGeneration}
             selectedBlock={selectedBlock}
             selectedCategory={selectedCategory}
+            selectedBoardExam={selectedBoardExam}
             onGenerationChange={setSelectedGeneration}
             onBlockChange={setSelectedBlock}
             onCategoryChange={setSelectedCategory}
+            onBoardExamChange={setSelectedBoardExam}
             isMobile={isMobileScreen}
             selectedYear={selectedYear}
             onYearChange={setSelectedYear}
