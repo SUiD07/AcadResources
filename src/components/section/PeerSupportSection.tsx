@@ -9,7 +9,7 @@ import {
 } from "../../lib/dataService";
 import type { StudentDocument, PeerSupportItem, KeywordConfig } from "../../lib/types";
 import * as googleDrive from "../../lib/googleDriveService";
-import { detectGeneration } from "../categorize";
+import { detectGeneration ,initializeCategorizer} from "../categorize";
 import { Button } from "../ui/button";
 import { Plus, Search, RefreshCcw, ChevronDown, ChevronUp } from "lucide-react";
 import { useIsMobile } from "../ui/use-mobile";
@@ -154,6 +154,25 @@ function SubjectCard({
   );
 }
 
+function classifyDocument(
+  doc: StudentDocument,
+  configs: KeywordConfig[],
+  configType: 'doc_type' | 'block_mapping'
+): KeywordConfig | null {
+  const haystacks = [doc.title.toLowerCase(), (doc.folder_path || '').toLowerCase()];
+  const relevant = configs.filter((c) => c.config_type === configType);
+
+  for (const config of relevant) {
+    const matches = config.keys.some((key) => {
+      const k = key.trim().toLowerCase();
+      if (!k) return false;
+      return haystacks.some((h) => h.includes(k));
+    });
+    if (matches) return config;
+  }
+  return null;
+}
+
 export function PeerSupportSection({
   isAdmin = false,
   isMobile = false,
@@ -214,6 +233,7 @@ export function PeerSupportSection({
       try {
         setIsLoading(true);
         const [docs, cfgs] = await Promise.all([getStudentDocuments(), getKeywordConfigs()]);
+        initializeCategorizer(cfgs);
         setStudentDocs(docs);
         setConfigs(cfgs);
       } catch (error) {
@@ -228,13 +248,11 @@ export function PeerSupportSection({
   const allItems = useMemo<PeerSupportItem[]>(
     () => {
       return studentDocs.map((doc) => {
-        const finalBlock = doc.block && doc.block.trim() !== ''
-          ? doc.block
-          : 'Unclassified';
+        const blockConfig = classifyDocument(doc, configs, 'block_mapping');
+        const typeConfig = classifyDocument(doc, configs, 'doc_type');
 
-        const finalCategory = doc.doc_type && doc.doc_type.trim() !== ''
-          ? doc.doc_type
-          : 'Unknown';
+        const finalBlock = blockConfig ? blockConfig.label : 'Unclassified';
+        const finalCategory = typeConfig ? typeConfig.label : 'Unknown';
 
         return {
           id: `doc-${doc.id}`,
@@ -250,7 +268,7 @@ export function PeerSupportSection({
         };
       });
     },
-    [studentDocs],
+    [studentDocs, configs],   // ← configs added as a dependency
   );
 
   const filterOptions = useMemo(() => {
