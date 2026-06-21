@@ -9,7 +9,7 @@ import {
 } from "../../lib/dataService";
 import type { StudentDocument, PeerSupportItem, KeywordConfig } from "../../lib/types";
 import * as googleDrive from "../../lib/googleDriveService";
-import { detectGeneration, initializeCategorizer } from "../categorize";
+import { detectGeneration } from "../categorize";
 import { Button } from "../ui/button";
 import { Plus, Search, RefreshCcw, ChevronDown, ChevronUp } from "lucide-react";
 import { useIsMobile } from "../ui/use-mobile";
@@ -214,7 +214,6 @@ export function PeerSupportSection({
       try {
         setIsLoading(true);
         const [docs, cfgs] = await Promise.all([getStudentDocuments(), getKeywordConfigs()]);
-        initializeCategorizer(cfgs);   // ← populate docKeywords/blockMap/SUBJECT_YEAR_MAP from DB
         setStudentDocs(docs);
         setConfigs(cfgs);
       } catch (error) {
@@ -247,6 +246,7 @@ export function PeerSupportSection({
             : 'Auto-Detected',
           block: finalBlock,
           category: finalCategory,
+          folder_path: doc.folder_path || "",
         };
       });
     },

@@ -15,6 +15,12 @@ export function KeywordManagementSection() {
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'doc_type' | 'block_mapping'>('doc_type');
   const [focusedKey, setFocusedKey] = useState<{ configId: string; keyIndex: number } | null>(null);
+  const [quickAddKeyword, setQuickAddKeyword] = useState('');
+  const [quickAddType, setQuickAddType] = useState<'doc_type' | 'block_mapping'>('doc_type');
+  const [quickAddCategoryId, setQuickAddCategoryId] = useState<string>(''); // '' = unselected, 'NEW' = new category
+  const [quickAddNewLabel, setQuickAddNewLabel] = useState('');
+  const [quickAddNewYear, setQuickAddNewYear] = useState('1');
+  const [isQuickAdding, setIsQuickAdding] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -159,7 +165,81 @@ export function KeywordManagementSection() {
       )
     );
   };
+  const handleQuickAddKeyword = async () => {
+    const keyword = quickAddKeyword.trim();
+    if (!keyword) return;
+    if (!quickAddCategoryId) return; // must pick a category or "+ New"
 
+    setIsQuickAdding(true);
+    try {
+      if (quickAddCategoryId === 'NEW') {
+        const label = quickAddNewLabel.trim();
+        if (!label) {
+          setIsQuickAdding(false);
+          return;
+        }
+        const newConfig: Omit<KeywordConfig, 'id'> = {
+          config_type: quickAddType,
+          label,
+          keys: [keyword],
+          year: quickAddType === 'block_mapping' ? quickAddNewYear : undefined,
+        };
+        await addKeywordConfig(newConfig);
+      } else {
+        const existing = configs.find(c => c.id === quickAddCategoryId);
+        if (!existing) {
+          setIsQuickAdding(false);
+          return;
+        }
+        // avoid duplicate keys (case-insensitive)
+        const alreadyHasKey = existing.keys.some(
+          k => k.trim().toLowerCase() === keyword.toLowerCase()
+        );
+        const updatedKeys = alreadyHasKey ? existing.keys : [...existing.keys, keyword];
+        await editKeywordConfig(existing.id, { ...existing, keys: updatedKeys });
+      }
+
+      // Reset the quick-add bar
+      setQuickAddKeyword('');
+      setQuickAddCategoryId('');
+      setQuickAddNewLabel('');
+      setQuickAddNewYear('1');
+
+      await loadData();
+    } catch (error) {
+      console.error('Error quick-adding keyword:', error);
+    } finally {
+      setIsQuickAdding(false);
+    }
+  };
+  const handleQuickAddTypeChange = (val: 'doc_type' | 'block_mapping') => {
+    setQuickAddType(val);
+    setQuickAddCategoryId(''); // category list depends on type, so reset
+  };
+  const quickAddCategoryOptions = configs.filter(c => c.config_type === quickAddType);
+  const quickAddMatchingFiles = quickAddKeyword.trim()
+    ? documents.filter(doc =>
+      doc.title.toLowerCase().includes(quickAddKeyword.trim().toLowerCase()) ||
+      doc.folder_path.toLowerCase().includes(quickAddKeyword.trim().toLowerCase())
+    )
+    : [];
+  const quickAddNonMatchingFiles = quickAddKeyword.trim()
+    ? documents.filter(doc =>
+      !(doc.title.toLowerCase().includes(quickAddKeyword.trim().toLowerCase()) ||
+        doc.folder_path.toLowerCase().includes(quickAddKeyword.trim().toLowerCase()))
+    )
+    : [];
+  const getMatchingFilesExcludingKey = (config: KeywordConfig, excludeKeyIndex: number) => {
+    const keysToCheck = config.keys.filter((_, i) => i !== excludeKeyIndex);
+
+    return documents.filter(doc =>
+      keysToCheck.some(key =>
+        key.trim() !== '' &&
+        (doc.title.toLowerCase().includes(key.toLowerCase()) ||
+          doc.folder_path.toLowerCase().includes(key.toLowerCase()))
+      )
+    );
+  };
   const filteredConfigs = configs.filter(c => c.config_type === activeTab);
 
   return (
@@ -174,6 +254,155 @@ export function KeywordManagementSection() {
             Configure how files are automatically categorized based on keywords.
           </p>
         </div>
+      </div>
+
+      {/* Quick Add Keyword Bar */}
+      <div className="p-5 border border-slate-200 rounded-2xl bg-white space-y-4">
+        <Label className="text-sm font-semibold text-slate-700">Quick Add Keyword</Label>
+        <div className="flex flex-col md:flex-row gap-3 md:items-end">
+          <div className="flex-1 min-w-[180px]">
+            <Input
+              className="bg-white"
+              value={quickAddKeyword}
+              onChange={(e) => setQuickAddKeyword(e.target.value)}
+              placeholder="Type a keyword..."
+            />
+          </div>
+          {quickAddKeyword.trim() && (
+            <div className="pt-3 border-t border-slate-100">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* LEFT: matches */}
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold text-slate-500">
+                    Matching "{quickAddKeyword.trim()}" ({quickAddMatchingFiles.length})
+                  </Label>
+                  <div className="bg-slate-50 border border-slate-200 rounded-lg overflow-hidden">
+                    {quickAddMatchingFiles.length > 0 ? (
+                      <ul className="divide-y divide-slate-100 overflow-y-auto" style={{ maxHeight: '8rem' }}>
+                        {quickAddMatchingFiles.map((doc) => (
+                          <li key={doc.id} className="p-2 px-3 hover:bg-white">
+                            <p className="text-sm font-medium text-slate-900">{doc.title}</p>
+                            <p className="text-xs text-slate-500 font-mono truncate">{doc.folder_path}</p>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="p-3 text-sm text-slate-400 italic">No matching files found.</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* RIGHT: the rest */}
+                <div className="space-y-2 md:border-l md:border-slate-100 md:pl-4">
+                  <Label className="text-xs font-semibold text-slate-400">
+                    Other Files ({quickAddNonMatchingFiles.length})
+                  </Label>
+                  <div className="bg-slate-50 border border-slate-200 rounded-lg overflow-hidden">
+                    {quickAddNonMatchingFiles.length > 0 ? (
+                      <ul className="divide-y divide-slate-100 overflow-y-auto" style={{ maxHeight: '8rem' }}>
+                        {quickAddNonMatchingFiles.map((doc) => (
+                          <li key={doc.id} className="p-2 px-3 hover:bg-white opacity-60">
+                            <p className="text-sm font-medium text-slate-700">{doc.title}</p>
+                            <p className="text-xs text-slate-400 font-mono truncate">{doc.folder_path}</p>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="p-3 text-sm text-slate-400 italic">No other files.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="w-full md:w-48">
+            <Select
+              value={quickAddType}
+              onValueChange={(val) => handleQuickAddTypeChange(val as 'doc_type' | 'block_mapping')}
+            >
+              <SelectTrigger className="bg-white">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="doc_type">Document Type</SelectItem>
+                <SelectItem value="block_mapping">Block Mapping</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="w-full md:w-56">
+            <Select
+              value={quickAddCategoryId}
+              onValueChange={(val) => setQuickAddCategoryId(val)}
+            >
+              <SelectTrigger className="bg-white">
+                <SelectValue placeholder="Select category..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="NEW">+ New Category</SelectItem>
+                {quickAddCategoryOptions.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {quickAddCategoryId !== 'NEW' && (
+            <Button
+              className="bg-[#E5007D] hover:bg-[#c00069] text-white px-6 shrink-0"
+              onClick={handleQuickAddKeyword}
+              disabled={isQuickAdding || !quickAddKeyword.trim() || !quickAddCategoryId}
+            >
+              {isQuickAdding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
+              Add
+            </Button>
+          )}
+        </div>
+
+        {/* Inline "new category" fields, only shown when "+ New Category" is selected */}
+        {quickAddCategoryId === 'NEW' && (
+          <div className="flex flex-col md:flex-row gap-3 md:items-end pt-3 border-t border-slate-100">
+            <div className="flex-1 min-w-[180px]">
+              <Label className="text-xs font-semibold text-slate-500 mb-1 block">New category label</Label>
+              <Input
+                className="bg-white"
+                value={quickAddNewLabel}
+                onChange={(e) => setQuickAddNewLabel(e.target.value)}
+                placeholder="e.g. Lab Manual"
+              />
+            </div>
+
+            {quickAddType === 'block_mapping' && (
+              <div className="w-full md:w-40">
+                <Label className="text-xs font-semibold text-slate-500 mb-1 block">Curriculum Year</Label>
+                <Select value={quickAddNewYear} onValueChange={setQuickAddNewYear}>
+                  <SelectTrigger className="bg-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">Year 1</SelectItem>
+                    <SelectItem value="2">Year 2</SelectItem>
+                    <SelectItem value="3">Year 3</SelectItem>
+                    <SelectItem value="4">Year 4</SelectItem>
+                    <SelectItem value="5">Year 5</SelectItem>
+                    <SelectItem value="6">Year 6</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <Button
+              className="bg-[#E5007D] hover:bg-[#c00069] text-white px-6 shrink-0"
+              onClick={handleQuickAddKeyword}
+              disabled={isQuickAdding || !quickAddKeyword.trim() || !quickAddNewLabel.trim()}
+            >
+              {isQuickAdding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
+              Create & Add
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className=" shadow-sm overflow-hidden flex flex-col">
@@ -211,6 +440,9 @@ export function KeywordManagementSection() {
                   config,
                   isFocusedHere ? focusedKey.keyIndex : undefined
                 );
+                const beforeKeyFiles = isFocusedHere
+                  ? getMatchingFilesExcludingKey(config, focusedKey.keyIndex)
+                  : [];
                 return (
                   <div key={config.id} className="p-6 border border-slate-200 rounded-2xl space-y-6 bg-white hover:border-pink-200 transition-colors">
                     <div className="flex flex-col md:flex-row items-start justify-between gap-6">
@@ -301,32 +533,81 @@ export function KeywordManagementSection() {
                     </div>
 
                     {/* Matching Files List */}
+                    {/* Matching Files List */}
                     <div className="space-y-3 pt-4 border-t border-slate-200">
-                      <Label className="text-sm font-semibold text-slate-700">
-                        Matching Files ({matchingFiles.length})
-                        {focusedKey?.configId === config.id && (
-                          <span className="ml-2 text-xs font-normal text-slate-400 italic">
-                            — for "{config.keys[focusedKey.keyIndex] || '...'}"
-                          </span>
-                        )}
-                      </Label>
-                      <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-                        {matchingFiles.length > 0 ? (
-                          <ul className="divide-y divide-slate-100 overflow-y-auto" style={{ maxHeight: '10rem' }}>
-                            {matchingFiles.map((doc) => (
-                              <li key={doc.id} className="p-3 flex items-start gap-3 hover:bg-slate-50">
-                                <div>
-                                  <p className="text-sm font-medium text-slate-900">{doc.title}</p>
-                                  <p className="text-xs text-slate-500 font-mono truncate">{doc.folder_path}</p>
-                                </div>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className="p-4 text-sm text-slate-400 italic">No matching files found.</p>
-                        )}
-                      </div>
+                      {isFocusedHere ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {/* LEFT: matches including this key */}
+                          <div className="space-y-2">
+                            <Label className="text-sm font-semibold text-slate-700">
+                              With "{config.keys[focusedKey.keyIndex] || '...'}" ({matchingFiles.length})
+                            </Label>
+                            <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+                              {matchingFiles.length > 0 ? (
+                                <ul className="divide-y divide-slate-100 overflow-y-auto" style={{ maxHeight: '10rem' }}>
+                                  {matchingFiles.map((doc) => (
+                                    <li key={doc.id} className="p-3 flex items-start gap-3 hover:bg-slate-50">
+                                      <div>
+                                        <p className="text-sm font-medium text-slate-900">{doc.title}</p>
+                                        <p className="text-xs text-slate-500 font-mono truncate">{doc.folder_path}</p>
+                                      </div>
+                                    </li>
+                                  ))}
+                                </ul>
+                              ) : (
+                                <p className="p-4 text-sm text-slate-400 italic">No matching files found.</p>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* RIGHT: matches before this key existed (rest of the category's keys) */}
+                          <div className="space-y-2 md:border-l md:border-slate-100 md:pl-4">
+                            <Label className="text-sm font-semibold text-slate-400">
+                              Before This Key ({beforeKeyFiles.length})
+                            </Label>
+                            <div className="bg-slate-50 border border-slate-200 rounded-lg overflow-hidden">
+                              {beforeKeyFiles.length > 0 ? (
+                                <ul className="divide-y divide-slate-100 overflow-y-auto" style={{ maxHeight: '10rem' }}>
+                                  {beforeKeyFiles.map((doc) => (
+                                    <li key={doc.id} className="p-3 flex items-start gap-3 hover:bg-white opacity-60">
+                                      <div>
+                                        <p className="text-sm font-medium text-slate-700">{doc.title}</p>
+                                        <p className="text-xs text-slate-400 font-mono truncate">{doc.folder_path}</p>
+                                      </div>
+                                    </li>
+                                  ))}
+                                </ul>
+                              ) : (
+                                <p className="p-4 text-sm text-slate-400 italic">No files matched without this key.</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <Label className="text-sm font-semibold text-slate-700">
+                            Matching Files ({matchingFiles.length})
+                          </Label>
+                          <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+                            {matchingFiles.length > 0 ? (
+                              <ul className="divide-y divide-slate-100 overflow-y-auto" style={{ maxHeight: '10rem' }}>
+                                {matchingFiles.map((doc) => (
+                                  <li key={doc.id} className="p-3 flex items-start gap-3 hover:bg-slate-50">
+                                    <div>
+                                      <p className="text-sm font-medium text-slate-900">{doc.title}</p>
+                                      <p className="text-xs text-slate-500 font-mono truncate">{doc.folder_path}</p>
+                                    </div>
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <p className="p-4 text-sm text-slate-400 italic">No matching files found.</p>
+                            )}
+                          </div>
+                        </>
+                      )}
                     </div>
+
                   </div>
                 );
               })}
