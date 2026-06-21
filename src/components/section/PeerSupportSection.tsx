@@ -9,7 +9,8 @@ import {
 } from "../../lib/dataService";
 import type { StudentDocument, PeerSupportItem, KeywordConfig } from "../../lib/types";
 import * as googleDrive from "../../lib/googleDriveService";
-import { detectGeneration ,initializeCategorizer} from "../categorize";
+import { initializeCategorizer } from "../categorize";
+import { classifyDocument } from "../../lib/KeywordMatching";
 import { Button } from "../ui/button";
 import { Plus, Search, RefreshCcw, ChevronDown, ChevronUp } from "lucide-react";
 import { useIsMobile } from "../ui/use-mobile";
@@ -154,25 +155,6 @@ function SubjectCard({
   );
 }
 
-function classifyDocument(
-  doc: StudentDocument,
-  configs: KeywordConfig[],
-  configType: 'doc_type' | 'block_mapping'
-): KeywordConfig | null {
-  const haystacks = [doc.title.toLowerCase(), (doc.folder_path || '').toLowerCase()];
-  const relevant = configs.filter((c) => c.config_type === configType);
-
-  for (const config of relevant) {
-    const matches = config.keys.some((key) => {
-      const k = key.trim().toLowerCase();
-      if (!k) return false;
-      return haystacks.some((h) => h.includes(k));
-    });
-    if (matches) return config;
-  }
-  return null;
-}
-
 export function PeerSupportSection({
   isAdmin = false,
   isMobile = false,
@@ -268,7 +250,7 @@ export function PeerSupportSection({
         };
       });
     },
-    [studentDocs, configs],   // ← configs added as a dependency
+    [studentDocs, configs],
   );
 
   const filterOptions = useMemo(() => {
@@ -303,7 +285,7 @@ export function PeerSupportSection({
     () =>
       allItems.filter((item) => {
         if (selectedYear.length > 0) {
-          const year = yearMap[item.block];   // ← changed from SUBJECT_YEAR_MAP[item.block]
+          const year = yearMap[item.block];
           const yearStr = year === undefined ? "other" : String(year);
           if (!selectedYear.includes(yearStr)) return false;
         }
@@ -320,7 +302,7 @@ export function PeerSupportSection({
         if (!genMatch || !blockMatch || !catMatch) return false;
         return evaluateSearch(item, searchBoxes, searchOperators);
       }),
-    [allItems, selectedYear, selectedGeneration, selectedBlock, selectedCategory, searchBoxes, searchOperators, yearMap], // ← add yearMap to deps
+    [allItems, selectedYear, selectedGeneration, selectedBlock, selectedCategory, searchBoxes, searchOperators, yearMap],
   );
 
   const groupedBySubject = useMemo(() => {
