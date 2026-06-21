@@ -26,12 +26,6 @@ const TYPE_COLORS: Record<string, string> = {
   "Survival Guide": "#84CC16",
 };
 
-// Categories whose files should be grouped into folders (by last folder_path segment)
-// instead of shown as a flat file grid.
-const FOLDER_GROUPED_CATEGORIES = new Set(["AC", "Lab & Spottest"]);
-
-const UNFILED_FOLDER_LABEL = "ไฟล์อื่นๆ"; // "Other files" — bucket for items with no folder_path
-
 interface ContentItem {
   id: string;
   block_name: string;
@@ -183,7 +177,7 @@ function FileCard({
   );
 }
 
-/** A folder tile that expands to reveal the files inside it. */
+/** A folder tile that expands to reveal the files inside it. Only ever rendered for 2+ files. */
 function FolderGroup({
   folderName,
   items,
@@ -225,9 +219,7 @@ function FolderGroup({
           </span>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-slate-900 truncate">{folderName}</p>
-            <p className="text-xs text-slate-500">
-              {items.length} file{items.length !== 1 ? "s" : ""}
-            </p>
+            <p className="text-xs text-slate-500">{items.length} files</p>
           </div>
         </div>
         <span className="text-slate-400 ml-2 shrink-0">
@@ -280,25 +272,41 @@ export function ContentCategory({
 
   const accentColor = TYPE_COLORS[categoryName] ?? "#6B7280";
   const isPrecourse = categoryName === "Precourse";
-  const isFolderGrouped = FOLDER_GROUPED_CATEGORIES.has(categoryName);
 
-  // Group items by last folder_path segment when this category is folder-grouped.
-  const folderGroups = isFolderGrouped
-    ? (() => {
-        const map = new Map<string, ContentItem[]>();
-        uniqueItems.forEach((item) => {
-          const folderName = getLastFolderSegment(item.folder_path) ?? UNFILED_FOLDER_LABEL;
-          if (!map.has(folderName)) map.set(folderName, []);
-          map.get(folderName)!.push(item);
-        });
-        // Keep "Other files" last; everything else alphabetical.
-        return [...map.entries()].sort(([a], [b]) => {
-          if (a === UNFILED_FOLDER_LABEL) return 1;
-          if (b === UNFILED_FOLDER_LABEL) return -1;
-          return a.localeCompare(b);
-        });
-      })()
-    : null;
+  // Group items by last folder_path segment. Items with no folder_path stay ungrouped
+  // (folderName === null) and render flat, same as items in a single-file folder.
+  const grouped = (() => {
+    const map = new Map<string, ContentItem[]>();
+    const unfiled: ContentItem[] = [];
+    uniqueItems.forEach((item) => {
+      const folderName = getLastFolderSegment(item.folder_path);
+      if (!folderName) {
+        unfiled.push(item);
+        return;
+      }
+      if (!map.has(folderName)) map.set(folderName, []);
+      map.get(folderName)!.push(item);
+    });
+
+    // Folders with exactly 1 file don't get folder chrome — they render as a plain
+    // FileCard alongside the unfiled items, exactly like the original flat view.
+    const realFolders: [string, ContentItem[]][] = [];
+    const flatItems: ContentItem[] = [...unfiled];
+    map.forEach((folderItems, folderName) => {
+      if (folderItems.length === 1) {
+        flatItems.push(folderItems[0]);
+      } else {
+        realFolders.push([folderName, folderItems]);
+      }
+    });
+
+    realFolders.sort(([a], [b]) => a.localeCompare(b));
+
+    return { realFolders, flatItems };
+  })();
+
+  const folderCount = grouped.realFolders.length;
+  const flatCount = grouped.flatItems.length;
 
   return (
     <div
@@ -339,8 +347,8 @@ export function ContentCategory({
               {categoryName}
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              {isFolderGrouped
-                ? `${folderGroups!.length} folder${folderGroups!.length !== 1 ? "s" : ""} · ${items.length} resource${items.length !== 1 ? "s" : ""}`
+              {folderCount > 0
+                ? `${folderCount} folder${folderCount !== 1 ? "s" : ""}${flatCount > 0 ? ` · ${flatCount} file${flatCount !== 1 ? "s" : ""}` : ""}`
                 : `${items.length} resource${items.length !== 1 ? "s" : ""}`}
             </p>
           </div>
@@ -373,12 +381,16 @@ export function ContentCategory({
         <div
           style={{
             padding: "16px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "12px",
             background: "white",
           }}
         >
-          {isFolderGrouped ? (
+          {/* Real folders (2+ files) get a collapsible folder row */}
+          {folderCount > 0 && (
             <div className="flex flex-col gap-2">
-              {folderGroups!.map(([folderName, folderItems]) => (
+              {grouped.realFolders.map(([folderName, folderItems]) => (
                 <FolderGroup
                   key={folderName}
                   folderName={folderName}
@@ -391,7 +403,10 @@ export function ContentCategory({
                 />
               ))}
             </div>
-          ) : (
+          )}
+
+          {/* Single-file folders + items with no folder_path render flat, same as before */}
+          {flatCount > 0 && (
             <div
               style={{
                 display: "grid",
@@ -399,7 +414,7 @@ export function ContentCategory({
                 gap: "12px",
               }}
             >
-              {uniqueItems.map((item) => (
+              {grouped.flatItems.map((item) => (
                 <FileCard
                   key={item.id}
                   item={item}

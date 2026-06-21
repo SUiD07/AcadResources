@@ -246,7 +246,7 @@ export function PeerSupportSection({
             : 'Auto-Detected',
           block: finalBlock,
           category: finalCategory,
-          folder_path: doc.folder_path || "",
+          folder_path: doc.folder_path,
         };
       });
     },
