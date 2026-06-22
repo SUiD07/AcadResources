@@ -35,6 +35,8 @@ const DOC_TYPE_ORDER = [
   "NLE 2",
   "Resources",
   "Survival Guide",
+  "Lecture Slide",
+  "Textbook"
 ];
 
 const TYPE_COLORS: Record<string, string> = {
@@ -48,7 +50,20 @@ const TYPE_COLORS: Record<string, string> = {
   "NLE 2": "#D946EF",
   Resources: "#06B6D4",
   "Survival Guide": "#84CC16",
+  "Lecture Slide" : "#06B6D4",
+  "Textbook" : "#EC4899"
 };
+
+function isUnclassifiedCategory(
+  category: string | undefined,
+  knownTypes: string[],
+) {
+  return (
+    !category ||
+    category === "Unknown" ||
+    !knownTypes.includes(category)
+  );
+}
 
 interface PeerSupportSectionProps {
   isAdmin?: boolean;
@@ -59,6 +74,7 @@ interface SubjectCardProps {
   subject: string;
   items: PeerSupportItem[];
   isAdmin: boolean;
+  knownTypes: string[];
   onEdit?: (item: PeerSupportItem) => void;
   onDelete?: (item: PeerSupportItem) => void;
 }
@@ -67,22 +83,22 @@ function SubjectCard({
   subject,
   items,
   isAdmin,
+  knownTypes,
   onEdit,
   onDelete,
 }: SubjectCardProps) {
   const [expanded, setExpanded] = useState(false);
 
   const typesPresent = [
-    ...DOC_TYPE_ORDER.filter((t) => items.some((i) => i.category === t)),
-    ...(items.some(
-      (i) =>
-        !i.category ||
-        i.category === "Unknown" ||
-        !DOC_TYPE_ORDER.includes(i.category),
-    )
-      ? ["ไม่ระบุประเภท"]
-      : []),
-  ];
+  ...knownTypes.filter((t) =>
+    items.some((i) => i.category === t)
+  ),
+  ...(items.some((i) =>
+    isUnclassifiedCategory(i.category, knownTypes)
+  )
+    ? ["ไม่ระบุประเภท"]
+    : []),
+];
 
   const gens = [...new Set(items.map((i) => i.generation))]
     .filter((g) => g !== "Auto-Detected")
@@ -112,7 +128,15 @@ function SubjectCard({
                   color: TYPE_COLORS[t] ?? "#6B7280",
                 }}
               >
-                {t} ({items.filter((i) => i.category === t || (t === "ไม่ระบุประเภท" && (!i.category || i.category === "Unknown"))).length}){" "}
+              {t} (
+              {
+                items.filter((i) =>
+                  t === "ไม่ระบุประเภท"
+                    ? isUnclassifiedCategory(i.category, knownTypes)
+                    : i.category === t
+                ).length
+              }
+              )              
               </span>
             ))}
             {gens.map((g) => (
@@ -140,7 +164,9 @@ function SubjectCard({
               categoryName={type}
               items={
                 type === "ไม่ระบุประเภท"
-                  ? items.filter((i) => !i.category || i.category === "Unknown")
+                  ? items.filter((i) =>
+                      isUnclassifiedCategory(i.category, knownTypes)
+                    )
                   : items.filter((i) => i.category === type)
               }
               isAdmin={isAdmin}
@@ -256,6 +282,13 @@ export function PeerSupportSection({
     },
     [studentDocs, configs],
   );
+  const knownDocTypes = useMemo(() => {
+    const fromConfigs = configs
+      .filter((c) => c.config_type === "doc_type")
+      .map((c) => c.label);
+
+    return [...new Set([...DOC_TYPE_ORDER, ...fromConfigs])];
+  }, [configs]);
 
   const filterOptions = useMemo(() => {
     const genSet = new Set(allItems.map((d) => d.generation).filter((g) => g !== "Auto-Detected"));
@@ -269,10 +302,10 @@ export function PeerSupportSection({
     return {
       generations: [...genSet].sort((a, b) => b.localeCompare(a)),
       blocks: [...blockSet].sort(),
-      types: DOC_TYPE_ORDER.filter((t) => typeSet.has(t)),
+      types: knownDocTypes.filter((t) => typeSet.has(t)),
       boardExams: [...boardExamSet].sort(),
     };
-  }, [allItems]);
+  }, [allItems, knownDocTypes]);
 
   const yearMap = useMemo(() => {
     const map: Record<string, number | 'other'> = {};
@@ -306,7 +339,12 @@ export function PeerSupportSection({
         const blockVal = !item.block || item.block === "Unclassified" ? "other" : item.block;
         const blockMatch = selectedBlock.length === 0 || (blockVal === "other" ? selectedBlock.includes("other") || selectedBlock.length === 0 : selectedBlock.includes(blockVal));
 
-        const catVal = !item.category || item.category === "Unknown" || !DOC_TYPE_ORDER.includes(item.category) ? "other" : item.category;
+        const catVal = isUnclassifiedCategory(
+          item.category,
+          knownDocTypes,
+        )
+        ? "other"
+        : item.category;        
         const catMatch = selectedCategory.length === 0 || (catVal === "other" ? selectedCategory.includes("other") || selectedCategory.length === 0 : selectedCategory.includes(catVal));
 
         const boardVal = !item.board_exam || item.board_exam === "None" ? "other" : item.board_exam;
@@ -399,6 +437,7 @@ export function PeerSupportSection({
                   subject={subject}
                   items={items}
                   isAdmin={isAdmin}
+                  knownTypes={knownDocTypes}
                   onEdit={(item) => {
                     setEditingItem({ id: item.id, blockName: item.block_name, blockCode: "", generation: item.generation, block: item.block, category: item.category, driveLink: item.drive_link, thumbnail: item.thumbnail });
                     setEditDialogOpen(true);
