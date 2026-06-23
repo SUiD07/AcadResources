@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { LoginPage } from './components/LoginPage';
 import { Sidebar } from './components/Sidebar';
 import { MobileNav } from './components/MobileNav';
@@ -16,12 +16,36 @@ export default function App() {
   const [activeSection, setActiveSection] = useState<Section>('peer-support');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+    // Check localStorage ตอน mount
+  useEffect(() => {
+    const savedLoginState = localStorage.getItem('acadresources_login');
+    if (savedLoginState) {
+      const { isLoggedIn: loggedIn, isAdmin: admin } = JSON.parse(savedLoginState);
+      setIsLoggedIn(loggedIn);
+      setIsAdmin(admin);
+    }
+  }, []);
+  // เพิ่ม: Save ตอนล็อกอิน
+  const handleLogin = (adminMode: boolean) => {
+    setIsLoggedIn(true);
+    setIsAdmin(adminMode);
+    // บันทึกลง localStorage
+    localStorage.setItem('acadresources_login', JSON.stringify({
+      isLoggedIn: true,
+      isAdmin: adminMode,
+      timestamp: Date.now()
+    }));
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    setIsAdmin(false);
+    localStorage.removeItem('acadresources_login');
+  };
+
   // Show login page if not logged in
   if (!isLoggedIn) {
-    return <LoginPage onLogin={(adminMode) => {
-      setIsLoggedIn(true);
-      setIsAdmin(adminMode);
-    }} />;
+    return <LoginPage onLogin={handleLogin} />;
   }
 
   // Show main application after login
@@ -30,14 +54,11 @@ export default function App() {
       <div className="flex flex-1">
         {/* Desktop Sidebar */}
         <div className="hidden lg:block">
-          <Sidebar 
-            activeSection={activeSection} 
+          <Sidebar
+            activeSection={activeSection}
             onSectionChange={setActiveSection}
             isAdmin={isAdmin}
-            onLogout={() => {
-              setIsLoggedIn(false);
-              setIsAdmin(false);
-            }}
+            onLogout={handleLogout}
           />
         </div>
 
@@ -51,12 +72,9 @@ export default function App() {
           isOpen={mobileMenuOpen}
           onToggle={() => setMobileMenuOpen(!mobileMenuOpen)}
           isAdmin={isAdmin}
-          onLogout={() => {
-            setIsLoggedIn(false);
-            setIsAdmin(false);
-          }}
+          onLogout={handleLogout} 
         />
-        
+
         <main className="flex-1 lg:ml-64">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8 pt-20 sm:pt-24 lg:pt-12">
             {activeSection === 'peer-support' && <PeerSupportSection isAdmin={isAdmin} />}

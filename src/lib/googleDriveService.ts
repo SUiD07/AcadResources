@@ -3,6 +3,7 @@ import { GOOGLE_DRIVE_CONFIG } from './config';
 const CLIENT_ID = GOOGLE_DRIVE_CONFIG.clientId;
 const FOLDER_ID = GOOGLE_DRIVE_CONFIG.folderId;
 const SCOPES = 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/userinfo.email';
+const TOKEN_STORAGE_KEY = 'acadresources_gdrive_token';
 
 export interface DriveFile {
   id: string;
@@ -44,10 +45,25 @@ export function initTokenClient(onTokenReceived: (token: string) => void) {
         throw response;
       }
       accessToken = response.access_token;
+      // เก็บ token ใน sessionStorage (ไม่ใช่ localStorage for security)
+      sessionStorage.setItem(TOKEN_STORAGE_KEY, response.access_token);
       onTokenReceived(response.access_token);
     },
   });
   console.log("tokenClient created", tokenClient);
+}
+export function restoreAccessToken(): boolean {
+  const saved = sessionStorage.getItem(TOKEN_STORAGE_KEY);
+  if (saved) {
+    accessToken = saved;
+    return true;
+  }
+  return false;
+}
+
+export function clearAccessToken(): void {
+  accessToken = null;
+  sessionStorage.removeItem(TOKEN_STORAGE_KEY);
 }
 
 /**

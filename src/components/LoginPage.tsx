@@ -27,6 +27,11 @@ export function LoginPage({ onLogin, initialAdminMode = false }: LoginPageProps)
   }, [initialAdminMode]);
 
   useEffect(() => {
+    const restored = googleDrive.restoreAccessToken();
+  if (restored) {
+    // สามารถอัป verify ได้ทันที
+    console.log("Token restored from session");
+  }
     // Wait for the Google script to load before initializing
     const checkGoogle = setInterval(() => {
       if ((window as any).google) {
