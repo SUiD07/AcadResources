@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { SUPABASE_CONFIG } from './config';
-import type { PeerSupportItem, Activity, ResourceCategory, StudentDocument } from './types';
+import type { PeerSupportItem, Activity, ResourceCategory, StudentDocument, DriveSyncRecord } from './types';
 import type { Generation, Board, BoardContent, KeywordConfig } from './types'
 
 // ============================================
@@ -491,3 +491,50 @@ export async function deleteKeywordConfig(id: string): Promise<void> {
 
   if (error) throw error;
 }
+
+// ============================================
+// DriveSyncRecord
+// ============================================
+
+export async function fetchDriveSync(): Promise<DriveSyncRecord[]> {
+  const PAGE_SIZE = 1000;
+  let from = 0;
+  let allRecords: DriveSyncRecord[] = [];
+ 
+  while (true) {
+    const { data, error } = await supabase
+      .from('drive_sync')
+      .select('*')
+      .range(from, from + PAGE_SIZE - 1);
+ 
+    if (error) {
+      console.error('Fetch Error (Drive Sync):', error.message);
+      return [];
+    }
+ 
+    if (!data || data.length === 0) {
+      break;
+    }
+ 
+    allRecords.push(...data);
+ 
+    if (data.length < PAGE_SIZE) {
+      break;
+    }
+ 
+    from += PAGE_SIZE;
+  }
+ 
+  return allRecords;
+}
+ 
+export async function upsertStudentDocuments(
+  records: Partial<StudentDocument>[]
+): Promise<void> {
+  const { error } = await supabase
+    .from('student_documents')
+    .upsert(records, { onConflict: 'drive_id' });
+ 
+  if (error) throw error;
+}
+ 

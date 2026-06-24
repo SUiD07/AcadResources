@@ -7,7 +7,7 @@
 
 import { USE_SUPABASE } from './config';
 import * as supabaseApi from './supabase';
-import type { PeerSupportItem, Activity, ResourceCategory, StudentDocument } from './types';
+import type { PeerSupportItem, Activity, ResourceCategory, StudentDocument, DriveSyncRecord } from './types';
 import type { Generation, Board, BoardContent, KeywordConfig } from './types';
 // ============================================
 // PEER SUPPORT DATA SERVICE
@@ -230,5 +230,24 @@ export async function editKeywordConfig(id: string, updates: Partial<KeywordConf
 export async function removeKeywordConfig(id: string): Promise<void> {
   if (USE_SUPABASE) {
     await supabaseApi.deleteKeywordConfig(id);
+  }
+}
+
+// ============================================
+// DriveSyncRecord
+// ============================================
+
+export async function getDriveSync(): Promise<DriveSyncRecord[]> {
+  if (USE_SUPABASE) {
+    return await supabaseApi.fetchDriveSync();
+  }
+  return [];
+}
+ 
+export async function upsertStudentDocuments(
+  records: Partial<import('./types').StudentDocument>[]
+): Promise<void> {
+  if (USE_SUPABASE) {
+    return await supabaseApi.upsertStudentDocuments(records);
   }
 }

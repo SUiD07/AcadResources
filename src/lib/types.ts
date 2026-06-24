@@ -31,7 +31,9 @@ export interface StudentDocument {
   uploaded_by: string;
   upload_date: string;
   thumbnail_url?: string;
-  board_exam?: string; 
+  board_exam?: string;
+  drive_id?: string;
+  is_overridden?: boolean; 
 }
 
 export interface Activity {
@@ -98,4 +100,16 @@ export interface KeywordConfig {
   year?: string;
   created_at?: string;
   updated_at?: string;
+}
+export interface DriveSyncRecord {
+  drive_id: string;
+  title: string;
+  file_url: string;
+  folder_path: string;
+  thumbnail_url?: string;
+  generation: number;
+  student_year: number;
+  is_folder:boolean;
+  modified_time?: string;
+  synced_at?: string;
 }
