@@ -7,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Loader2, Upload, X } from 'lucide-react';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import type { ResourceFormData } from './AddResourceDialog';
+import { fetchKeywordConfigs } from '../../lib/supabase';
+import type { KeywordConfig } from '../../lib/types';
 
 interface EditResourceDialogProps {
   open: boolean;
@@ -18,6 +20,7 @@ interface EditResourceDialogProps {
 export function EditResourceDialog({ open, onOpenChange, onSubmit, initialData }: EditResourceDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [thumbnailPreview, setThumbnailPreview] = useState<string>('');
+  const [keywordConfigs, setKeywordConfigs] = useState<KeywordConfig[]>([]);
   const [formData, setFormData] = useState<ResourceFormData & { id: string }>({
     id: '',
     blockName: '',
@@ -28,6 +31,26 @@ export function EditResourceDialog({ open, onOpenChange, onSubmit, initialData }
     driveLink: '',
     thumbnail: '',
   });
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadKeywordConfigs = async () => {
+      try {
+        const configs = await fetchKeywordConfigs();
+        if (isMounted) {
+          setKeywordConfigs(configs);
+        }
+      } catch (error) {
+        console.error('Error loading keyword configs:', error);
+      }
+    };
+
+    loadKeywordConfigs();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Update form when initialData changes
   useEffect(() => {
@@ -50,6 +73,10 @@ export function EditResourceDialog({ open, onOpenChange, onSubmit, initialData }
     }
   };
 
+  const blockOptions = keywordConfigs.filter((config) => config.config_type === 'block_mapping').map((config) => config.label);
+  const categoryOptions = keywordConfigs.filter((config) => config.config_type === 'doc_type').map((config) => config.label);
+  const boardExamOptions = keywordConfigs.filter((config) => config.config_type === 'board_exam').map((config) => config.label);
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -70,7 +97,7 @@ export function EditResourceDialog({ open, onOpenChange, onSubmit, initialData }
             Update the details for this academic resource.
           </DialogDescription>
         </DialogHeader>
-        
+
         <form onSubmit={handleSubmit}>
           <div className="space-y-4 py-4">
             {/* Block Name */}
@@ -102,7 +129,7 @@ export function EditResourceDialog({ open, onOpenChange, onSubmit, initialData }
                 <Label htmlFor="edit-generation">Generation *</Label>
                 <Select
                   value={formData.generation}
-                  onValueChange={(value:any) => setFormData({ ...formData, generation: value })}
+                  onValueChange={(value: any) => setFormData({ ...formData, generation: value })}
                 >
                   <SelectTrigger id="edit-generation">
                     <SelectValue />
@@ -122,17 +149,21 @@ export function EditResourceDialog({ open, onOpenChange, onSubmit, initialData }
                 <Label htmlFor="edit-block">Block *</Label>
                 <Select
                   value={formData.block}
-                  onValueChange={(value:any) => setFormData({ ...formData, block: value })}
+                  onValueChange={(value: any) => setFormData({ ...formData, block: value })}
                 >
                   <SelectTrigger id="edit-block">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Array.from({ length: 15 }, (_, i) => (
-                      <SelectItem key={i + 1} value={`Block ${i + 1}`}>
-                        Block {i + 1}
-                      </SelectItem>
-                    ))}
+                    {blockOptions.length > 0 ? (
+                      blockOptions.map((option) => (
+                        <SelectItem key={option} value={option}>
+                          {option}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="Block 1">Block 1</SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -143,18 +174,52 @@ export function EditResourceDialog({ open, onOpenChange, onSubmit, initialData }
               <Label htmlFor="edit-category">Category *</Label>
               <Select
                 value={formData.category}
-                onValueChange={(value:any) => setFormData({ ...formData, category: value })}
+                onValueChange={(value: any) => setFormData({ ...formData, category: value })}
               >
                 <SelectTrigger id="edit-category">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="AC">AC</SelectItem>
-                  <SelectItem value="Peer Tutoring">Peer Tutoring</SelectItem>
-                  <SelectItem value="Summary">Summary</SelectItem>
-                  <SelectItem value="Mock Exam">Mock Exam</SelectItem>
-                  <SelectItem value="Resources">Resources</SelectItem>
-                  <SelectItem value="Survival Guide">Survival Guide</SelectItem>
+                  {categoryOptions.length > 0 ? (
+                    categoryOptions.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <>
+                      <SelectItem value="AC">AC</SelectItem>
+                      <SelectItem value="Peer Tutoring">Peer Tutoring</SelectItem>
+                      <SelectItem value="Summary">Summary</SelectItem>
+                      <SelectItem value="Mock Exam">Mock Exam</SelectItem>
+                      <SelectItem value="Resources">Resources</SelectItem>
+                      <SelectItem value="Survival Guide">Survival Guide</SelectItem>
+                    </>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Board Exam */}
+            <div className="space-y-2">
+              <Label htmlFor="edit-boardExam">Board Exam</Label>
+              <Select
+                value={formData.boardExam || ''}
+                onValueChange={(value: any) => setFormData({ ...formData, boardExam: value })}
+              >
+                <SelectTrigger id="edit-boardExam">
+                  <SelectValue placeholder="Select board exam" />
+                </SelectTrigger>
+                <SelectContent>
+                  {boardExamOptions.length > 0 ? (
+                    boardExamOptions.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="">None</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>

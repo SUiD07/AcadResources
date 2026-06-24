@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -6,6 +6,8 @@ import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Loader2, Upload, X } from 'lucide-react';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
+import { fetchKeywordConfigs } from '../../lib/supabase';
+import type { KeywordConfig } from '../../lib/types';
 
 interface AddResourceDialogProps {
   open: boolean;
@@ -20,6 +22,7 @@ export interface ResourceFormData {
   generation: string;
   block: string;
   category: string;
+  boardExam?: string;
   driveLink: string;
   thumbnail: string;
 }
@@ -27,15 +30,53 @@ export interface ResourceFormData {
 export function AddResourceDialog({ open, onOpenChange, onSubmit, categoryName }: AddResourceDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [thumbnailPreview, setThumbnailPreview] = useState<string>('');
+  const [keywordConfigs, setKeywordConfigs] = useState<KeywordConfig[]>([]);
   const [formData, setFormData] = useState<ResourceFormData>({
     blockName: '',
     blockCode: '',
     generation: 'MDCU 81',
     block: 'Block 1',
     category: categoryName || 'AC',
+    boardExam: '',
     driveLink: '',
     thumbnail: '',
   });
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadKeywordConfigs = async () => {
+      try {
+        const configs = await fetchKeywordConfigs();
+        if (isMounted) {
+          setKeywordConfigs(configs);
+          setFormData((prev) => ({
+            ...prev,
+            block: configs.some((c) => c.config_type === 'block_mapping' && c.label === prev.block)
+              ? prev.block
+              : configs.find((c) => c.config_type === 'block_mapping')?.label || prev.block,
+            category: configs.some((c) => c.config_type === 'doc_type' && c.label === prev.category)
+              ? prev.category
+              : configs.find((c) => c.config_type === 'doc_type')?.label || prev.category,
+            boardExam: configs.some((c) => c.config_type === 'board_exam' && c.label === prev.boardExam)
+              ? prev.boardExam || ''
+              : configs.find((c) => c.config_type === 'board_exam')?.label || prev.boardExam || '',
+          }));
+        }
+      } catch (error) {
+        console.error('Error loading keyword configs:', error);
+      }
+    };
+
+    loadKeywordConfigs();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const blockOptions = keywordConfigs.filter((config) => config.config_type === 'block_mapping').map((config) => config.label);
+  const categoryOptions = keywordConfigs.filter((config) => config.config_type === 'doc_type').map((config) => config.label);
+  const boardExamOptions = keywordConfigs.filter((config) => config.config_type === 'board_exam').map((config) => config.label);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,8 +88,9 @@ export function AddResourceDialog({ open, onOpenChange, onSubmit, categoryName }
         blockName: '',
         blockCode: '',
         generation: 'MDCU 81',
-        block: 'Block 1',
-        category: categoryName || 'AC',
+        block: blockOptions[0] || 'Block 1',
+        category: categoryName || categoryOptions[0] || 'AC',
+        boardExam: boardExamOptions[0] || '',
         driveLink: '',
         thumbnail: '',
       });
@@ -81,7 +123,7 @@ export function AddResourceDialog({ open, onOpenChange, onSubmit, categoryName }
             Fill in the details for the new academic resource. All fields are required.
           </DialogDescription>
         </DialogHeader>
-        
+
         <form onSubmit={handleSubmit}>
           <div className="space-y-4 py-4">
             {/* Block Name */}
@@ -113,7 +155,7 @@ export function AddResourceDialog({ open, onOpenChange, onSubmit, categoryName }
                 <Label htmlFor="generation">Generation *</Label>
                 <Select
                   value={formData.generation}
-                  onValueChange={(value:any) => setFormData({ ...formData, generation: value })}
+                  onValueChange={(value: any) => setFormData({ ...formData, generation: value })}
                 >
                   <SelectTrigger id="generation">
                     <SelectValue />
@@ -133,17 +175,21 @@ export function AddResourceDialog({ open, onOpenChange, onSubmit, categoryName }
                 <Label htmlFor="block">Block *</Label>
                 <Select
                   value={formData.block}
-                  onValueChange={(value:any) => setFormData({ ...formData, block: value })}
+                  onValueChange={(value: any) => setFormData({ ...formData, block: value })}
                 >
                   <SelectTrigger id="block">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Array.from({ length: 15 }, (_, i) => (
-                      <SelectItem key={i + 1} value={`Block ${i + 1}`}>
-                        Block {i + 1}
-                      </SelectItem>
-                    ))}
+                    {blockOptions.length > 0 ? (
+                      blockOptions.map((option) => (
+                        <SelectItem key={option} value={option}>
+                          {option}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="Block 1">Block 1</SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -154,18 +200,52 @@ export function AddResourceDialog({ open, onOpenChange, onSubmit, categoryName }
               <Label htmlFor="category">Category *</Label>
               <Select
                 value={formData.category}
-                onValueChange={(value:any) => setFormData({ ...formData, category: value })}
+                onValueChange={(value: any) => setFormData({ ...formData, category: value })}
               >
                 <SelectTrigger id="category">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="AC">AC</SelectItem>
-                  <SelectItem value="Peer Tutoring">Peer Tutoring</SelectItem>
-                  <SelectItem value="Summary">Summary</SelectItem>
-                  <SelectItem value="Mock Exam">Mock Exam</SelectItem>
-                  <SelectItem value="Resources">Resources</SelectItem>
-                  <SelectItem value="Survival Guide">Survival Guide</SelectItem>
+                  {categoryOptions.length > 0 ? (
+                    categoryOptions.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <>
+                      <SelectItem value="AC">AC</SelectItem>
+                      <SelectItem value="Peer Tutoring">Peer Tutoring</SelectItem>
+                      <SelectItem value="Summary">Summary</SelectItem>
+                      <SelectItem value="Mock Exam">Mock Exam</SelectItem>
+                      <SelectItem value="Resources">Resources</SelectItem>
+                      <SelectItem value="Survival Guide">Survival Guide</SelectItem>
+                    </>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Board Exam */}
+            <div className="space-y-2">
+              <Label htmlFor="boardExam">Board Exam</Label>
+              <Select
+                value={formData.boardExam || ''}
+                onValueChange={(value: any) => setFormData({ ...formData, boardExam: value })}
+              >
+                <SelectTrigger id="boardExam">
+                  <SelectValue placeholder="Select board exam" />
+                </SelectTrigger>
+                <SelectContent>
+                  {boardExamOptions.length > 0 ? (
+                    boardExamOptions.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="">None</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>
