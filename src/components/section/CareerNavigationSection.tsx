@@ -1,4 +1,4 @@
-import { Heart } from "lucide-react";
+import { Heart, List } from "lucide-react";
 import React from "react";
 
 function CareerNavigationSection() {
@@ -36,6 +36,118 @@ function CareerNavigationSection() {
           </div>
         </div>
         <br />
+        <div>
+          <div className="font-bold text-[24px]">กำหนดการสำคัญของ Extern</div>
+          สรุปภาพรวม Timeline โดยอิงจากปี 2568 - 2569 เกี่ยวกับกำหนดการต่าง ๆ
+          โดยสามารถดูรายละเอียดเพิ่มเติมได้ด้านล่าง แนะนำดูใน iPad or Com
+          <div className="text-[#E5007D]">
+            **กำหนดการนี้เป็นเพียงภาพรวมในปีที่ผ่านมา
+            ไม่ใช่กำหนดการจริงที่จะเกิดขึ้น โปรดตรวจสอบอีกครั้ง
+            ผ่านหน้าเว็บ/Facebook ของแต่ละสถาบัน โดยสามารถพิมพ์
+            "สมัครแพทย์ใช้ทุน...สถาบันที่สนใจ....ปี..." เพื่อดูข้อมูลอีกครั้ง
+            เนื่องจากแต่ละปีอาจไม่เหมือนกัน
+          </div>
+          <ul
+            style={{
+              listStyleType: "disc",
+              paddingLeft: "1.25rem",
+            }}
+          >
+            <li>
+              บางสถาบันอาจเปิดหลายรอบ แต่ไม่ใช่ทุกรอบจะมีสาขาที่แต่ละคนสนใจ
+              เนื่องจากรอบหลัง ๆ อาจเป็นการเก็บตก
+            </li>
+            <li>หลักฐาน/เอกสาร/แหล่งการขอเอกสารที่ควรรู้</li>
+            <ul
+              style={{
+                listStyleType: "disc",
+                paddingLeft: "1.25rem",
+              }}
+            >
+              <li>เอกสารราชการ - บัตรประชาชน ทะเบียนบ้าน</li>
+              <li>
+                เอกสารการศึกษา เช่น Transcript สามารถขอได้จากสำนักการทะเบียนจุฬา
+                ที่ลิ้งนี้ https://web.reg.chula.ac.th/requestdocuments.html
+              </li>
+              <li>คะแนนสอบภาษาอังกฤษ ตามแต่ละสถาบัน</li>
+              <li>Portfolio / CV บางที่ให้ทำเป็นเล่ม บางที่อาจให้กรอกข้อมูล</li>
+              <li>ใบ Recommendation</li>
+              <li>เอกสารทางทหาร สด.8 / 9 (เฉพาะผู้ชาย) กรณีอยากเข้ากองทัพ</li>
+            </ul>
+          </ul>
+        </div>
+        <iframe
+          src="https://script.google.com/a/macros/docchula.com/s/AKfycby57lgWeptmTCl6IZh7-tYRL48VLqovhALOE1UZfvSv13WHkH2SFm38IWreLmZXklXTUw/exec"
+          width="100%"
+          height="800"
+        ></iframe>
+        <br />
+        <>
+          <p className="font-bold">รายละเอียดเพิ่มเติม</p>
+          <ul
+            style={{
+              listStyleType: "disc",
+              paddingLeft: "1.25rem",
+            }}
+          >
+            <li>
+              การจัดหมวดในแต่ละสถาบัน จะแบ่งเป็นรายละเอียดตาม Post ของ สพท.
+              สามารถศึกษาเพิ่มเติมได้
+            </li>
+            <ul
+              style={{
+                listStyleType: "disc",
+                paddingLeft: "1.25rem",
+              }}
+            >
+              <li>แพทย์เพิ่มพูนทักษะ</li>
+              <li>จับสลากใช้ทุน</li>
+              <ul
+                style={{
+                  listStyleType: "disc",
+                  paddingLeft: "1.25rem",
+                }}
+              >
+                <li>เอกสารจากกระทรวง ประจำปี 2569</li>
+              </ul>
+              <li>แพทย์พี่เลี้ยง</li>
+              <ul
+                style={{
+                  listStyleType: "disc",
+                  paddingLeft: "1.25rem",
+                }}
+              >
+                <li>
+                  เว็บไซต์ส่วนกลาง:{" "}
+                  <a
+                    href="https://icpird.moph.go.th/contributordr/Default.aspx"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline"
+                  >
+                    https://icpird.moph.go.th/contributordr/Default.aspx
+                  </a>
+                </li>
+              </ul>
+              <li>ใช้ทุนโรงเรียนแพทย์</li>
+              <ul
+                style={{
+                  listStyleType: "disc",
+                  paddingLeft: "1.25rem",
+                }}
+              >
+                <li>กลุ่มโรงเรียนแพทย์ขนาดใหญ่</li>
+                <li>กลุ่มโรงเรียนแพทย์หลักส่วนภูมิภาค (มช, มอ, มข, มน)</li>
+                <li>กลุ่มโรงเรียนแพทย์เปิดใหม่</li>
+              </ul>
+            </ul>
+          </ul>
+        </>
+        <br />
+        <div className="font-bold text-[24px]">
+          จำนวนการรับสาขาเรียนต่อในแต่ละจังหวัดและสาขาของปี 2568
+        </div>
+        เว็บไซต์ เลือกเมนู "พื้นที่เรียนต่อ" อ้างอิงจากประกาศแพทยสภา
         <iframe
           src="https://script.google.com/a/macros/docchula.com/s/AKfycbzLW3UuSljfe5tDJghzfOvfBgh-k9yrm_RNwQ12myPPk1Ti4Td9g6RDosFZeTUxVGeaMw/exec"
           width="100%"
