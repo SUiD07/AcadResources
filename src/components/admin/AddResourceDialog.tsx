@@ -6,7 +6,7 @@ import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Loader2, Upload, X } from 'lucide-react';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
-import { fetchKeywordConfigs } from '../../lib/supabase';
+import { extractDriveId, fetchKeywordConfigs, fetchStudentDocuments } from '../../lib/supabase';
 import type { KeywordConfig } from '../../lib/types';
 
 interface AddResourceDialogProps {
@@ -25,6 +25,7 @@ export interface ResourceFormData {
   boardExam?: string;
   driveLink: string;
   thumbnail: string;
+  isOverridden?: boolean;
 }
 
 export function AddResourceDialog({ open, onOpenChange, onSubmit, categoryName }: AddResourceDialogProps) {
@@ -40,6 +41,7 @@ export function AddResourceDialog({ open, onOpenChange, onSubmit, categoryName }
     boardExam: '',
     driveLink: '',
     thumbnail: '',
+    isOverridden: false,
   });
 
   useEffect(() => {
@@ -74,6 +76,34 @@ export function AddResourceDialog({ open, onOpenChange, onSubmit, categoryName }
     };
   }, []);
 
+  useEffect(() => {
+    let isMounted = true;
+    const driveId = extractDriveId(formData.driveLink);
+
+    if (!driveId) {
+      setFormData((prev) => ({ ...prev, isOverridden: false }));
+      return;
+    }
+
+    const checkExistingDrive = async () => {
+      try {
+        const documents = await fetchStudentDocuments();
+        const hasMatchingDriveId = documents.some((doc) => doc.drive_id === driveId);
+        if (isMounted) {
+          setFormData((prev) => ({ ...prev, isOverridden: hasMatchingDriveId ? true : prev.isOverridden || false }));
+        }
+      } catch (error) {
+        console.error('Error checking existing drive id:', error);
+      }
+    };
+
+    checkExistingDrive();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [formData.driveLink]);
+
   const blockOptions = keywordConfigs.filter((config) => config.config_type === 'block_mapping').map((config) => config.label);
   const categoryOptions = keywordConfigs.filter((config) => config.config_type === 'doc_type').map((config) => config.label);
   const boardExamOptions = keywordConfigs.filter((config) => config.config_type === 'board_exam').map((config) => config.label);
@@ -93,6 +123,7 @@ export function AddResourceDialog({ open, onOpenChange, onSubmit, categoryName }
         boardExam: boardExamOptions[0] || '',
         driveLink: '',
         thumbnail: '',
+        isOverridden: false,
       });
       setThumbnailPreview('');
       onOpenChange(false);
@@ -248,6 +279,23 @@ export function AddResourceDialog({ open, onOpenChange, onSubmit, categoryName }
                   )}
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Override Toggle */}
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <label className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={Boolean(formData.isOverridden)}
+                  onChange={(e) => setFormData({ ...formData, isOverridden: e.target.checked })}
+                  className="mt-1 h-4 w-4 rounded border-slate-300 text-[#E5007D] focus:ring-[#E5007D]"
+                />
+                <span className="text-sm text-slate-700">
+                  <span className="font-medium text-slate-900">Use manual override for this resource</span>
+                  <br />
+                  This turns on the override flag when the same Google Drive ID already exists, and you can switch it off to return to keyword-based classification.
+                </span>
+              </label>
             </div>
 
             {/* Google Drive Link */}

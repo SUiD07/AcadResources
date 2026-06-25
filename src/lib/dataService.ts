@@ -47,6 +47,19 @@ export async function removePeerSupportItem(id: string): Promise<void> {
   }
 }
 
+export async function createStudentDocument(
+  record: Partial<StudentDocument>
+): Promise<StudentDocument> {
+  if (USE_SUPABASE) {
+    return await supabaseApi.createStudentDocument(record);
+  }
+  throw new Error('Supabase not enabled');
+}
+
+export function extractDriveId(url: string): string | null {
+  return supabaseApi.extractDriveId(url);
+}
+
 export async function updateStudentDocument(id: number, updates: Partial<StudentDocument>): Promise<StudentDocument> {
   if (USE_SUPABASE) {
     return await supabaseApi.updateStudentDocument(id, updates);
