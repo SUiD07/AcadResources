@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { FilterBar, filterBlocksByYear } from "../FilterBar";
 import { ContentCategory } from "../ContentCategory";
 import {
+  createStudentDocument,
   getStudentDocuments,
   updateStudentDocument,
   deleteStudentDocument,
@@ -14,6 +15,7 @@ import { classifyDocument } from "../../lib/KeywordMatching";
 import { Button } from "../ui/button";
 import { Plus, Search, RefreshCcw, ChevronDown, ChevronUp } from "lucide-react";
 import { useIsMobile } from "../ui/use-mobile";
+import { extractDriveId } from "../../lib/supabase";
 import {
   AddResourceDialog,
   type ResourceFormData,
@@ -192,9 +194,83 @@ export function PeerSupportSection({
   const [deletingItem, setDeletingItem] = useState<{ id: string; name: string } | null>(null);
 
   const handleAdd = async (data: ResourceFormData) => {
-    // Manual additions are currently disabled for student_documents as they sync from Drive.
-    // To add a resource, upload it to the designated Google Drive folder.
-    console.log("Add ignored: New resources should be uploaded to Google Drive.", data);
+    const driveId = extractDriveId(data.driveLink);
+    const existingDocs = await getStudentDocuments();
+    const existingDoc = driveId
+      ? existingDocs.find((doc) => doc.drive_id === driveId)
+      : null;
+
+    const shouldOverride = Boolean(data.isOverridden ?? existingDoc);
+
+    const generation = Number.parseInt(data.generation.replace("MDCU ", ""), 10) || 0;
+    const fallbackTitle = data.blockName || data.driveLink || "Untitled resource";
+
+    const classifiedDoc: StudentDocument = {
+      id: existingDoc?.id ?? -1,
+      title: fallbackTitle,
+      file_url: data.driveLink,
+      folder_path: data.blockName || data.driveLink || "",
+      uploaded_by: "admin",
+      upload_date: new Date().toISOString(),
+      block: data.block,
+      doc_type: data.category,
+      generation,
+      thumbnail_url: data.thumbnail || undefined,
+      drive_id: driveId ?? undefined,
+      board_exam: data.boardExam || undefined,
+      is_overridden: shouldOverride,
+    };
+
+    if (existingDoc && driveId) {
+      const updates: Partial<StudentDocument> = {
+        title: fallbackTitle,
+        file_url: data.driveLink,
+        folder_path: data.blockName || data.driveLink || existingDoc.folder_path || "",
+        thumbnail_url: data.thumbnail || undefined,
+        generation,
+        block: shouldOverride ? data.block : existingDoc.block,
+        doc_type: shouldOverride ? data.category : existingDoc.doc_type,
+        board_exam: shouldOverride ? (data.boardExam || undefined) : existingDoc.board_exam,
+        drive_id: driveId,
+        is_overridden: shouldOverride,
+      };
+
+      if (!shouldOverride) {
+        const blockConfig = classifyDocument(classifiedDoc, configs, "block_mapping");
+        const typeConfig = classifyDocument(classifiedDoc, configs, "doc_type");
+        const boardConfig = classifyDocument(classifiedDoc, configs, "board_exam");
+
+        updates.block = blockConfig ? blockConfig.label : existingDoc.block || "Unclassified";
+        updates.doc_type = typeConfig ? typeConfig.label : existingDoc.doc_type || "Unknown";
+        updates.board_exam = boardConfig ? boardConfig.label : undefined;
+      }
+
+      await updateStudentDocument(existingDoc.id, updates);
+    } else {
+      const blockConfig = classifyDocument(classifiedDoc, configs, "block_mapping");
+      const typeConfig = classifyDocument(classifiedDoc, configs, "doc_type");
+      const boardConfig = classifyDocument(classifiedDoc, configs, "board_exam");
+
+      const recordToCreate: Partial<StudentDocument> = {
+        title: fallbackTitle,
+        file_url: data.driveLink,
+        folder_path: data.blockName || data.driveLink || "",
+        uploaded_by: "admin",
+        upload_date: new Date().toISOString(),
+        block: shouldOverride ? data.block : blockConfig ? blockConfig.label : "Unclassified",
+        doc_type: shouldOverride ? data.category : typeConfig ? typeConfig.label : "Unknown",
+        generation,
+        thumbnail_url: data.thumbnail || undefined,
+        drive_id: driveId ?? undefined,
+        board_exam: shouldOverride ? (data.boardExam || undefined) : boardConfig ? boardConfig.label : undefined,
+        is_overridden: shouldOverride,
+      };
+
+      await createStudentDocument(recordToCreate);
+    }
+
+    const updated = await getStudentDocuments();
+    setStudentDocs(updated);
   };
 
   const handleEdit = async (data: ResourceFormData & { id: string }) => {

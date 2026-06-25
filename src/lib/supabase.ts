@@ -125,6 +125,32 @@ export async function deletePeerSupportItem(id: string): Promise<void> {
 // 1.1 STUDENT DOCUMENTS ADMIN FUNCTIONS
 // ============================================
 
+export function extractDriveId(url: string): string | null {
+  const patterns = [
+    /\/file\/d\/([a-zA-Z0-9_-]+)/,
+    /id=([a-zA-Z0-9_-]+)/,
+    /\/folders\/([a-zA-Z0-9_-]+)/,
+  ];
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) return match[1];
+  }
+  return null;
+}
+
+export async function createStudentDocument(
+  record: Partial<StudentDocument>
+): Promise<StudentDocument> {
+  const { data, error } = await supabase
+    .from('student_documents')
+    .insert(record)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
 export async function updateStudentDocument(id: number, updates: Partial<StudentDocument>): Promise<StudentDocument> {
   const { data, error } = await supabase
     .from('student_documents')
