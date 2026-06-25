@@ -52,8 +52,8 @@ const TYPE_COLORS: Record<string, string> = {
   "NLE 2": "#D946EF",
   Resources: "#06B6D4",
   "Survival Guide": "#84CC16",
-  "Lecture Slide" : "#06B6D4",
-  "Textbook" : "#EC4899"
+  "Lecture Slide": "#06B6D4",
+  "Textbook": "#EC4899"
 };
 
 function isUnclassifiedCategory(
@@ -92,15 +92,15 @@ function SubjectCard({
   const [expanded, setExpanded] = useState(false);
 
   const typesPresent = [
-  ...knownTypes.filter((t) =>
-    items.some((i) => i.category === t)
-  ),
-  ...(items.some((i) =>
-    isUnclassifiedCategory(i.category, knownTypes)
-  )
-    ? ["ไม่ระบุประเภท"]
-    : []),
-];
+    ...knownTypes.filter((t) =>
+      items.some((i) => i.category === t)
+    ),
+    ...(items.some((i) =>
+      isUnclassifiedCategory(i.category, knownTypes)
+    )
+      ? ["ไม่ระบุประเภท"]
+      : []),
+  ];
 
   const gens = [...new Set(items.map((i) => i.generation))]
     .filter((g) => g !== "Auto-Detected")
@@ -130,15 +130,15 @@ function SubjectCard({
                   color: TYPE_COLORS[t] ?? "#6B7280",
                 }}
               >
-              {t} (
-              {
-                items.filter((i) =>
-                  t === "ไม่ระบุประเภท"
-                    ? isUnclassifiedCategory(i.category, knownTypes)
-                    : i.category === t
-                ).length
-              }
-              )              
+                {t} (
+                {
+                  items.filter((i) =>
+                    t === "ไม่ระบุประเภท"
+                      ? isUnclassifiedCategory(i.category, knownTypes)
+                      : i.category === t
+                  ).length
+                }
+                )
               </span>
             ))}
             {gens.map((g) => (
@@ -167,8 +167,8 @@ function SubjectCard({
               items={
                 type === "ไม่ระบุประเภท"
                   ? items.filter((i) =>
-                      isUnclassifiedCategory(i.category, knownTypes)
-                    )
+                    isUnclassifiedCategory(i.category, knownTypes)
+                  )
                   : items.filter((i) => i.category === type)
               }
               isAdmin={isAdmin}
@@ -419,8 +419,8 @@ export function PeerSupportSection({
           item.category,
           knownDocTypes,
         )
-        ? "other"
-        : item.category;        
+          ? "other"
+          : item.category;
         const catMatch = selectedCategory.length === 0 || (catVal === "other" ? selectedCategory.includes("other") || selectedCategory.length === 0 : selectedCategory.includes(catVal));
 
         const boardVal = !item.board_exam || item.board_exam === "None" ? "other" : item.board_exam;
