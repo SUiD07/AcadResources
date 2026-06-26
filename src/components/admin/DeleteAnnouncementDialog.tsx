@@ -55,7 +55,7 @@ export function DeleteAnnouncementDialog({
             </div>
             <AlertDialogTitle>Delete Announcement</AlertDialogTitle>
           </div>
-          <AlertDialogDescription className="pt-3">
+          <AlertDialogDescription>
             Are you sure you want to delete the announcement <strong>"{announcement.title}"</strong>?
             This action cannot be undone.
           </AlertDialogDescription>

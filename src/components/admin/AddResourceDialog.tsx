@@ -147,8 +147,7 @@ export function AddResourceDialog({ open, onOpenChange, onSubmit, categoryName }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">        <DialogHeader>
           <DialogTitle>Add New Resource</DialogTitle>
           <DialogDescription>
             Fill in the details for the new academic resource. All fields are required.

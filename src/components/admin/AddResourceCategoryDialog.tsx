@@ -95,16 +95,18 @@ export function AddResourceCategoryDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle>Add Resource Category</DialogTitle>
           <DialogDescription>
             Create a new academic resource category with items.
           </DialogDescription>
         </DialogHeader>
-
-        <form onSubmit={handleSubmit}>
-          <div className="space-y-4 py-4">
+        <form
+          onSubmit={handleSubmit}
+          className="flex flex-col flex-1 overflow-hidden"
+        >
+          <div className="space-y-4 py-4 overflow-y-auto flex-1 px-1">
             {/* Title */}
             <div className="space-y-2">
               <Label htmlFor="category-title">Category Title *</Label>

@@ -1,5 +1,9 @@
 import { Heart, List } from "lucide-react";
 import React from "react";
+import { ImageWithFallback } from "../figma/ImageWithFallback";
+import externImg from "../../assets/images/extern.jpg";
+import timelineImg from "../../assets/images/timeline.jpg";
+import NLE3Img from "../../assets/images/NLE3.png";
 
 function CareerNavigationSection() {
   return (
@@ -9,7 +13,7 @@ function CareerNavigationSection() {
         <div className="mb-6 sm:mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
             <h1 className="text-slate-900 text-[24px] font-bold">
-              Carreer Navigation
+              Career Navigation
             </h1>
           </div>
           <p className="text-slate-600 text-sm sm:text-base">
@@ -144,15 +148,66 @@ function CareerNavigationSection() {
           </ul>
         </>
         <br />
+
+        {/* Extern Image */}
+        <div className="flex justify-center my-4">
+          <ImageWithFallback
+            src={externImg}
+            alt="Extern Schedule"
+            className="h-auto rounded-lg object-contain border-2 border-slate-200"
+            style={{ maxWidth: "600px", width: "100%" }}
+          />
+        </div>
+        <p className="text-center text-sm text-slate-600 mb-6">
+          Credit: Extern MDCU-BB32 & FB จบ extern แล้วไปไหนดี
+        </p>
+
+        {/* Timeline Image */}
+        <div className="flex justify-center my-4">
+          <ImageWithFallback
+            src={timelineImg}
+            alt="Extern Timeline"
+            className="h-auto rounded-lg object-contain border-2 border-slate-200"
+            style={{ maxWidth: "600px", width: "100%" }}
+          />
+        </div>
+        <br />
+
+        {/* Specialization Distribution */}
         <div className="font-bold text-[24px]">
           จำนวนการรับสาขาเรียนต่อในแต่ละจังหวัดและสาขาของปี 2568
         </div>
-        เว็บไซต์ เลือกเมนู "พื้นที่เรียนต่อ" อ้างอิงจากประกาศแพทยสภา
-        <iframe
-          src="https://script.google.com/a/macros/docchula.com/s/AKfycbzLW3UuSljfe5tDJghzfOvfBgh-k9yrm_RNwQ12myPPk1Ti4Td9g6RDosFZeTUxVGeaMw/exec"
-          width="100%"
-          height="800"
-        ></iframe>
+        <p className="text-slate-600 mb-4">
+          เว็บไซต์ เลือกเมนู "พื้นที่เรียนต่อ" อ้างอิงจากประกาศแพทยสภา
+        </p>
+        <div className="overflow-x-auto">
+          <iframe
+            src="https://script.google.com/a/macros/docchula.com/s/AKfycbzLW3UuSljfe5tDJghzfOvfBgh-k9yrm_RNwQ12myPPk1Ti4Td9g6RDosFZeTUxVGeaMw/exec"
+            width="100%"
+            height="800"
+          ></iframe>
+        </div>
+        <br />
+
+        {/* NLE3 Section */}
+        <div className="font-bold text-[24px] mb-4">NLE 3</div>
+        <div className="overflow-x-auto mb-4">
+          <iframe
+            src="https://cmathai.org/news/detail/974"
+            width="100%"
+            height="600"
+          ></iframe>
+        </div>
+
+        {/* NLE3 Image */}
+        <div className="flex justify-center my-4">
+          <ImageWithFallback
+            src={NLE3Img}
+            alt="NLE3"
+            className="h-auto rounded-lg object-contain border-2 border-slate-200"
+            style={{ maxWidth: "600px", width: "100%" }}
+          />
+        </div>
       </div>
     </>
   );

@@ -50,10 +50,8 @@ export function DeleteConfirmDialog({
             </div>
             <AlertDialogTitle>Delete {itemType}?</AlertDialogTitle>
           </div>
-          <AlertDialogDescription className="pt-3">
+          <AlertDialogDescription>
             Are you sure you want to delete <span className="font-semibold text-slate-900">"{itemName}"</span>?
-            <br />
-            <br />
             This action cannot be undone. The {itemType} will be permanently removed from the database.
           </AlertDialogDescription>
         </AlertDialogHeader>
@@ -62,7 +60,7 @@ export function DeleteConfirmDialog({
           <AlertDialogAction
             onClick={handleConfirm}
             disabled={isDeleting}
-            className="!bg-red-600 hover:bg-red-700 focus:ring-red-600"
+            className="bg-red-600! hover:bg-red-700 focus:ring-red-600"
           >
             {isDeleting ? (
               <>

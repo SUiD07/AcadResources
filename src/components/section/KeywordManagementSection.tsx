@@ -321,17 +321,17 @@ export function KeywordManagementSection() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <Settings className="w-8 h-8 text-[#E5007D]" />
-            Keyword Management
-          </h1>
-          <p className="text-slate-500 mt-1">
-            Configure how files are automatically categorized based on keywords.
+      <div className="mb-6 sm:mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
+            <h1 className="text-slate-900 text-[24px] font-bold flex items-center gap-2">
+              <Settings className="w-8 h-8 text-[#E5007D]" />
+              Keyword Management
+            </h1>
+          </div>
+          <p className="text-slate-600 text-sm sm:text-base">
+            Configure how files are automatically categorized based on keywords
           </p>
         </div>
-      </div>
 
       <QuickAddKeywordBar
         documents={documents}
