@@ -19,6 +19,8 @@ import {
 } from "../ui/select";
 import { Textarea } from "../ui/textarea";
 import { Loader2 } from "lucide-react";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 interface AddActivityDialogProps {
   open: boolean;
@@ -113,7 +115,7 @@ export function AddActivityDialog({
             {/* Date */}
             <div className="space-y-2">
               <Label htmlFor="activity-date">Date & Time *</Label>
-              <Input
+              {/* <Input
                 id="activity-date"
                 type="text"
                 placeholder="e.g., Dec 5, 2025 - 2:00 PM"
@@ -122,6 +124,22 @@ export function AddActivityDialog({
                   setFormData({ ...formData, date: e.target.value })
                 }
                 required
+              /> */}
+              {/* มันมีบัคแต่มันwork somehow ?-? ว่างๆเดี๋ยวมาแก้ต่อ ต้งอแก้ type ด้วยแต่่ทำไมมันใช้งานได้ฏ้ไม่รู้ */}
+              <DatePicker
+                selected={formData.date}
+                onChange={(date) =>
+                  setFormData({
+                    ...formData,
+                    date,
+                  })
+                }
+                showTimeSelect
+                dateFormat="dd/MM/yyyy HH:mm"
+                placeholderText="Select date and time"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                // withPortal
+                 popperPlacement="bottom-start"
               />
             </div>
 

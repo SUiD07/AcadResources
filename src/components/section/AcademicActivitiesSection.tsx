@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import {
   Calendar,
+  Clock,
   Users,
   Award,
   BookOpen,
@@ -165,7 +166,25 @@ export function AcademicActivitiesSection({
                 <CardContent>
                   <div className="flex items-center gap-2 text-sm text-slate-600 mb-4">
                     <Calendar className="w-4 h-4 shrink-0" />
-                    <span className="text-xs sm:text-sm">{activity.date}</span>
+                    <div className="flex items-center gap-2 text-sm text-slate-600">
+                      {/* <Calendar className="h-4 w-4" /> */}
+                      <span>
+                        {new Date(activity.date).toLocaleDateString("th-TH", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </span>
+
+                      <Clock className="h-4 w-4 ml-2" />
+                      <span>
+                        {new Date(activity.date).toLocaleTimeString("th-TH", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      {" "}น.
+                      </span>
+                    </div>
                   </div>
                   <div className="flex gap-2">
                     <Button variant="outline" className="flex-1" size="sm">

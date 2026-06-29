@@ -38,7 +38,9 @@ const DOC_TYPE_ORDER = [
   "Resources",
   "Survival Guide",
   "Lecture Slide",
-  "Textbook"
+  "Textbook",
+  "Checklist",
+  "Guideline"
 ];
 
 const TYPE_COLORS: Record<string, string> = {
@@ -53,7 +55,9 @@ const TYPE_COLORS: Record<string, string> = {
   Resources: "#06B6D4",
   "Survival Guide": "#84CC16",
   "Lecture Slide": "#06B6D4",
-  "Textbook": "#EC4899"
+  "Textbook": "#EC4899",
+  "Checklist": "#D946EF",
+  "Guideline": "#F59E0B"
 };
 
 function isUnclassifiedCategory(
