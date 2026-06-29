@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Folder, File, ChevronRight, ArrowLeft, FolderCheck } from 'lucide-react';
 import type { DriveSyncRecord, StudentDocument } from '../../lib/types';
 
@@ -20,7 +21,6 @@ interface DrillState {
 interface KeywordAutocompleteProps {
   value: string;
   onChange: (value: string) => void;
-  /** Called when user finalises a selection (click or Enter). */
   onCommit: (value: string) => void;
   onFocus?: () => void;
   onBlur?: () => void;
@@ -28,12 +28,7 @@ interface KeywordAutocompleteProps {
   documents: StudentDocument[];
   placeholder?: string;
   className?: string;
-  /**
-   * When true the dropdown only shows Drive folders (is_folder records),
-   * never plain-text file matches. Used by the "Add Folder" button.
-   */
   foldersOnly?: boolean;
-  /** Focus the input as soon as it mounts (used by AddFolderAutocomplete). */
   autoFocus?: boolean;
 }
 
@@ -47,8 +42,7 @@ function lastName(path: string): string {
 function parentCrumb(path: string): string {
   const parts = path.split('>').map((s) => s.trim());
   if (parts.length <= 1) return '';
-  const parent = parts.slice(0, -1).join(' > ');
-  return parent.length > 40 ? '…' + parent.slice(-38) : parent;
+  return parts.slice(0, -1).join(' > ');
 }
 
 function buildFolderSet(records: DriveSyncRecord[]): Set<string> {
@@ -234,6 +228,15 @@ export function KeywordAutocomplete({
     [suggestions, value, onCommit, selectItem],
   );
 
+  // ── Portal positioning ──────────────────────────────────────────────────────
+  const [dropPos, setDropPos] = useState<{ top: number; left: number } | null>(null);
+
+  useEffect(() => {
+    if (!showDropdown || !inputRef.current) { setDropPos(null); return; }
+    const rect = inputRef.current.getBoundingClientRect();
+    setDropPos({ top: rect.bottom + window.scrollY + 6, left: rect.left + window.scrollX });
+  }, [showDropdown]);
+
   return (
     <div style={{ position: 'relative', display: 'inline-block' }}>
       <input
@@ -249,21 +252,22 @@ export function KeywordAutocomplete({
         autoFocus={autoFocus}
       />
 
-      {showDropdown && (
+      {showDropdown && dropPos && createPortal(
         <div
           ref={dropRef}
           onMouseDown={handleDropdownMouseDown}
           style={{
             position: 'absolute',
-            top: 'calc(100% + 6px)',
-            left: 0,
+            top: dropPos.top,
+            left: dropPos.left,
             zIndex: 9999,
-            minWidth: '320px',
-            maxWidth: '480px',
-            background: 'var(--color-background-primary)',
-            border: '0.5px solid var(--color-border-secondary)',
-            borderRadius: 'var(--border-radius-lg)',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.10)',
+            width: 'max-content',
+            minWidth: '480px',
+            maxWidth: '720px',
+            background: 'white',
+            border: '0.5px solid #e2e8f0',
+            borderRadius: '8px',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
             overflow: 'hidden',
           }}
         >
@@ -346,11 +350,11 @@ export function KeywordAutocomplete({
                   ) : (
                     <File size={15} style={{ color: 'var(--color-text-tertiary)', flexShrink: 0 }} />
                   )}
-                  <span style={{ flex: 1, fontSize: 13, color: 'var(--color-text-primary)', fontWeight: item.isFolder ? 500 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <span style={{ flex: 1, fontSize: 13, color: 'var(--color-text-primary)', fontWeight: item.isFolder ? 500 : 400, whiteSpace: 'nowrap' }}>
                     {item.name}
                   </span>
                   {item.parentCrumb && (
-                    <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '160px', flexShrink: 0 }}>
+                    <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)', whiteSpace: 'nowrap', flexShrink: 0, paddingLeft: 8 }}>
                       {item.parentCrumb}
                     </span>
                   )}
@@ -367,7 +371,8 @@ export function KeywordAutocomplete({
               </li>
             )}
           </ul>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

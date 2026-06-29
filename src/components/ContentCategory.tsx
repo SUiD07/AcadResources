@@ -48,35 +48,93 @@ interface ContentCategoryProps {
   onDelete?: (item: ContentItem) => void;
 }
 
-/**
- * ─── ROBUST THUMBNAIL GENERATOR ───
- * Extracts File ID from Drive link and generates a high-res thumbnail.
- */
+// ─── THUMBNAIL ────────────────────────────────────────────────────────────────
 function getDriveThumbnail(driveLink: string): string {
   const match = driveLink.match(/[-\w]{25,}/);
   const fileId = match?.[0];
   if (!fileId) return "";
-  // sz=w600 provides a good balance between speed and quality for grid cards
   return `https://drive.google.com/thumbnail?id=${fileId}&sz=w600`;
 }
 
-/**
- * Extracts the last segment of a folder_path string, e.g.
- * "ACD Resources > AC SUPER > Comprehensive & NLE > NLE Step 2 > NLE 2020" → "NLE 2020"
- * Supports ">" or "/" as separators. Returns null if no usable path is present.
- */
-function getLastFolderSegment(folderPath?: string): string | null {
-  if (!folderPath || folderPath.trim() === "") return null;
-  const separator = folderPath.includes(">") ? ">" : "/";
-  const segments = folderPath
-    .split(separator)
-    .map((s) => s.trim())
-    .filter(Boolean);
-  if (segments.length === 0) return null;
-  return segments[segments.length - 1];
+// ─── FOLDER TREE HELPERS ──────────────────────────────────────────────────────
+
+interface FolderNode {
+  name: string;
+  fullPath: string;
+  children: Map<string, FolderNode>;
+  items: ContentItem[];
 }
 
-/** A single file card — used both in the flat grid and inside an expanded folder. */
+function makeFolderNode(name: string, fullPath: string): FolderNode {
+  return { name, fullPath, children: new Map(), items: [] };
+}
+
+/**
+ * Build a full-path tree from items' folder_path strings.
+ * Each path segment becomes a tree level, so siblings from different
+ * branches are never merged even if their last segment matches.
+ */
+function buildFolderTree(items: ContentItem[]): FolderNode {
+  const root = makeFolderNode("", "");
+
+  for (const item of items) {
+    const raw = item.folder_path || "";
+    const separator = raw.includes(" > ") ? " > " : "/";
+    const segments = raw
+      .split(separator)
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    let node = root;
+    let builtPath = "";
+    for (const seg of segments) {
+      builtPath = builtPath ? `${builtPath}/${seg}` : seg;
+      if (!node.children.has(seg)) {
+        node.children.set(seg, makeFolderNode(seg, builtPath));
+      }
+      node = node.children.get(seg)!;
+    }
+    node.items.push(item);
+  }
+
+  return root;
+}
+
+function countDescendants(node: FolderNode): number {
+  let total = node.items.length;
+  for (const child of node.children.values()) {
+    total += countDescendants(child);
+  }
+  return total;
+}
+
+/**
+ * Collapse chains where a folder has no direct files and exactly one child —
+ * merge the names with " / " so the UI doesn't show pointless single-child nesting.
+ */
+function collapseChains(node: FolderNode): FolderNode {
+  // Recurse children first
+  const collapsedChildren = new Map<string, FolderNode>();
+  for (const [key, child] of node.children) {
+    collapsedChildren.set(key, collapseChains(child));
+  }
+  node.children = collapsedChildren;
+
+  // Collapse this node if it has no direct items and exactly one child
+  if (node.items.length === 0 && node.children.size === 1 && node.name !== "") {
+    const [, onlyChild] = [...node.children.entries()][0];
+    return {
+      name: onlyChild.name,
+      fullPath: onlyChild.fullPath,
+      children: onlyChild.children,
+      items: onlyChild.items,
+    };
+  }
+
+  return node;
+}
+
+// ─── FILE CARD ────────────────────────────────────────────────────────────────
 function FileCard({
   item,
   categoryName,
@@ -94,7 +152,6 @@ function FileCard({
 }) {
   return (
     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col">
-      {/* Image Section */}
       <div
         className="w-full bg-slate-50 border-b border-slate-100 overflow-hidden relative"
         style={{ aspectRatio: "16/9" }}
@@ -108,7 +165,6 @@ function FileCard({
         />
       </div>
 
-      {/* Content Section */}
       <div className="p-4 flex flex-col gap-2 flex-1">
         <span
           className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-slate-100 text-slate-500 w-fit"
@@ -138,7 +194,6 @@ function FileCard({
           </span>
         </div>
 
-        {/* Actions */}
         <div className="flex gap-2 pt-2 border-t border-slate-50 mt-1">
           <Button variant="outline" size="sm" className="flex-1" asChild>
             <a
@@ -178,18 +233,16 @@ function FileCard({
   );
 }
 
-/** A folder tile that expands to reveal the files inside it. Only ever rendered for 2+ files. */
+// ─── FOLDER GROUP (recursive) ─────────────────────────────────────────────────
 function FolderGroup({
-  folderName,
-  items,
+  node,
   categoryName,
   accentColor,
   isAdmin,
   onEdit,
   onDelete,
 }: {
-  folderName: string;
-  items: ContentItem[];
+  node: FolderNode;
   categoryName: string;
   accentColor: string;
   isAdmin: boolean;
@@ -197,6 +250,22 @@ function FolderGroup({
   onDelete?: (item: ContentItem) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const total = countDescendants(node);
+
+  // Sort children alphabetically
+  const sortedChildren = [...node.children.values()].sort((a, b) =>
+    a.name.localeCompare(b.name)
+  );
+
+  // Children with only 1 descendant render as flat FileCards, not nested folders
+  const realFolderChildren = sortedChildren.filter(
+    (c) => countDescendants(c) > 1
+  );
+  const flatFromChildren = sortedChildren
+    .filter((c) => countDescendants(c) === 1)
+    .flatMap((c) => collectAllItems(c));
+
+  const flatItems = [...node.items, ...flatFromChildren];
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
@@ -216,45 +285,84 @@ function FolderGroup({
               color: accentColor,
             }}
           >
-            {open ? <FolderOpen className="w-4 h-4" /> : <Folder className="w-4 h-4" />}
+            {open ? (
+              <FolderOpen className="w-4 h-4" />
+            ) : (
+              <Folder className="w-4 h-4" />
+            )}
           </span>
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-slate-900 truncate">{folderName}</p>
-            <p className="text-xs text-slate-500">{items.length} files</p>
+            <p className="text-sm font-semibold text-slate-900 truncate">
+              {node.name}
+            </p>
+            <p className="text-xs text-slate-500">{total} files</p>
           </div>
         </div>
         <span className="text-slate-400 ml-2 shrink-0">
-          {open ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+          {open ? (
+            <ChevronDown className="w-4 h-4" />
+          ) : (
+            <ChevronRight className="w-4 h-4" />
+          )}
         </span>
       </div>
 
       {open && (
-        <div
-          className="border-t border-slate-100 bg-slate-50/50"
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-            gap: "12px",
-            padding: "16px",
-          }}
-        >
-          {items.map((item) => (
-            <FileCard
-              key={item.id}
-              item={item}
-              categoryName={categoryName}
-              accentColor={accentColor}
-              isAdmin={isAdmin}
-              onEdit={onEdit}
-              onDelete={onDelete}
-            />
-          ))}
+        <div className="border-t border-slate-100 bg-slate-50/50 p-4 flex flex-col gap-3">
+          {/* Nested sub-folders (2+ files each) */}
+          {realFolderChildren.length > 0 && (
+            <div className="flex flex-col gap-2">
+              {realFolderChildren.map((child) => (
+                <FolderGroup
+                  key={child.fullPath}
+                  node={child}
+                  categoryName={categoryName}
+                  accentColor={accentColor}
+                  isAdmin={isAdmin}
+                  onEdit={onEdit}
+                  onDelete={onDelete}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Direct files + single-descendant child items */}
+          {flatItems.length > 0 && (
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+                gap: "12px",
+              }}
+            >
+              {flatItems.map((item) => (
+                <FileCard
+                  key={item.id}
+                  item={item}
+                  categoryName={categoryName}
+                  accentColor={accentColor}
+                  isAdmin={isAdmin}
+                  onEdit={onEdit}
+                  onDelete={onDelete}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
   );
 }
 
+/** Recursively collect all ContentItems from a node and its descendants. */
+function collectAllItems(node: FolderNode): ContentItem[] {
+  return [
+    ...node.items,
+    ...[...node.children.values()].flatMap(collectAllItems),
+  ];
+}
+
+// ─── CONTENT CATEGORY ─────────────────────────────────────────────────────────
 export function ContentCategory({
   categoryName,
   items,
@@ -266,7 +374,7 @@ export function ContentCategory({
   const [expanded, setExpanded] = useState(defaultExpanded);
 
   const uniqueItems = items.filter(
-    (item, idx, arr) => arr.findIndex((i) => i.id === item.id) === idx,
+    (item, idx, arr) => arr.findIndex((i) => i.id === item.id) === idx
   );
 
   if (items.length === 0) return null;
@@ -274,40 +382,27 @@ export function ContentCategory({
   const accentColor = TYPE_COLORS[categoryName] ?? "#6B7280";
   const isPrecourse = categoryName === "Precourse";
 
-  // Group items by last folder_path segment. Items with no folder_path stay ungrouped
-  // (folderName === null) and render flat, same as items in a single-file folder.
-  const grouped = (() => {
-    const map = new Map<string, ContentItem[]>();
-    const unfiled: ContentItem[] = [];
-    uniqueItems.forEach((item) => {
-      const folderName = getLastFolderSegment(item.folder_path);
-      if (!folderName) {
-        unfiled.push(item);
-        return;
-      }
-      if (!map.has(folderName)) map.set(folderName, []);
-      map.get(folderName)!.push(item);
-    });
+  // Build the full recursive tree, then collapse pointless single-child chains
+  const rawTree = buildFolderTree(uniqueItems);
+  const tree = collapseChains(rawTree);
 
-    // Folders with exactly 1 file don't get folder chrome — they render as a plain
-    // FileCard alongside the unfiled items, exactly like the original flat view.
-    const realFolders: [string, ContentItem[]][] = [];
-    const flatItems: ContentItem[] = [...unfiled];
-    map.forEach((folderItems, folderName) => {
-      if (folderItems.length === 1) {
-        flatItems.push(folderItems[0]);
-      } else {
-        realFolders.push([folderName, folderItems]);
-      }
-    });
+  // Top-level: children with 2+ descendants become FolderGroups;
+  // children with 1 descendant + root direct items render flat.
+  const sortedTopChildren = [...tree.children.values()].sort((a, b) =>
+    a.name.localeCompare(b.name)
+  );
+  const realFolders = sortedTopChildren.filter(
+    (c) => countDescendants(c) > 1
+  );
+  const flatItems = [
+    ...tree.items,
+    ...sortedTopChildren
+      .filter((c) => countDescendants(c) === 1)
+      .flatMap(collectAllItems),
+  ];
 
-    realFolders.sort(([a], [b]) => a.localeCompare(b));
-
-    return { realFolders, flatItems };
-  })();
-
-  const folderCount = grouped.realFolders.length;
-  const flatCount = grouped.flatItems.length;
+  const folderCount = realFolders.length;
+  const flatCount = flatItems.length;
 
   return (
     <div
@@ -325,7 +420,11 @@ export function ContentCategory({
         className="flex items-center justify-between cursor-pointer select-none px-4 sm:px-6 py-3 sm:py-4 border-b"
         style={{
           background: isPrecourse ? "#E0F2FE" : "#F8FAFC",
-          borderColor: isPrecourse ? "#BAE6FD" : expanded ? "#E2E8F0" : "transparent",
+          borderColor: isPrecourse
+            ? "#BAE6FD"
+            : expanded
+            ? "#E2E8F0"
+            : "transparent",
         }}
       >
         <div className="flex items-center gap-3">
@@ -349,7 +448,11 @@ export function ContentCategory({
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
               {folderCount > 0
-                ? `${folderCount} folder${folderCount !== 1 ? "s" : ""}${flatCount > 0 ? ` · ${flatCount} file${flatCount !== 1 ? "s" : ""}` : ""}`
+                ? `${folderCount} folder${folderCount !== 1 ? "s" : ""}${
+                    flatCount > 0
+                      ? ` · ${flatCount} file${flatCount !== 1 ? "s" : ""}`
+                      : ""
+                  }`
                 : `${items.length} resource${items.length !== 1 ? "s" : ""}`}
             </p>
           </div>
@@ -372,7 +475,11 @@ export function ContentCategory({
             </div>
           )}
           <span style={{ color: "#94A3B8" }}>
-            {expanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+            {expanded ? (
+              <ChevronUp className="w-5 h-5" />
+            ) : (
+              <ChevronDown className="w-5 h-5" />
+            )}
           </span>
         </div>
       </div>
@@ -388,14 +495,13 @@ export function ContentCategory({
             background: "white",
           }}
         >
-          {/* Real folders (2+ files) get a collapsible folder row */}
-          {folderCount > 0 && (
+          {/* Real folders (2+ files) — recursive */}
+          {realFolders.length > 0 && (
             <div className="flex flex-col gap-2">
-              {grouped.realFolders.map(([folderName, folderItems]) => (
+              {realFolders.map((node) => (
                 <FolderGroup
-                  key={folderName}
-                  folderName={folderName}
-                  items={folderItems}
+                  key={node.fullPath}
+                  node={node}
                   categoryName={categoryName}
                   accentColor={accentColor}
                   isAdmin={isAdmin}
@@ -406,8 +512,8 @@ export function ContentCategory({
             </div>
           )}
 
-          {/* Single-file folders + items with no folder_path render flat, same as before */}
-          {flatCount > 0 && (
+          {/* Flat files */}
+          {flatItems.length > 0 && (
             <div
               style={{
                 display: "grid",
@@ -415,7 +521,7 @@ export function ContentCategory({
                 gap: "12px",
               }}
             >
-              {grouped.flatItems.map((item) => (
+              {flatItems.map((item) => (
                 <FileCard
                   key={item.id}
                   item={item}

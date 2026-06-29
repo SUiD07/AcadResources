@@ -39,7 +39,16 @@ interface KeywordCategoryCardProps {
   onDelete: (id: string) => void;
 }
 
-// ─── Sub-components (unchanged from original) ────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+/** Returns the last segment of a " > " or "/" separated path. */
+function lastSegment(path: string): string {
+  const sep = path.includes(' > ') ? ' > ' : '/';
+  const parts = path.split(sep).map((s) => s.trim()).filter(Boolean);
+  return parts[parts.length - 1] ?? path;
+}
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
 
 function FileList({ files, emptyLabel, dimmed = false }: {
   files: StudentDocument[];
@@ -105,12 +114,6 @@ function DriveTreeView({ root }: { root: DriveTreeNode }) {
   );
 }
 
-// ─── Add Folder button with inline autocomplete ───────────────────────────────
-/**
- * Renders as a dashed "Add Folder" button.
- * On click it opens an inline chip with a folders-only KeywordAutocomplete.
- * Selecting a folder fires onAdd(fullPath) and collapses back to the button.
- */
 function AddFolderAutocomplete({
   driveSyncRecords,
   documents,
@@ -133,7 +136,6 @@ function AddFolderAutocomplete({
   );
 
   const handleBlur = useCallback(() => {
-    // Small delay so a dropdown click registers before we collapse
     setTimeout(() => {
       setActive(false);
       setInputValue('');
@@ -166,8 +168,6 @@ function AddFolderAutocomplete({
         onChange={setInputValue}
         onCommit={handleCommit}
         onBlur={handleBlur}
-        // Auto-open the dropdown as soon as the chip appears
-        // (the input will call onFocus → setOpen(true) on mount via autoFocus)
         className="min-w-[160px]"
         autoFocus
       />
@@ -207,7 +207,6 @@ export function KeywordCategoryCard({
 
   const driveFolderPaths = getDriveSyncFolderPaths(driveSyncRecords);
 
-  // Append a folder path as a new key (called by AddFolderAutocomplete)
   const handleAddFolder = useCallback(
     (folderPath: string) => {
       const alreadyExists = config.keys.some(
@@ -283,24 +282,37 @@ export function KeywordCategoryCard({
           <span className="text-xs font-normal text-slate-400 italic">(Case-insensitive)</span>
         </Label>
         <div className="flex flex-wrap gap-2">
-          {/* Existing keyword chips — plain text inputs, unchanged from original */}
           {config.keys.map((key, idx) => {
             const isFolder = isDriveSyncFolderKey(key, driveFolderPaths);
             return (
               <div
                 key={idx}
                 className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg pl-3 pr-1 py-1 group focus-within:border-[#E5007D] transition-colors"
-                title={isFolder ? 'Matches this folder and all its subfolders' : undefined}
+                title={isFolder ? key : undefined}
               >
                 {isFolder && <Folder className="w-3.5 h-3.5 text-[#E5007D] shrink-0" />}
-                <input
-                  className="bg-transparent text-sm focus:outline-none min-w-[120px] text-slate-600"
-                  value={key}
-                  onChange={(e) => onUpdateKey(config.id, idx, e.target.value)}
-                  onFocus={() => onFocusKey(config.id, idx)}
-                  onBlur={onBlurKey}
-                  placeholder="Type keyword…"
-                />
+
+                {isFolder ? (
+                  // Show only the last path segment; full path is in the title tooltip
+                  <span
+                    className="text-sm text-slate-600 min-w-[80px] cursor-default select-none"
+                    tabIndex={0}
+                    onFocus={() => onFocusKey(config.id, idx)}
+                    onBlur={onBlurKey}
+                  >
+                    {lastSegment(key)}
+                  </span>
+                ) : (
+                  <input
+                    className="bg-transparent text-sm focus:outline-none min-w-[120px] text-slate-600"
+                    value={key}
+                    onChange={(e) => onUpdateKey(config.id, idx, e.target.value)}
+                    onFocus={() => onFocusKey(config.id, idx)}
+                    onBlur={onBlurKey}
+                    placeholder="Type keyword…"
+                  />
+                )}
+
                 <button
                   onClick={() => onRemoveKey(config.id, idx)}
                   className="p-1 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
@@ -311,7 +323,6 @@ export function KeywordCategoryCard({
             );
           })}
 
-          {/* Add Key — plain text, no autocomplete (unchanged behaviour) */}
           <Button
             variant="outline"
             size="sm"
@@ -321,10 +332,6 @@ export function KeywordCategoryCard({
             <Plus className="w-4 h-4 mr-2" /> Add Key
           </Button>
 
-          {/*
-            Add Folder — replaced the static <Select> with an inline
-            folders-only autocomplete that supports drill-down navigation.
-          */}
           <AddFolderAutocomplete
             driveSyncRecords={driveSyncRecords}
             documents={documents}
@@ -333,16 +340,17 @@ export function KeywordCategoryCard({
         </div>
         <p className="text-xs text-slate-400">
           A folder key tags every file in that folder — including subfolders — with this category.
+          Hover a folder chip to see its full path.
         </p>
       </div>
 
-      {/* ── Matching files panel (unchanged) ── */}
+      {/* ── Matching files panel ── */}
       <div className="space-y-3 pt-4 border-t border-slate-200">
         {showTreeForFocusedKey ? (
           <>
             <Label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
               <Folder className="w-4 h-4 text-[#E5007D]" />
-              Folder Contents — "{focusedKeyValue}"
+              Folder Contents — "{lastSegment(focusedKeyValue!)}"
             </Label>
             <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
               {scopedTree
@@ -350,7 +358,7 @@ export function KeywordCategoryCard({
                 : <p className="p-4 text-sm text-slate-400 italic">This folder couldn't be found in Drive anymore.</p>}
             </div>
             <p className="text-xs text-slate-400">
-              Showing the live folder structure from Drive. Every file under this folder (including subfolders) is tagged with this category.
+              Full path: <span className="font-mono">{focusedKeyValue}</span>
             </p>
           </>
         ) : isFocusedHere ? (

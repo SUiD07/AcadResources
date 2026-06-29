@@ -48,8 +48,8 @@ export function QuickAddKeywordBar({
     <div className="p-5 border border-slate-200 rounded-2xl bg-white space-y-4">
       <Label className="text-sm font-semibold text-slate-700">Quick Add Keyword</Label>
 
-      <div className="flex flex-col md:flex-row gap-3 md:items-end">
-        <div className="flex-1 min-w-[180px]">
+      <div className="flex flex-col gap-3 md:flex-row md:items-end">
+        <div className="flex-1 min-w-0">
           <Input
             className="bg-white"
             value={keyword}
@@ -58,7 +58,7 @@ export function QuickAddKeywordBar({
           />
         </div>
 
-        <div className="w-full md:w-48">
+        <div className="w-full md:w-48 min-w-0">
           <Select
             value={type}
             onValueChange={(val) => onTypeChange(val as KeywordConfig['config_type'])}
@@ -74,7 +74,7 @@ export function QuickAddKeywordBar({
           </Select>
         </div>
 
-        <div className="w-full md:w-56">
+        <div className="w-full md:w-56 min-w-0">
           <Select value={categoryId} onValueChange={onCategoryIdChange}>
             <SelectTrigger className="bg-white">
               <SelectValue placeholder="Select category..." />
@@ -92,7 +92,7 @@ export function QuickAddKeywordBar({
 
         {!isCreatingNew && (
           <Button
-            className="bg-[#E5007D] hover:bg-[#c00069] text-white px-6 shrink-0"
+            className="w-full md:w-auto bg-[#E5007D] hover:bg-[#c00069] text-white px-6 shrink-0"
             onClick={onSubmit}
             disabled={isSubmitting || !keyword.trim() || !categoryId}
           >
@@ -108,8 +108,8 @@ export function QuickAddKeywordBar({
 
       {/* Inline "new category" fields, only shown when "+ New Category" is selected */}
       {isCreatingNew && (
-        <div className="flex flex-col md:flex-row gap-3 md:items-end pt-3 border-t border-slate-100">
-          <div className="flex-1 min-w-[180px]">
+        <div className="flex flex-col gap-3 md:flex-row md:items-end pt-3 border-t border-slate-100">
+          <div className="flex-1 min-w-0">
             <Label className="text-xs font-semibold text-slate-500 mb-1 block">
               New category label
             </Label>
@@ -122,7 +122,7 @@ export function QuickAddKeywordBar({
           </div>
 
           {type === 'block_mapping' && (
-            <div className="w-full md:w-40">
+            <div className="w-full md:w-40 min-w-0">
               <Label className="text-xs font-semibold text-slate-500 mb-1 block">
                 Curriculum Year
               </Label>
@@ -144,7 +144,7 @@ export function QuickAddKeywordBar({
           )}
 
           <Button
-            className="bg-[#E5007D] hover:bg-[#c00069] text-white px-6 shrink-0"
+            className="w-full md:w-auto bg-[#E5007D] hover:bg-[#c00069] text-white px-6 shrink-0"
             onClick={onSubmit}
             disabled={isSubmitting || !keyword.trim() || !newLabel.trim()}
           >
@@ -161,7 +161,7 @@ export function QuickAddKeywordBar({
       {/* Live matching preview for the keyword being typed */}
       {keyword.trim() && (
         <div className="pt-3 border-t border-slate-100">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label className="text-xs font-semibold text-slate-500">
                 Matching "{keyword.trim()}" ({matchingFiles.length})
