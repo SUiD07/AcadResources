@@ -337,9 +337,15 @@ export function PeerSupportSection({
         const typeConfig = classifyDocument(doc, configs, 'doc_type');
         const boardConfig = classifyDocument(doc, configs, 'board_exam');
 
-        const finalBlock = blockConfig ? blockConfig.label : 'Unclassified';
-        const finalCategory = typeConfig ? typeConfig.label : 'Unknown';
-        const finalBoardExam = boardConfig ? boardConfig.label : 'None';
+        const finalBlock = doc.is_overridden && doc.block
+          ? doc.block
+          : (blockConfig ? blockConfig.label : 'Unclassified');
+        const finalCategory = doc.is_overridden && doc.doc_type
+          ? doc.doc_type
+          : (typeConfig ? typeConfig.label : 'Unknown');
+        const finalBoardExam = doc.is_overridden && doc.board_exam
+          ? doc.board_exam
+          : (boardConfig ? boardConfig.label : 'None');
 
         return {
           id: `doc-${doc.id}`,
