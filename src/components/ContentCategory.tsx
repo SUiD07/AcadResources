@@ -24,6 +24,10 @@ const TYPE_COLORS: Record<string, string> = {
   "NLE 2": "#D946EF",
   Resources: "#06B6D4",
   "Survival Guide": "#84CC16",
+  "Lecture Slide": "#06B6D4",
+  "Textbook": "#EC4899",
+  "Checklist": "#D946EF",
+  "Guideline": "#F59E0B"
 };
 
 interface ContentItem {
@@ -167,7 +171,7 @@ function FileCard({
 
       <div className="p-4 flex flex-col gap-2 flex-1">
         <span
-          className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-slate-100 text-slate-500 w-fit"
+          className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded rounded-lg bg-slate-100 text-slate-500 w-fit"
           style={{ color: accentColor, background: `${accentColor}18` }}
         >
           {categoryName}

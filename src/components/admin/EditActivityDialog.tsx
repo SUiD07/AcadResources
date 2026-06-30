@@ -1,12 +1,27 @@
-import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Textarea } from '../ui/textarea';
-import { Loader2 } from 'lucide-react';
-import type { ActivityFormData } from './AddActivityDialog';
+import { useState, useEffect } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../ui/dialog";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
+import { Textarea } from "../ui/textarea";
+import { Loader2 } from "lucide-react";
+import type { ActivityFormData } from "./AddActivityDialog";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 interface EditActivityDialogProps {
   open: boolean;
@@ -15,15 +30,20 @@ interface EditActivityDialogProps {
   initialData?: ActivityFormData & { id: string };
 }
 
-export function EditActivityDialog({ open, onOpenChange, onSubmit, initialData }: EditActivityDialogProps) {
+export function EditActivityDialog({
+  open,
+  onOpenChange,
+  onSubmit,
+  initialData,
+}: EditActivityDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState<ActivityFormData & { id: string }>({
-    id: '',
-    title: '',
-    description: '',
-    date: '',
-    status: 'Upcoming',
-    icon: 'Calendar',
+    id: "",
+    title: "",
+    description: "",
+    date: "",
+    status: "Upcoming",
+    icon: "Calendar",
   });
 
   // Update form when initialData changes
@@ -40,7 +60,7 @@ export function EditActivityDialog({ open, onOpenChange, onSubmit, initialData }
       await onSubmit(formData);
       onOpenChange(false);
     } catch (error) {
-      console.error('Error submitting form:', error);
+      console.error("Error submitting form:", error);
     } finally {
       setIsLoading(false);
     }
@@ -55,7 +75,7 @@ export function EditActivityDialog({ open, onOpenChange, onSubmit, initialData }
             Update the details for this academic activity.
           </DialogDescription>
         </DialogHeader>
-        
+
         <form onSubmit={handleSubmit}>
           <div className="space-y-4 py-4">
             {/* Title */}
@@ -65,7 +85,9 @@ export function EditActivityDialog({ open, onOpenChange, onSubmit, initialData }
                 id="edit-activity-title"
                 placeholder="e.g., Peer Tutoring Session"
                 value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, title: e.target.value })
+                }
                 required
               />
             </div>
@@ -77,7 +99,9 @@ export function EditActivityDialog({ open, onOpenChange, onSubmit, initialData }
                 id="edit-activity-description"
                 placeholder="Brief description of the activity..."
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
                 rows={3}
                 required
               />
@@ -86,13 +110,27 @@ export function EditActivityDialog({ open, onOpenChange, onSubmit, initialData }
             {/* Date */}
             <div className="space-y-2">
               <Label htmlFor="edit-activity-date">Date & Time *</Label>
-              <Input
+              {/* <Input
                 id="edit-activity-date"
                 type="text"
                 placeholder="e.g., Dec 5, 2025 - 2:00 PM"
                 value={formData.date}
                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                 required
+              /> */}
+              <DatePicker
+                selected={formData.date}
+                onChange={(date) =>
+                  setFormData({
+                    ...formData,
+                    date,
+                  })
+                }
+                showTimeSelect
+                dateFormat="dd/MM/yyyy HH:mm"
+                placeholderText="Select date and time"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                popperPlacement="bottom-start"
               />
             </div>
 
@@ -159,7 +197,7 @@ export function EditActivityDialog({ open, onOpenChange, onSubmit, initialData }
                   Saving...
                 </>
               ) : (
-                'Save Changes'
+                "Save Changes"
               )}
             </Button>
           </DialogFooter>
