@@ -75,7 +75,7 @@ export default function App() {
           onLogout={handleLogout} 
         />
 
-        <main className="flex-1 lg:ml-64">
+        <main className="flex-1 lg:ml-64 min-w-0 overflow-hidden">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8 pt-20 sm:pt-24 lg:pt-12">
             {activeSection === 'peer-support' && <PeerSupportSection isAdmin={isAdmin} />}
             {activeSection === 'academic-activities' && <AcademicActivitiesSection isAdmin={isAdmin} />}

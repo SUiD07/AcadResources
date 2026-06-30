@@ -71,7 +71,14 @@ function CareerNavigationSection() {
               <li>เอกสารราชการ - บัตรประชาชน ทะเบียนบ้าน</li>
               <li>
                 เอกสารการศึกษา เช่น Transcript สามารถขอได้จากสำนักการทะเบียนจุฬา
-                ที่ลิ้งนี้ https://web.reg.chula.ac.th/requestdocuments.html
+                ที่ลิ้งนี้
+                <a target="_blank"
+                href="https://web.reg.chula.ac.th/requestdocuments.html"
+                  rel="noopener noreferrer"
+                  style={{
+                    color: "#2563eb",
+                    textDecoration: "underline",
+                  }}>https://web.reg.chula.ac.th/requestdocuments.html</a>
               </li>
               <li>คะแนนสอบภาษาอังกฤษ ตามแต่ละสถาบัน</li>
               <li>Portfolio / CV บางที่ให้ทำเป็นเล่ม บางที่อาจให้กรอกข้อมูล</li>
@@ -104,17 +111,62 @@ function CareerNavigationSection() {
                 paddingLeft: "1.25rem",
               }}
             >
-              <li>แพทย์เพิ่มพูนทักษะ</li>
-              <li>จับสลากใช้ทุน</li>
+              <li>
+                <a
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline"
+                  href="https://www.facebook.com/AfterExtern/posts/pfbid02kBcY3niqC2NW1UoCGNKdfNWhgqw7suKyUikWiAkrFYuE9pt7QnWh8z987Fea7LcEl?rdid=x8J6qgfZojKx0twf#"
+                >
+                  แพทย์เพิ่มพูนทักษะ
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://www.facebook.com/AfterExtern/posts/pfbid02iShmmkzBDd8aotKAgRnrzUBpTApL45KuS8BQF8tTETnc9CH1GtiBrAjq9QvXyqCyl?rdid=di5URNU1ADiUehKd#"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    color: "#2563eb",
+                    textDecoration: "underline",
+                  }}
+                >
+                  จับสลากใช้ทุน
+                </a>
+              </li>
               <ul
                 style={{
                   listStyleType: "disc",
                   paddingLeft: "1.25rem",
                 }}
               >
-                <li>เอกสารจากกระทรวง ประจำปี 2569</li>
+                <li>
+                  <a
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      color: "#2563eb",
+                      textDecoration: "underline",
+                    }}
+                    href="https://drive.google.com/drive/folders/1uExsvNaxKryyAS1HsiEWwUrjj8DGnMJP"
+                  >
+                    เอกสารจากกระทรวง ประจำปี 2569
+                  </a>
+                </li>
               </ul>
-              <li>แพทย์พี่เลี้ยง</li>
+              <li>
+                <a
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    color: "#2563eb",
+                    textDecoration: "underline",
+                  }}
+                  href="https://www.facebook.com/AfterExtern/posts/pfbid035y5qBDiqZyqNoG7hDkYrh17PawWprdqBJFpstHuHLQw8JRrgao5BreR3YPhnysqLl?rdid=Ybj2Vy43T5OvtNIk#"
+                >
+                  แพทย์พี่เลี้ยง
+                </a>
+              </li>
               <ul
                 style={{
                   listStyleType: "disc",
@@ -127,13 +179,28 @@ function CareerNavigationSection() {
                     href="https://icpird.moph.go.th/contributordr/Default.aspx"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-600 hover:underline"
+                    style={{
+                      color: "#2563eb",
+                      textDecoration: "underline",
+                    }}
                   >
                     https://icpird.moph.go.th/contributordr/Default.aspx
                   </a>
                 </li>
               </ul>
-              <li>ใช้ทุนโรงเรียนแพทย์</li>
+              <li>
+                <a
+                  href="https://www.facebook.com/AfterExtern/posts/pfbid02Bu6aUr35NDPu4vJ1e7rcCP2jRJ1rAFZjzKYczEMrVDiecm6YpPJTD7JbgEfdCdF7l?rdid=FgpUcE6C9QUOFrRM#"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    color: "#2563eb",
+                    textDecoration: "underline",
+                  }}
+                >
+                  ใช้ทุนโรงเรียนแพทย์
+                </a>
+              </li>
               <ul
                 style={{
                   listStyleType: "disc",
