@@ -1,4 +1,5 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useCallback } from 'react';
+import { Card, CardContent } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -39,16 +40,11 @@ interface KeywordCategoryCardProps {
   onDelete: (id: string) => void;
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-/** Returns the last segment of a " > " or "/" separated path. */
 function lastSegment(path: string): string {
   const sep = path.includes(' > ') ? ' > ' : '/';
   const parts = path.split(sep).map((s) => s.trim()).filter(Boolean);
   return parts[parts.length - 1] ?? path;
 }
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
 
 function FileList({ files, emptyLabel, dimmed = false }: {
   files: StudentDocument[];
@@ -56,15 +52,15 @@ function FileList({ files, emptyLabel, dimmed = false }: {
   dimmed?: boolean;
 }) {
   if (files.length === 0) {
-    return <p className="p-4 text-sm text-slate-400 italic">{emptyLabel}</p>;
+    return <p className="p-4 text-sm italic text-slate-400">{emptyLabel}</p>;
   }
   return (
-    <ul className="divide-y divide-slate-100 overflow-y-auto" style={{ maxHeight: '10rem' }}>
+    <ul className="overflow-y-auto divide-y divide-slate-100" style={{ maxHeight: '10rem' }}>
       {files.map((doc) => (
-        <li key={doc.id} className={`p-3 flex items-start gap-3 hover:bg-slate-50 ${dimmed ? 'opacity-60' : ''}`}>
-          <div>
-            <p className={`text-sm font-medium ${dimmed ? 'text-slate-700' : 'text-slate-900'}`}>{doc.title}</p>
-            <p className={`text-xs font-mono truncate ${dimmed ? 'text-slate-400' : 'text-slate-500'}`}>{doc.folder_path}</p>
+        <li key={doc.id} className={`p-3 flex items-start gap-3 min-w-0 ${dimmed ? 'opacity-60 bg-slate-50' : 'bg-pink-50/40'}`}>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-slate-800 truncate">{doc.title}</p>
+            <p className="text-xs font-mono text-slate-500 truncate">{doc.folder_path}</p>
           </div>
         </li>
       ))}
@@ -78,19 +74,19 @@ function DriveTreeRow({ node, depth }: { node: DriveTreeNode; depth: number }) {
   return (
     <li>
       <div
-        className={`flex items-center gap-2 px-3 py-2 hover:bg-slate-50 ${node.isFolder ? 'cursor-pointer' : ''}`}
+        className={`flex items-center gap-2 px-3 py-2 min-w-0 hover:bg-slate-50 ${node.isFolder ? 'cursor-pointer' : ''}`}
         style={{ paddingLeft: `${0.75 + depth * 1.25}rem` }}
         onClick={() => node.isFolder && hasChildren && setExpanded((e) => !e)}
       >
         {node.isFolder ? (
           hasChildren ? (
-            expanded ? <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+            expanded ? <ChevronDown className="w-3.5 h-3.5 shrink-0 text-slate-400" /> : <ChevronRight className="w-3.5 h-3.5 shrink-0 text-slate-400" />
           ) : <span className="w-3.5 h-3.5 shrink-0" />
         ) : <span className="w-3.5 h-3.5 shrink-0" />}
         {node.isFolder
-          ? <Folder className="w-4 h-4 text-[#E5007D] shrink-0" />
-          : <FileText className="w-4 h-4 text-slate-400 shrink-0" />}
-        <span className={`text-sm truncate ${node.isFolder ? 'font-medium text-slate-700' : 'text-slate-600'}`}>
+          ? <Folder className="w-4 h-4 shrink-0 text-[#E5007D]" />
+          : <FileText className="w-4 h-4 shrink-0 text-slate-400" />}
+        <span className={`text-sm truncate ${node.isFolder ? 'font-medium text-slate-800' : 'text-slate-600'}`}>
           {node.name}
         </span>
       </div>
@@ -105,10 +101,10 @@ function DriveTreeRow({ node, depth }: { node: DriveTreeNode; depth: number }) {
 
 function DriveTreeView({ root }: { root: DriveTreeNode }) {
   if (root.children.length === 0) {
-    return <p className="p-4 text-sm text-slate-400 italic">This folder is empty.</p>;
+    return <p className="p-4 text-sm italic text-slate-400">This folder is empty.</p>;
   }
   return (
-    <ul className="divide-y divide-slate-50 overflow-y-auto" style={{ maxHeight: '20rem' }}>
+    <ul className="overflow-y-auto divide-y divide-slate-100" style={{ maxHeight: '20rem' }}>
       {root.children.map((child) => <DriveTreeRow key={child.fullPath} node={child} depth={0} />)}
     </ul>
   );
@@ -147,7 +143,7 @@ function AddFolderAutocomplete({
       <Button
         variant="outline"
         size="sm"
-        className="h-9 border-dashed border-2 border-slate-200 hover:border-[#E5007D] hover:text-[#E5007D] hover:bg-pink-50 gap-2"
+        className="h-9 gap-2 border-slate-200 text-slate-600 hover:bg-slate-50"
         onClick={() => setActive(true)}
       >
         <FolderPlus className="w-4 h-4" />
@@ -157,8 +153,8 @@ function AddFolderAutocomplete({
   }
 
   return (
-    <div className="flex items-center gap-2 bg-white border border-[#E5007D] rounded-lg pl-3 pr-1 py-1">
-      <Folder className="w-3.5 h-3.5 text-[#E5007D] shrink-0" />
+    <div className="flex items-center gap-2 pl-3 pr-1 py-1 min-w-0 rounded-full bg-slate-50 border border-slate-200">
+      <Folder className="w-3.5 h-3.5 shrink-0 text-[#E5007D]" />
       <KeywordAutocomplete
         value={inputValue}
         driveSyncRecords={driveSyncRecords}
@@ -173,15 +169,13 @@ function AddFolderAutocomplete({
       />
       <button
         onClick={() => { setActive(false); setInputValue(''); }}
-        className="p-1 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
+        className="p-1 text-slate-400 hover:text-slate-600"
       >
         <X className="w-4 h-4" />
       </button>
     </div>
   );
 }
-
-// ─── Main card ───────────────────────────────────────────────────────────────
 
 export function KeywordCategoryCard({
   config,
@@ -229,168 +223,167 @@ export function KeywordCategoryCard({
     : null;
 
   return (
-    <div className="p-6 border border-slate-200 rounded-2xl space-y-6 bg-white hover:border-pink-200 transition-colors">
-      {/* ── Header row ── */}
-      <div className="flex flex-col md:flex-row items-start justify-between gap-6">
-        <div className="flex-1 w-full grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold text-slate-700">Display Label</Label>
-            <Input
-              className="bg-white"
-              value={config.label}
-              onChange={(e) => onUpdateConfig(config.id, { label: e.target.value })}
+    <Card className="hover:shadow-lg transition-shadow overflow-hidden">
+      <CardContent className="p-4 sm:p-6 space-y-5 sm:space-y-6 min-w-0">
+        <div className="flex flex-col md:flex-row items-start justify-between gap-4 sm:gap-6">
+          <div className="flex-1 w-full grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold text-slate-900">Display Label</Label>
+              <Input
+                value={config.label}
+                onChange={(e) => onUpdateConfig(config.id, { label: e.target.value })}
+              />
+            </div>
+            {activeTab === 'block_mapping' && (
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold text-slate-900">Curriculum Year</Label>
+                <Select value={config.year} onValueChange={(val) => onUpdateConfig(config.id, { year: val })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {['1','2','3','4','5','6'].map((y) => (
+                      <SelectItem key={y} value={y}>Year {y}</SelectItem>
+                    ))}
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+          <div className="flex gap-2 sm:gap-3 shrink-0 w-full md:w-auto">
+            <Button
+              variant="outline"
+              onClick={() => onDelete(config.id)}
+              className="border-red-300 text-red-600 hover:bg-red-50"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+            <Button
+              onClick={() => onSave(config)}
+              disabled={isSaving}
+              className="flex-1 md:flex-none bg-[#E5007D] hover:bg-[#c00069] text-white"
+            >
+              {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+              Save Changes
+            </Button>
+          </div>
+        </div>
+
+        <div className="space-y-3 min-w-0">
+          <Label className="text-sm font-semibold text-slate-900 flex items-center justify-between">
+            Matching Keywords
+            <span className="text-xs font-normal italic text-slate-400">(Case-insensitive)</span>
+          </Label>
+          <div className="flex flex-wrap gap-2 min-w-0">
+            {config.keys.map((key, idx) => {
+              const isFolder = isDriveSyncFolderKey(key, driveFolderPaths);
+              return (
+                <div
+                  key={idx}
+                  className={`flex items-center gap-2 pl-3 pr-1 py-1 group max-w-[240px] rounded-full border ${
+                    isFolder ? 'bg-pink-50 border-pink-200' : 'bg-slate-50 border-slate-200'
+                  }`}
+                  title={isFolder ? key : undefined}
+                >
+                  {isFolder && <Folder className="w-3.5 h-3.5 shrink-0 text-[#E5007D]" />}
+
+                  {isFolder ? (
+                    <span
+                      className="text-sm text-slate-700 truncate cursor-default select-none"
+                      tabIndex={0}
+                      onFocus={() => onFocusKey(config.id, idx)}
+                      onBlur={onBlurKey}
+                    >
+                      {lastSegment(key)}
+                    </span>
+                  ) : (
+                    <input
+                      className="bg-transparent text-sm text-slate-700 focus:outline-none w-[140px]"
+                      value={key}
+                      onChange={(e) => onUpdateKey(config.id, idx, e.target.value)}
+                      onFocus={() => onFocusKey(config.id, idx)}
+                      onBlur={onBlurKey}
+                      placeholder="Type keyword…"
+                    />
+                  )}
+
+                  <button
+                    onClick={() => onRemoveKey(config.id, idx)}
+                    className="p-1 text-slate-400 hover:text-red-500"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              );
+            })}
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 border-slate-200 text-slate-600 hover:bg-slate-50"
+              onClick={() => onAddKey(config.id)}
+            >
+              <Plus className="w-4 h-4 mr-2" /> Add Key
+            </Button>
+
+            <AddFolderAutocomplete
+              driveSyncRecords={driveSyncRecords}
+              documents={documents}
+              onAdd={handleAddFolder}
             />
           </div>
-          {activeTab === 'block_mapping' && (
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold text-slate-700">Curriculum Year</Label>
-              <Select value={config.year} onValueChange={(val) => onUpdateConfig(config.id, { year: val })}>
-                <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {['1','2','3','4','5','6'].map((y) => (
-                    <SelectItem key={y} value={y}>Year {y}</SelectItem>
-                  ))}
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+          <p className="text-xs text-slate-500">
+            A folder key tags every file in that folder — including subfolders — with this category.
+            Hover a folder chip to see its full path.
+          </p>
         </div>
-        <div className="flex gap-3 shrink-0">
-          <Button
-            variant="outline"
-            className="text-slate-500 hover:text-red-600 hover:bg-red-50 border-slate-200"
-            onClick={() => onDelete(config.id)}
-          >
-            <Trash2 className="w-4 h-4" />
-          </Button>
-          <Button
-            className="bg-[#E5007D] hover:bg-[#c00069] text-white px-6"
-            onClick={() => onSave(config)}
-            disabled={isSaving}
-          >
-            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-            Save Changes
-          </Button>
-        </div>
-      </div>
 
-      {/* ── Keywords ── */}
-      <div className="space-y-3">
-        <Label className="text-sm font-semibold text-slate-700 flex items-center justify-between">
-          Matching Keywords
-          <span className="text-xs font-normal text-slate-400 italic">(Case-insensitive)</span>
-        </Label>
-        <div className="flex flex-wrap gap-2">
-          {config.keys.map((key, idx) => {
-            const isFolder = isDriveSyncFolderKey(key, driveFolderPaths);
-            return (
-              <div
-                key={idx}
-                className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg pl-3 pr-1 py-1 group focus-within:border-[#E5007D] transition-colors"
-                title={isFolder ? key : undefined}
-              >
-                {isFolder && <Folder className="w-3.5 h-3.5 text-[#E5007D] shrink-0" />}
-
-                {isFolder ? (
-                  // Show only the last path segment; full path is in the title tooltip
-                  <span
-                    className="text-sm text-slate-600 min-w-[80px] cursor-default select-none"
-                    tabIndex={0}
-                    onFocus={() => onFocusKey(config.id, idx)}
-                    onBlur={onBlurKey}
-                  >
-                    {lastSegment(key)}
-                  </span>
-                ) : (
-                  <input
-                    className="bg-transparent text-sm focus:outline-none min-w-[120px] text-slate-600"
-                    value={key}
-                    onChange={(e) => onUpdateKey(config.id, idx, e.target.value)}
-                    onFocus={() => onFocusKey(config.id, idx)}
-                    onBlur={onBlurKey}
-                    placeholder="Type keyword…"
-                  />
-                )}
-
-                <button
-                  onClick={() => onRemoveKey(config.id, idx)}
-                  className="p-1 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            );
-          })}
-
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-9 border-dashed border-2 hover:border-[#E5007D] hover:text-[#E5007D] hover:bg-pink-50"
-            onClick={() => onAddKey(config.id)}
-          >
-            <Plus className="w-4 h-4 mr-2" /> Add Key
-          </Button>
-
-          <AddFolderAutocomplete
-            driveSyncRecords={driveSyncRecords}
-            documents={documents}
-            onAdd={handleAddFolder}
-          />
-        </div>
-        <p className="text-xs text-slate-400">
-          A folder key tags every file in that folder — including subfolders — with this category.
-          Hover a folder chip to see its full path.
-        </p>
-      </div>
-
-      {/* ── Matching files panel ── */}
-      <div className="space-y-3 pt-4 border-t border-slate-200">
-        {showTreeForFocusedKey ? (
-          <>
-            <Label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-              <Folder className="w-4 h-4 text-[#E5007D]" />
-              Folder Contents — "{lastSegment(focusedKeyValue!)}"
-            </Label>
-            <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-              {scopedTree
-                ? <DriveTreeView root={scopedTree} />
-                : <p className="p-4 text-sm text-slate-400 italic">This folder couldn't be found in Drive anymore.</p>}
-            </div>
-            <p className="text-xs text-slate-400">
-              Full path: <span className="font-mono">{focusedKeyValue}</span>
-            </p>
-          </>
-        ) : isFocusedHere ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold text-slate-700">
-                With "{config.keys[focusedKey.keyIndex] || '…'}" ({matchingFiles.length})
+        <div className="space-y-3 pt-4 border-t border-slate-100 min-w-0">
+          {showTreeForFocusedKey ? (
+            <>
+              <Label className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                <Folder className="w-4 h-4 text-[#E5007D]" />
+                Folder Contents — "{lastSegment(focusedKeyValue!)}"
               </Label>
-              <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+              <div className="min-w-0 overflow-hidden rounded-lg border border-slate-100">
+                {scopedTree
+                  ? <DriveTreeView root={scopedTree} />
+                  : <p className="p-4 text-sm italic text-slate-400">This folder couldn't be found in Drive anymore.</p>}
+              </div>
+              <p className="text-xs text-slate-500">
+                Full path: <span className="font-mono break-all text-slate-600">{focusedKeyValue}</span>
+              </p>
+            </>
+          ) : isFocusedHere ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 min-w-0">
+              <div className="space-y-2 min-w-0">
+                <Label className="text-sm font-semibold text-slate-900">
+                  With "{config.keys[focusedKey.keyIndex] || '…'}" ({matchingFiles.length})
+                </Label>
+                <div className="min-w-0 overflow-hidden rounded-lg border border-slate-100">
+                  <FileList files={matchingFiles} emptyLabel="No matching files found." />
+                </div>
+              </div>
+              <div className="space-y-2 min-w-0 md:pl-4">
+                <Label className="text-sm font-semibold text-slate-900">
+                  Before This Key ({beforeKeyFiles.length})
+                </Label>
+                <div className="min-w-0 overflow-hidden rounded-lg border border-slate-100">
+                  <FileList files={beforeKeyFiles} emptyLabel="No files matched without this key." dimmed />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              <Label className="text-sm font-semibold text-slate-900">
+                Matching Files ({matchingFiles.length})
+              </Label>
+              <div className="min-w-0 overflow-hidden rounded-lg border border-slate-100">
                 <FileList files={matchingFiles} emptyLabel="No matching files found." />
               </div>
-            </div>
-            <div className="space-y-2 md:border-l md:border-slate-100 md:pl-4">
-              <Label className="text-sm font-semibold text-slate-400">
-                Before This Key ({beforeKeyFiles.length})
-              </Label>
-              <div className="bg-slate-50 border border-slate-200 rounded-lg overflow-hidden">
-                <FileList files={beforeKeyFiles} emptyLabel="No files matched without this key." dimmed />
-              </div>
-            </div>
-          </div>
-        ) : (
-          <>
-            <Label className="text-sm font-semibold text-slate-700">
-              Matching Files ({matchingFiles.length})
-            </Label>
-            <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-              <FileList files={matchingFiles} emptyLabel="No matching files found." />
-            </div>
-          </>
-        )}
-      </div>
-    </div>
+            </>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
+import { Card, CardContent } from '../ui/card';
 import { Button } from '../ui/button';
-import { Loader2, Plus, Settings, AlertTriangle } from 'lucide-react';
+import { Loader2, Plus, Settings, AlertTriangle, ChevronDown, ChevronUp, Check, X } from 'lucide-react';
 import {
   getKeywordConfigs,
   editKeywordConfig,
@@ -26,8 +27,6 @@ interface FocusedKey {
   keyIndex: number;
 }
 
-// ─── Overlap audit panel ──────────────────────────────────────────────────────
-
 function OverlapAuditPanel({
   overlaps,
   configType,
@@ -40,35 +39,39 @@ function OverlapAuditPanel({
   if (overlaps.length === 0) return null;
 
   return (
-    <div className="rounded-xl border border-amber-200 bg-amber-50 overflow-hidden">
+    <Card className="border-amber-200 bg-amber-50 overflow-hidden">
       <button
-        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-amber-100 transition-colors"
+        className="w-full flex items-center gap-3 px-4 sm:px-5 py-3 sm:py-4 text-left"
         onClick={() => setExpanded((v) => !v)}
       >
-        <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
-        <span className="text-sm font-semibold text-amber-800 flex-1">
+        <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600 shrink-0" />
+        <span className="text-xs sm:text-sm font-semibold text-amber-900 flex-1">
           {overlaps.length} file{overlaps.length > 1 ? 's' : ''} match multiple{' '}
           {configType === 'doc_type' ? 'document type' : configType === 'block_mapping' ? 'block' : 'board exam'}{' '}
           categories — specificity rule decides the winner
         </span>
-        <span className="text-xs text-amber-600">{expanded ? 'hide' : 'show'}</span>
+        {expanded ? (
+          <ChevronUp className="w-4 h-4 text-amber-600 shrink-0" />
+        ) : (
+          <ChevronDown className="w-4 h-4 text-amber-600 shrink-0" />
+        )}
       </button>
 
       {expanded && (
-        <ul className="divide-y divide-amber-100 max-h-72 overflow-y-auto">
-          {overlaps.map(({ doc, winner, losers, winnerScore, loserScores }) => (
-            <li key={doc.id} className="px-4 py-3 text-xs">
-              <p className="font-medium text-slate-800 truncate mb-1">{doc.title}</p>
-              <p className="text-slate-500 font-mono truncate mb-2">{doc.folder_path}</p>
+        <ul className="max-h-72 overflow-y-auto border-t border-amber-200 divide-y divide-amber-200">
+          {overlaps.map(({ doc, winner, winnerScore, loserScores }) => (
+            <li key={doc.id} className="px-4 sm:px-5 py-3 text-xs min-w-0 bg-white/60">
+              <p className="font-medium text-slate-900 truncate mb-1">{doc.title}</p>
+              <p className="font-mono text-slate-500 truncate mb-2">{doc.folder_path}</p>
               <div className="flex flex-wrap gap-2">
-                <span className="inline-flex items-center gap-1 bg-green-100 text-green-800 rounded-full px-2 py-0.5">
-                  ✓ {winner.label}
-                  <span className="text-green-600 font-mono">score {winnerScore}</span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-pink-100 text-[#E5007D] font-medium">
+                  <Check className="w-3 h-3" /> {winner.label}
+                  <span className="font-mono opacity-70">score {winnerScore}</span>
                 </span>
                 {loserScores.map(({ config, score }) => (
                   <span
                     key={config.id}
-                    className="inline-flex items-center gap-1 bg-slate-100 text-slate-500 rounded-full px-2 py-0.5 line-through"
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-400 line-through"
                   >
                     {config.label}
                     <span className="font-mono no-underline">score {score}</span>
@@ -79,11 +82,9 @@ function OverlapAuditPanel({
           ))}
         </ul>
       )}
-    </div>
+    </Card>
   );
 }
-
-// ─── Main section ─────────────────────────────────────────────────────────────
 
 export function KeywordManagementSection() {
   const [configs, setConfigs] = useState<KeywordConfig[]>([]);
@@ -94,7 +95,6 @@ export function KeywordManagementSection() {
   const [focusedKey, setFocusedKey] = useState<FocusedKey | null>(null);
   const [driveSyncRecords, setDriveSyncRecords] = useState<DriveSyncRecord[]>([]);
 
-  // Quick-add bar state
   const [quickAddKeyword, setQuickAddKeyword] = useState('');
   const [quickAddType, setQuickAddType] = useState<KeywordConfig['config_type']>('doc_type');
   const [quickAddCategoryId, setQuickAddCategoryId] = useState<string>('');
@@ -125,8 +125,6 @@ export function KeywordManagementSection() {
     }
   };
 
-  // ── Category card handlers ────────────────────────────────────────────────
-
   const handleUpdateConfig = (id: string, updates: Partial<KeywordConfig>) => {
     setConfigs((prev) => prev.map((c) => (c.id === id ? { ...c, ...updates } : c)));
   };
@@ -151,21 +149,9 @@ export function KeywordManagementSection() {
     handleUpdateConfig(id, { keys: config.keys.filter((_, i) => i !== keyIndex) });
   };
 
-  /**
-   * Save a config and re-classify every document that touches this config_type.
-   *
-   * Strategy (specificity-aware, single-label):
-   *   1. Persist the config itself first.
-   *   2. For every document that either currently carries this config's label
-   *      OR matches any of its keywords, re-run classifyDocument() using the
-   *      full updated configs array.  classifyDocument now picks the winner by
-   *      specificity score, not DB insertion order.
-   *   3. Write the winner label back; clear the field if nothing matches.
-   */
   const handleSave = async (config: KeywordConfig) => {
     setIsSaving(true);
     try {
-      // 1. Persist config
       if (config.id.startsWith('new-')) {
         const { id, ...rest } = config;
         await addKeywordConfig(rest);
@@ -173,12 +159,8 @@ export function KeywordManagementSection() {
         await editKeywordConfig(config.id, config);
       }
 
-      // 2. Build updated configs list for classification
       const updatedConfigs = configs.map((c) => (c.id === config.id ? config : c));
 
-      // 3. Find all docs that are "in play" for this config_type:
-      //    - docs that already carry any label from this config_type
-      //    - docs that match any keyword in the saved config (newly affected)
       const affectedByKeywords = getMatchingFiles(documents, config);
       const affectedByLabel = documents.filter((doc) => {
         if (config.config_type === 'doc_type') return !!doc.doc_type;
@@ -192,7 +174,6 @@ export function KeywordManagementSection() {
         ...affectedByLabel.map((d) => d.id),
       ]);
 
-      // 4. Re-classify each affected doc with specificity-aware classifier
       const updates = Array.from(affectedIds).map((docId) => {
         const doc = documents.find((d) => d.id === docId)!;
         const winner = classifyDocument(doc, updatedConfigs, config.config_type);
@@ -256,8 +237,6 @@ export function KeywordManagementSection() {
     setConfigs((prev) => [...prev, newConfig]);
   };
 
-  // ── Quick-add bar ─────────────────────────────────────────────────────────
-
   const handleQuickAddKeyword = async () => {
     const keyword = quickAddKeyword.trim();
     if (!keyword || !quickAddCategoryId) return;
@@ -300,11 +279,7 @@ export function KeywordManagementSection() {
     setQuickAddCategoryId('');
   };
 
-  // ── Derived data ──────────────────────────────────────────────────────────
-
   const filteredConfigs = configs.filter((c) => c.config_type === activeTab);
-
-  // Compute overlaps for the active tab so admin can audit keyword conflicts
   const overlaps = findOverlaps(documents, configs, activeTab);
 
   const TAB_LABELS: Record<KeywordConfig['config_type'], string> = {
@@ -320,18 +295,21 @@ export function KeywordManagementSection() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="pb-20 lg:pb-8 space-y-6 sm:space-y-8">
+      {/* Header */}
       <div className="mb-6 sm:mb-8">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
-            <h1 className="text-slate-900 text-[24px] font-bold flex items-center gap-2">
-              <Settings className="w-8 h-8 text-[#E5007D]" />
-              Keyword Management
-            </h1>
-          </div>
-          <p className="text-slate-600 text-sm sm:text-base">
-            Configure how files are automatically categorized based on keywords
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
+          <h1 className="text-slate-900 text-[24px] font-bold flex items-center gap-2">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-pink-100 rounded-lg flex items-center justify-center shrink-0">
+              <Settings className="w-5 h-5 text-[#E5007D]" />
+            </div>
+            Keyword Management
+          </h1>
         </div>
+        <p className="text-slate-600 text-sm sm:text-base">
+          Configure how files are automatically categorized based on keywords
+        </p>
+      </div>
 
       <QuickAddKeywordBar
         documents={documents}
@@ -350,32 +328,34 @@ export function KeywordManagementSection() {
         onSubmit={handleQuickAddKeyword}
       />
 
-      <div className="shadow-sm overflow-hidden flex flex-col">
-        {/* Tabs */}
-        <div className="flex border-b border-slate-200">
-          {(['doc_type', 'block_mapping', 'board_exam'] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-8 py-4 text-sm font-semibold border-b-2 transition-colors ${
-                activeTab === tab
-                  ? 'border-[#E5007D] text-[#E5007D] bg-pink-50/30'
-                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'
-              }`}
-            >
-              {TAB_LABELS[tab]}
-            </button>
-          ))}
+      {/* Tabs */}
+      <div className="flex flex-col">
+        <div className="flex overflow-x-auto hide-scrollbar border-b border-slate-200 gap-1 sm:gap-2">
+          {(['doc_type', 'block_mapping', 'board_exam'] as const).map((tab) => {
+            const isActive = activeTab === tab;
+            return (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`whitespace-nowrap px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-semibold border-b-2 transition-colors ${
+                  isActive
+                    ? 'border-[#E5007D] text-[#E5007D]'
+                    : 'border-transparent text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                {TAB_LABELS[tab]}
+              </button>
+            );
+          })}
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="pt-4 sm:pt-6 space-y-4 sm:space-y-6">
           {isLoading ? (
-            <div className="flex items-center justify-center py-24">
-              <Loader2 className="w-12 h-12 animate-spin text-[#E5007D]" />
+            <div className="flex items-center justify-center py-16 sm:py-24">
+              <Loader2 className="w-8 h-8 sm:w-10 sm:h-10 animate-spin text-[#E5007D]" />
             </div>
           ) : (
-            <div className="grid gap-6">
-              {/* Overlap audit banner — only shown when conflicts exist */}
+            <div className="grid grid-cols-1 gap-4 sm:gap-6">
               <OverlapAuditPanel overlaps={overlaps} configType={activeTab} />
 
               {filteredConfigs.map((config) => (
@@ -398,18 +378,19 @@ export function KeywordManagementSection() {
                 />
               ))}
 
-              <Button
-                variant="outline"
-                className="w-full py-10 border-dashed border-2 hover:bg-pink-50 hover:border-pink-300 hover:text-[#E5007D] rounded-2xl group transition-all"
+              <button
                 onClick={handleAddNewCategory}
+                className="w-full py-8 sm:py-10 rounded-xl border-2 border-dashed border-slate-200 hover:border-[#E5007D] hover:bg-pink-50/50 transition-colors group"
               >
                 <div className="flex flex-col items-center gap-2">
-                  <Plus className="w-8 h-8 text-slate-300 group-hover:text-[#E5007D] transition-colors" />
-                  <span className="text-lg font-medium">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-pink-100 rounded-lg flex items-center justify-center group-hover:bg-pink-200 transition-colors">
+                    <Plus className="w-5 h-5 sm:w-6 sm:h-6 text-[#E5007D]" />
+                  </div>
+                  <span className="text-sm sm:text-lg font-medium text-slate-700">
                     Add New {NEW_LABEL[activeTab]}
                   </span>
                 </div>
-              </Button>
+              </button>
             </div>
           )}
         </div>

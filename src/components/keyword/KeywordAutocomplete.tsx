@@ -45,20 +45,46 @@ function parentCrumb(path: string): string {
   return parts.slice(0, -1).join(' > ');
 }
 
-function buildFolderSet(records: DriveSyncRecord[]): Set<string> {
-  const set = new Set<string>();
-  for (const r of records) {
-    if (r.is_folder) set.add(r.folder_path);
-  }
-  return set;
+// IMPORTANT: `r.folder_path` on a DriveSyncRecord is the path of the row's
+// PARENT folder, not the row's own path. A row's own full path is its
+// parent's path plus its own title. Earlier logic conflated these two
+// things (filtering/keying directly on `folder_path`), which meant a
+// folder's own identity was never actually being compared against —
+// only its parent's — so folders nested one level deeper than expected
+// (e.g. "Summary 3A1" sitting alongside "Summary 2B"/"Midterm 1B"/"Final 1B"
+// as siblings under the same parent) could silently fail isFolder checks
+// or child-count lookups depending on naming coincidences.
+function ownPath(r: DriveSyncRecord): string {
+  return r.folder_path ? `${r.folder_path} > ${r.title}` : r.title;
 }
 
+// Builds a lookup of every row's OWN full path -> is_folder, so we can
+// correctly answer "is the thing AT this path a folder" rather than
+// "is this path someone's parent".
+function buildOwnPathFolderMap(records: DriveSyncRecord[]): Map<string, boolean> {
+  const map = new Map<string, boolean>();
+  for (const r of records) {
+    map.set(ownPath(r), !!r.is_folder);
+  }
+  return map;
+}
+
+// Direct children of `parentPath` = rows whose PARENT path (r.folder_path)
+// is exactly parentPath. This part was already correct in the original —
+// folder_path genuinely is the parent path, so an exact match here is
+// the right check. The bug was downstream, in how isFolder/childCount
+// were computed from that point on.
 function directChildren(records: DriveSyncRecord[], parentPath: string): DriveSyncRecord[] {
-  const prefix = parentPath + ' > ';
-  return records.filter((r) => {
-    if (!r.folder_path.startsWith(prefix)) return false;
-    return !r.folder_path.slice(prefix.length).includes(' > ');
-  });
+  return records.filter((r) => r.folder_path === parentPath);
+}
+
+function countDescendants(records: DriveSyncRecord[], ownFullPath: string): number {
+  const prefix = ownFullPath + ' > ';
+  // A row is a descendant of `ownFullPath` if its PARENT path is either
+  // ownFullPath itself, or nested further under it.
+  return records.filter(
+    (r) => r.folder_path === ownFullPath || r.folder_path.startsWith(prefix),
+  ).length;
 }
 
 function searchSuggestions(
@@ -69,21 +95,18 @@ function searchSuggestions(
   const q = query.trim().toLowerCase();
   if (!q) return [];
 
-  const folderSet = buildFolderSet(records);
   const seen = new Map<string, SuggestionItem>();
 
   for (const r of records) {
-    const path = r.folder_path;
+    const path = ownPath(r);
     if (seen.has(path)) continue;
     if (!path.toLowerCase().includes(q)) continue;
 
-    const isFolder = folderSet.has(path);
+    const isFolder = !!r.is_folder;
     if (foldersOnly && !isFolder) continue;
 
     const name = lastName(path);
-    const childCount = isFolder
-      ? records.filter((x) => x.folder_path.startsWith(path + ' > ')).length
-      : 0;
+    const childCount = isFolder ? countDescendants(records, path) : 0;
 
     seen.set(path, { fullPath: path, name, parentCrumb: parentCrumb(path), isFolder, childCount });
   }
@@ -102,21 +125,19 @@ function searchSuggestions(
 
 function drillChildren(records: DriveSyncRecord[], parentPath: string, foldersOnly: boolean): SuggestionItem[] {
   const children = directChildren(records, parentPath);
-  const folderSet = buildFolderSet(records);
   const seen = new Map<string, SuggestionItem>();
 
   for (const r of children) {
-    if (seen.has(r.folder_path)) continue;
-    const isFolder = folderSet.has(r.folder_path);
+    const path = ownPath(r);
+    if (seen.has(path)) continue;
+    const isFolder = !!r.is_folder;
     if (foldersOnly && !isFolder) continue;
-    const name = lastName(r.folder_path);
-    const childCount = isFolder
-      ? records.filter((x) => x.folder_path.startsWith(r.folder_path + ' > ')).length
-      : 0;
-    seen.set(r.folder_path, {
-      fullPath: r.folder_path,
+    const name = lastName(path);
+    const childCount = isFolder ? countDescendants(records, path) : 0;
+    seen.set(path, {
+      fullPath: path,
       name,
-      parentCrumb: parentCrumb(r.folder_path),
+      parentCrumb: parentCrumb(path),
       isFolder,
       childCount,
     });
