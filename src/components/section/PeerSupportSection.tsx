@@ -13,7 +13,7 @@ import * as googleDrive from "../../lib/googleDriveService";
 import { initializeCategorizer } from "../categorize";
 import { classifyDocument } from "../../lib/KeywordMatching";
 import { Button } from "../ui/button";
-import { Plus, Search, RefreshCcw, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Search, RefreshCcw, ChevronDown, ChevronUp, LayoutGrid, List } from "lucide-react";
 import { useIsMobile } from "../ui/use-mobile";
 import { extractDriveId } from "../../lib/supabase";
 import {
@@ -81,6 +81,7 @@ interface SubjectCardProps {
   items: PeerSupportItem[];
   isAdmin: boolean;
   knownTypes: string[];
+  viewMode: "grid" | "list";
   onEdit?: (item: PeerSupportItem) => void;
   onDelete?: (item: PeerSupportItem) => void;
 }
@@ -90,6 +91,7 @@ function SubjectCard({
   items,
   isAdmin,
   knownTypes,
+  viewMode,
   onEdit,
   onDelete,
 }: SubjectCardProps) {
@@ -177,6 +179,7 @@ function SubjectCard({
               }
               isAdmin={isAdmin}
               defaultExpanded={type === "Precourse"}
+              viewMode={viewMode}
               onEdit={onEdit}
               onDelete={onDelete}
             />
@@ -196,6 +199,9 @@ export function PeerSupportSection({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<(ResourceFormData & { id: string }) | null>(null);
   const [deletingItem, setDeletingItem] = useState<{ id: string; name: string } | null>(null);
+
+  // ─── Global view mode ────────────────────────────────────────────────────
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   const handleAdd = async (data: ResourceFormData) => {
     const driveId = extractDriveId(data.driveLink);
@@ -368,6 +374,7 @@ export function PeerSupportSection({
     },
     [studentDocs, configs],
   );
+
   const knownDocTypes = useMemo(() => {
     const fromConfigs = configs
       .filter((c) => c.config_type === "doc_type")
@@ -509,9 +516,36 @@ export function PeerSupportSection({
             </div>
           )}
 
+          {/* ── Count row + view toggle ── */}
           {!isLoading && (
-            <div className="text-xs text-slate-400 mb-3">
-              พบ {filteredItems.length} รายการ จาก {groupedBySubject.length} วิชา
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs text-slate-400">
+                พบ {filteredItems.length} รายการ จาก {groupedBySubject.length} วิชา
+              </span>
+              <div className="flex items-center rounded-lg border border-slate-200 overflow-hidden">
+                <button
+                  onClick={() => setViewMode("grid")}
+                  className="flex items-center justify-center px-2.5 py-1.5 transition-colors"
+                  style={{
+                    background: viewMode === "grid" ? "#E5007D" : "white",
+                    color: viewMode === "grid" ? "white" : "#94A3B8",
+                  }}
+                  title="Grid view"
+                >
+                  <LayoutGrid className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => setViewMode("list")}
+                  className="flex items-center justify-center px-2.5 py-1.5 transition-colors"
+                  style={{
+                    background: viewMode === "list" ? "#E5007D" : "white",
+                    color: viewMode === "list" ? "white" : "#94A3B8",
+                  }}
+                  title="List view"
+                >
+                  <List className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
           )}
 
@@ -524,6 +558,7 @@ export function PeerSupportSection({
                   items={items}
                   isAdmin={isAdmin}
                   knownTypes={knownDocTypes}
+                  viewMode={viewMode}
                   onEdit={(item) => {
                     setEditingItem({ id: item.id, blockName: item.block_name, blockCode: "", generation: item.generation, block: item.block, category: item.category, driveLink: item.drive_link, thumbnail: item.thumbnail });
                     setEditDialogOpen(true);
