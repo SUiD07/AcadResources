@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, createContext, useContext } from "react";
 import {
   ExternalLink,
   Folder,
@@ -30,6 +30,9 @@ const TYPE_COLORS: Record<string, string> = {
   "Guideline": "#F59E0B"
 };
 
+// ─── VIEW MODE CONTEXT ────────────────────────────────────────────────────────
+const ViewModeContext = createContext<"grid" | "list">("grid");
+
 interface ContentItem {
   id: string;
   block_name: string;
@@ -48,6 +51,7 @@ interface ContentCategoryProps {
   items: ContentItem[];
   isAdmin?: boolean;
   defaultExpanded?: boolean;
+  viewMode?: "grid" | "list";
   onEdit?: (item: ContentItem) => void;
   onDelete?: (item: ContentItem) => void;
 }
@@ -154,6 +158,91 @@ function FileCard({
   onEdit?: (item: ContentItem) => void;
   onDelete?: (item: ContentItem) => void;
 }) {
+  const viewMode = useContext(ViewModeContext);
+
+  // ── List view ──
+  if (viewMode === "list") {
+    return (
+      <div className="bg-white rounded-lg border border-slate-200 flex items-center gap-3 px-4 py-3 hover:shadow-sm transition-shadow">
+        <div
+          className="shrink-0 rounded-md overflow-hidden bg-slate-100 border border-slate-100"
+          style={{ width: 72, height: 40 }}
+        >
+          <ImageWithFallback
+            src={item.thumbnail || getDriveThumbnail(item.drive_link)}
+            alt={item.block_name}
+            className="w-full h-full object-cover"
+            loading="lazy"
+          />
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            {item.block_code && (
+              <span className="text-xs text-slate-400">{item.block_code}</span>
+            )}
+            <span
+              className="text-[5px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-lg"
+              style={{ color: accentColor, background: `${accentColor}18`, paddingLeft: "10px", paddingRight: "10px" }}
+            >
+              {categoryName}
+            </span>
+          </div>
+          <p className="text-sm font-semibold text-slate-900 truncate mt-0.5">
+            {item.block_name}
+          </p>
+          <div className="flex gap-1.5 mt-1">
+            <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
+              {item.block}
+            </span>
+            <span
+              className="text-xs px-2 py-0.5 rounded-full font-medium"
+              style={{ background: "#FDF2F8", color: "#BE185D" }}
+            >
+              {item.generation}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <Button variant="outline" size="sm" asChild>
+            <a
+              href={item.drive_link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5"
+            >
+              <FolderOpen className="w-3.5 h-3.5" />
+              Open
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          </Button>
+          {isAdmin && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onEdit?.(item)}
+                className="border-[#E5007D] text-[#E5007D] hover:bg-pink-50"
+              >
+                <Pencil className="w-3 h-3" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onDelete?.(item)}
+                className="border-red-300 text-red-600 hover:bg-red-50"
+              >
+                <Trash2 className="w-3 h-3" />
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Grid view (default) ──
   return (
     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col">
       <div
@@ -256,6 +345,7 @@ function FolderGroup({
   depth?: number; // NEW
 }) {
   const [open, setOpen] = useState(false);
+  const viewMode = useContext(ViewModeContext);
   const total = countDescendants(node);
 
   const sortedChildren = [...node.children.values()].sort((a, b) =>
@@ -340,11 +430,19 @@ function FolderGroup({
 
           {flatItems.length > 0 && (
             <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: `repeat(auto-fill, minmax(${cardMinWidth}px, 1fr))`, // CHANGED
-                gap: "12px",
-              }}
+              style={
+                viewMode === "grid"
+                  ? {
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+                      gap: "12px",
+                    }
+                  : {
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "8px",
+                    }
+              }
             >
               {flatItems.map((item) => (
                 <FileCard
@@ -379,6 +477,7 @@ export function ContentCategory({
   items,
   isAdmin = false,
   defaultExpanded = false,
+  viewMode = "grid",
   onEdit,
   onDelete,
 }: ContentCategoryProps) {
@@ -416,137 +515,132 @@ export function ContentCategory({
   const flatCount = flatItems.length;
 
   return (
-    <div
-      className="rounded-xl border overflow-hidden"
-      style={{
-        background: isPrecourse ? "#F0F9FF" : "white",
-        borderColor: isPrecourse ? "#BAE6FD" : "#E2E8F0",
-      }}
-    >
-      {/* ── Accordion Header ── */}
+    <ViewModeContext.Provider value={viewMode}>
       <div
-        role="button"
-        aria-expanded={expanded}
-        onClick={() => setExpanded((e) => !e)}
-        className="flex items-center justify-between cursor-pointer select-none px-4 sm:px-6 py-3 sm:py-4 border-b"
+        className="rounded-xl border overflow-hidden"
         style={{
-          background: isPrecourse ? "#E0F2FE" : "#F8FAFC",
-          borderColor: isPrecourse
-            ? "#BAE6FD"
-            : expanded
-            ? "#E2E8F0"
-            : "transparent",
+          background: isPrecourse ? "#F0F9FF" : "white",
+          borderColor: isPrecourse ? "#BAE6FD" : "#E2E8F0",
         }}
       >
-        <div className="flex items-center gap-3">
-          <span
-            style={{
-              width: 10,
-              height: 10,
-              borderRadius: "50%",
-              background: accentColor,
-              flexShrink: 0,
-              boxShadow: `0 0 0 3px ${accentColor}22`,
-            }}
-          />
-          <div>
-            <h3
-              className="font-semibold text-sm sm:text-base"
-              style={{ color: isPrecourse ? "#0369A1" : "#0F172A" }}
-            >
-              {isPrecourse && "📋 "}
-              {categoryName}
-            </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              {folderCount > 0
-                ? `${folderCount} folder${folderCount !== 1 ? "s" : ""}${
-                    flatCount > 0
-                      ? ` · ${flatCount} file${flatCount !== 1 ? "s" : ""}`
-                      : ""
-                  }`
-                : `${items.length} resource${items.length !== 1 ? "s" : ""}`}
-            </p>
+        {/* ── Accordion Header ── */}
+        <div
+          role="button"
+          aria-expanded={expanded}
+          onClick={() => setExpanded((e) => !e)}
+          className="flex items-center justify-between cursor-pointer select-none px-4 sm:px-6 py-3 sm:py-4 border-b"
+          style={{
+            background: isPrecourse ? "#E0F2FE" : "#F8FAFC",
+            borderColor: isPrecourse
+              ? "#BAE6FD"
+              : expanded
+              ? "#E2E8F0"
+              : "transparent",
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <span
+              style={{
+                width: 10,
+                height: 10,
+                borderRadius: "50%",
+                background: accentColor,
+                flexShrink: 0,
+                boxShadow: `0 0 0 3px ${accentColor}22`,
+              }}
+            />
+            <div>
+              <h3
+                className="font-semibold text-sm sm:text-base"
+                style={{ color: isPrecourse ? "#0369A1" : "#0F172A" }}
+              >
+                {isPrecourse && "📋 "}
+                {categoryName}
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                {folderCount > 0
+                  ? `${folderCount} folder${folderCount !== 1 ? "s" : ""}${
+                      flatCount > 0
+                        ? ` · ${flatCount} file${flatCount !== 1 ? "s" : ""}`
+                        : ""
+                    }`
+                  : `${items.length} resource${items.length !== 1 ? "s" : ""}`}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span style={{ color: "#94A3B8" }}>
+              {expanded ? (
+                <ChevronUp className="w-5 h-5" />
+              ) : (
+                <ChevronDown className="w-5 h-5" />
+              )}
+            </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          {!expanded && (
-            <div className="hidden sm:flex gap-1 flex-wrap">
-              {[...new Set(items.map((i) => i.generation))]
-                .slice(0, 3)
-                .map((gen) => (
-                  <span
-                    key={gen}
-                    className="text-xs px-2 py-0.5 rounded-full font-medium"
-                    style={{ background: "#FCE7F3", color: "#E5007D" }}
-                  >
-                    {gen}
-                  </span>
+        {/* ── Accordion Body ── */}
+        {expanded && (
+          <div
+            style={{
+              padding: "16px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "12px",
+              background: "white",
+            }}
+          >
+            {/* Real folders (2+ files) — recursive */}
+            {realFolders.length > 0 && (
+              <div className="flex flex-col gap-2">
+                {realFolders.map((node) => (
+                  <FolderGroup
+                    key={node.fullPath}
+                    node={node}
+                    categoryName={categoryName}
+                    accentColor={accentColor}
+                    isAdmin={isAdmin}
+                    onEdit={onEdit}
+                    onDelete={onDelete}
+                  />
                 ))}
-            </div>
-          )}
-          <span style={{ color: "#94A3B8" }}>
-            {expanded ? (
-              <ChevronUp className="w-5 h-5" />
-            ) : (
-              <ChevronDown className="w-5 h-5" />
+              </div>
             )}
-          </span>
-        </div>
+
+            {/* Flat files */}
+            {flatItems.length > 0 && (
+              <div
+                style={
+                  viewMode === "grid"
+                    ? {
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+                        gap: "12px",
+                      }
+                    : {
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "8px",
+                      }
+                }
+              >
+                {flatItems.map((item) => (
+                  <FileCard
+                    key={item.id}
+                    item={item}
+                    categoryName={categoryName}
+                    accentColor={accentColor}
+                    isAdmin={isAdmin}
+                    onEdit={onEdit}
+                    onDelete={onDelete}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
-
-      {/* ── Accordion Body ── */}
-      {expanded && (
-        <div
-          style={{
-            padding: "16px",
-            display: "flex",
-            flexDirection: "column",
-            gap: "12px",
-            background: "white",
-          }}
-        >
-          {/* Real folders (2+ files) — recursive */}
-          {realFolders.length > 0 && (
-            <div className="flex flex-col gap-2">
-              {realFolders.map((node) => (
-                <FolderGroup
-                  key={node.fullPath}
-                  node={node}
-                  categoryName={categoryName}
-                  accentColor={accentColor}
-                  isAdmin={isAdmin}
-                  onEdit={onEdit}
-                  onDelete={onDelete}
-                />
-              ))}
-            </div>
-          )}
-
-          {/* Flat files */}
-          {flatItems.length > 0 && (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-                gap: "12px",
-              }}
-            >
-              {flatItems.map((item) => (
-                <FileCard
-                  key={item.id}
-                  item={item}
-                  categoryName={categoryName}
-                  accentColor={accentColor}
-                  isAdmin={isAdmin}
-                  onEdit={onEdit}
-                  onDelete={onDelete}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
+    </ViewModeContext.Provider>
   );
 }
