@@ -58,30 +58,14 @@ function ownPath(r: DriveSyncRecord): string {
   return r.folder_path ? `${r.folder_path} > ${r.title}` : r.title;
 }
 
-// Builds a lookup of every row's OWN full path -> is_folder, so we can
-// correctly answer "is the thing AT this path a folder" rather than
-// "is this path someone's parent".
-function buildOwnPathFolderMap(records: DriveSyncRecord[]): Map<string, boolean> {
-  const map = new Map<string, boolean>();
-  for (const r of records) {
-    map.set(ownPath(r), !!r.is_folder);
-  }
-  return map;
-}
-
 // Direct children of `parentPath` = rows whose PARENT path (r.folder_path)
-// is exactly parentPath. This part was already correct in the original —
-// folder_path genuinely is the parent path, so an exact match here is
-// the right check. The bug was downstream, in how isFolder/childCount
-// were computed from that point on.
+// is exactly parentPath.
 function directChildren(records: DriveSyncRecord[], parentPath: string): DriveSyncRecord[] {
   return records.filter((r) => r.folder_path === parentPath);
 }
 
 function countDescendants(records: DriveSyncRecord[], ownFullPath: string): number {
   const prefix = ownFullPath + ' > ';
-  // A row is a descendant of `ownFullPath` if its PARENT path is either
-  // ownFullPath itself, or nested further under it.
   return records.filter(
     (r) => r.folder_path === ownFullPath || r.folder_path.startsWith(prefix),
   ).length;
@@ -249,15 +233,6 @@ export function KeywordAutocomplete({
     [suggestions, value, onCommit, selectItem],
   );
 
-  // ── Portal positioning ──────────────────────────────────────────────────────
-  const [dropPos, setDropPos] = useState<{ top: number; left: number } | null>(null);
-
-  useEffect(() => {
-    if (!showDropdown || !inputRef.current) { setDropPos(null); return; }
-    const rect = inputRef.current.getBoundingClientRect();
-    setDropPos({ top: rect.bottom + window.scrollY + 6, left: rect.left + window.scrollX });
-  }, [showDropdown]);
-
   return (
     <div style={{ position: 'relative', display: 'inline-block' }}>
       <input
@@ -273,126 +248,178 @@ export function KeywordAutocomplete({
         autoFocus={autoFocus}
       />
 
-      {showDropdown && dropPos && createPortal(
-        <div
-          ref={dropRef}
-          onMouseDown={handleDropdownMouseDown}
-          style={{
-            position: 'absolute',
-            top: dropPos.top,
-            left: dropPos.left,
-            zIndex: 9999,
-            width: 'max-content',
-            minWidth: '480px',
-            maxWidth: '720px',
-            background: 'white',
-            border: '0.5px solid #e2e8f0',
-            borderRadius: '8px',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
-            overflow: 'hidden',
-          }}
-        >
-          {/* Drill header / back button */}
-          {drill && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '8px 12px',
-                background: 'var(--color-background-secondary)',
-                borderBottom: '0.5px solid var(--color-border-tertiary)',
-                cursor: 'pointer',
-              }}
-              onClick={() => setDrill(null)}
-            >
-              <ArrowLeft size={13} style={{ color: 'var(--color-text-secondary)', flexShrink: 0 }} />
-              <span style={{ fontSize: 12, color: 'var(--color-text-secondary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {drill.folderName}
-              </span>
-              <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)' }}>back</span>
-            </div>
-          )}
+      {showDropdown && createPortal(
+        <>
+          {/* Backdrop — dims the page and gives a click-away target */}
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(15, 23, 42, 0.35)',
+              zIndex: 9998,
+            }}
+          />
 
-          {/* "Use this folder" pinned option while drilling */}
-          {drill && (
-            <button
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '9px 12px',
-                width: '100%',
-                border: 'none',
-                borderBottom: '0.5px solid var(--color-border-tertiary)',
-                background: '#fff0f7',
-                cursor: 'pointer',
-                textAlign: 'left',
-              }}
-              onClick={() =>
-                selectItem({ fullPath: drill.folderPath, name: drill.folderName, parentCrumb: '', isFolder: true, childCount: 0 })
-              }
-            >
-              <FolderCheck size={15} style={{ color: '#E5007D', flexShrink: 0 }} />
-              <span style={{ fontSize: 13, color: '#E5007D', fontWeight: 500 }}>
-                Use &ldquo;{drill.folderName}&rdquo;
-              </span>
-            </button>
-          )}
-
-          {/* Suggestion list */}
-          <ul style={{ listStyle: 'none', margin: 0, padding: 0, maxHeight: '280px', overflowY: 'auto' }}>
-            {(drill ? drillItems : suggestions).map((item) => (
-              <li key={item.fullPath} style={{ borderTop: '0.5px solid var(--color-border-tertiary)' }}>
-                <button
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    padding: '9px 12px',
-                    width: '100%',
-                    border: 'none',
-                    background: 'transparent',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                  }}
-                  onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = 'var(--color-background-secondary)')}
-                  onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = 'transparent')}
-                  onClick={() => {
-                    if (item.isFolder && item.childCount > 0) {
-                      drillInto(item);
-                    } else {
-                      selectItem(item);
-                    }
-                  }}
-                >
-                  {item.isFolder ? (
-                    <Folder size={15} style={{ color: '#E5007D', flexShrink: 0 }} />
-                  ) : (
-                    <File size={15} style={{ color: 'var(--color-text-tertiary)', flexShrink: 0 }} />
-                  )}
-                  <span style={{ flex: 1, fontSize: 13, color: 'var(--color-text-primary)', fontWeight: item.isFolder ? 500 : 400, whiteSpace: 'nowrap' }}>
-                    {item.name}
-                  </span>
-                  {item.parentCrumb && (
-                    <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)', whiteSpace: 'nowrap', flexShrink: 0, paddingLeft: 8 }}>
-                      {item.parentCrumb}
-                    </span>
-                  )}
-                  {item.isFolder && item.childCount > 0 && (
-                    <ChevronRight size={13} style={{ color: 'var(--color-text-tertiary)', flexShrink: 0 }} />
-                  )}
-                </button>
-              </li>
-            ))}
-
-            {(drill ? drillItems : suggestions).length === 0 && (
-              <li style={{ padding: '12px', fontSize: 13, color: 'var(--color-text-tertiary)', textAlign: 'center' }}>
-                {drill ? 'No subfolders here.' : 'No matches found.'}
-              </li>
+          {/* Centered panel — fixed to the viewport instead of anchored
+              under the input, so it can never run off-screen regardless
+              of where the input sits (e.g. inside a narrow modal). */}
+          <div
+            ref={dropRef}
+            onMouseDown={handleDropdownMouseDown}
+            style={{
+              position: 'fixed',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              zIndex: 9999,
+              width: 'min(640px, 92vw)',
+              maxHeight: '80vh',
+              display: 'flex',
+              flexDirection: 'column',
+              background: 'white',
+              border: '0.5px solid #e2e8f0',
+              borderRadius: '12px',
+              boxShadow: '0 12px 40px rgba(0,0,0,0.25)',
+              overflow: 'hidden',
+            }}
+          >
+            {/* Drill header / back button */}
+            {drill && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '10px 14px',
+                  background: 'var(--color-background-secondary)',
+                  borderBottom: '0.5px solid var(--color-border-tertiary)',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                }}
+                onClick={() => setDrill(null)}
+              >
+                <ArrowLeft size={13} style={{ color: 'var(--color-text-secondary)', flexShrink: 0 }} />
+                <span style={{ fontSize: 12, color: 'var(--color-text-secondary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {drill.folderName}
+                </span>
+                <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)' }}>back</span>
+              </div>
             )}
-          </ul>
-        </div>,
+
+            {/* "Use this folder" pinned option while drilling */}
+            {drill && (
+              <button
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '10px 14px',
+                  width: '100%',
+                  border: 'none',
+                  borderBottom: '0.5px solid var(--color-border-tertiary)',
+                  background: '#fff0f7',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  flexShrink: 0,
+                }}
+                onClick={() =>
+                  selectItem({ fullPath: drill.folderPath, name: drill.folderName, parentCrumb: '', isFolder: true, childCount: 0 })
+                }
+              >
+                <FolderCheck size={15} style={{ color: '#E5007D', flexShrink: 0 }} />
+                <span style={{ fontSize: 13, color: '#E5007D', fontWeight: 500 }}>
+                  Use &ldquo;{drill.folderName}&rdquo;
+                </span>
+              </button>
+            )}
+
+            {/* Suggestion list */}
+            <ul style={{ listStyle: 'none', margin: 0, padding: 0, overflowY: 'auto', flex: 1 }}>
+              {(drill ? drillItems : suggestions).map((item) => (
+                <li
+                  key={item.fullPath}
+                  style={{ display: 'flex', alignItems: 'stretch', borderTop: '0.5px solid var(--color-border-tertiary)' }}
+                >
+                  {/* Main row — for folders this ALWAYS drills in (explore).
+                      It never selects on its own, so an ambiguous or
+                      miscounted childCount can't accidentally pick a
+                      folder when the user only meant to look inside it. */}
+                  <button
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: '10px 14px',
+                      flex: 1,
+                      minWidth: 0,
+                      border: 'none',
+                      background: 'transparent',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                    }}
+                    onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = 'var(--color-background-secondary)')}
+                    onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = 'transparent')}
+                    onClick={() => {
+                      if (item.isFolder) {
+                        drillInto(item);
+                      } else {
+                        selectItem(item);
+                      }
+                    }}
+                  >
+                    {item.isFolder ? (
+                      <Folder size={15} style={{ color: '#E5007D', flexShrink: 0 }} />
+                    ) : (
+                      <File size={15} style={{ color: 'var(--color-text-tertiary)', flexShrink: 0 }} />
+                    )}
+                    <span style={{ flex: 1, fontSize: 13, color: 'var(--color-text-primary)', fontWeight: item.isFolder ? 500 : 400, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {item.name}
+                    </span>
+                    {item.parentCrumb && (
+                      <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)', whiteSpace: 'nowrap', flexShrink: 0, paddingLeft: 8, maxWidth: '35%', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {item.parentCrumb}
+                      </span>
+                    )}
+                    {item.isFolder && (
+                      <ChevronRight size={13} style={{ color: 'var(--color-text-tertiary)', flexShrink: 0 }} />
+                    )}
+                  </button>
+
+                  {/* Explicit select button — the only way to choose a
+                      folder as the key. Keeps "explore" and "select" as
+                      two clearly separate actions. */}
+                  {item.isFolder && (
+                    <button
+                      title={`Use "${item.name}"`}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '0 12px',
+                        border: 'none',
+                        borderLeft: '0.5px solid var(--color-border-tertiary)',
+                        background: 'transparent',
+                        cursor: 'pointer',
+                        flexShrink: 0,
+                      }}
+                      onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = '#fff0f7')}
+                      onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = 'transparent')}
+                      onClick={() => selectItem(item)}
+                    >
+                      <FolderCheck size={15} style={{ color: '#E5007D' }} />
+                    </button>
+                  )}
+                </li>
+              ))}
+
+              {(drill ? drillItems : suggestions).length === 0 && (
+                <li style={{ padding: '16px', fontSize: 13, color: 'var(--color-text-tertiary)', textAlign: 'center' }}>
+                  {drill ? 'No subfolders here.' : 'No matches found.'}
+                </li>
+              )}
+            </ul>
+          </div>
+        </>,
         document.body,
       )}
     </div>

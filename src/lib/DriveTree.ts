@@ -7,14 +7,28 @@
 // `folder_path` string structure (same convention as StudentDocument).
 // So "building a tree" here means parsing path segments, not walking a
 // real adjacency list.
+//
+// IMPORTANT: `r.folder_path` on a DriveSyncRecord is the row's PARENT
+// folder path, not its own path. A row's own full path is
+// `folder_path + ' > ' + title`. This mirrors the same convention already
+// documented in KeywordAutocomplete.tsx's `ownPath()` — keep both in sync
+// if this logic ever changes.
 
 import type { DriveSyncRecord } from './types';
 
+// Paths in this app are joined with ' > ', not '/'. Splitting on the wrong
+// delimiter collapses every real path into a single segment.
 function pathSegments(path: string): string[] {
   return path
-    .split('/')
+    .split(' > ')
     .map((s) => s.trim())
     .filter(Boolean);
+}
+
+// A row's own full path (parent path + its own title), matching the
+// `ownPath()` helper in KeywordAutocomplete.tsx.
+function ownPath(r: DriveSyncRecord): string {
+  return r.folder_path ? `${r.folder_path} > ${r.title}` : r.title;
 }
 
 export interface DriveTreeNode {
@@ -34,12 +48,18 @@ export interface DriveTreeNode {
  * Distinct FOLDER paths from drive_sync, i.e. rows where is_folder === true.
  * Used to populate the "Add Folder" picker — this is now the source of
  * truth for folder keys, replacing the StudentDocument-derived heuristic.
+ *
+ * NOTE: must use each row's OWN full path (folder_path + its own title),
+ * not the raw `folder_path` field, which is only the row's PARENT path.
+ * Using the raw field here made a folder's own identity only "found" when
+ * it coincidentally matched some other row's parent path (e.g. it had a
+ * nested child of its own) — leaf/deepest folders never matched at all.
  */
 export function getDriveSyncFolderPaths(records: DriveSyncRecord[]): string[] {
   const set = new Set<string>();
   for (const r of records) {
     if (!r.is_folder) continue;
-    const trimmed = r.folder_path.trim();
+    const trimmed = ownPath(r).trim();
     if (trimmed) set.add(trimmed);
   }
   return Array.from(set).sort((a, b) => a.localeCompare(b));
@@ -72,20 +92,24 @@ export function buildScopedDriveTree(
   const rootSegs = pathSegments(rootPath);
   if (rootSegs.length === 0) return null;
 
-  // Rows that live at or under rootPath.
+  // Rows that live at or under rootPath. A row's own segment path is its
+  // PARENT segments (from folder_path) plus its own title as the final
+  // segment — matching ownPath() — so we compare against that, not against
+  // folder_path alone.
   const scoped = records.filter((r) => {
-    const segs = pathSegments(r.folder_path);
+    const segs = pathSegments(ownPath(r));
     if (segs.length < rootSegs.length) return false;
     return rootSegs.every((seg, i) => segs[i].toLowerCase() === seg.toLowerCase());
   });
 
   if (scoped.length === 0) return null;
 
-  // Index every row by its full segment path (lowercased) for quick lookup,
-  // and collect every distinct path (folders implied by depth included).
+  // Index every row by its own full segment path (lowercased) for quick
+  // lookup, and collect every distinct path (folders implied by depth
+  // included).
   const recordBySegPath = new Map<string, DriveSyncRecord>();
   for (const r of scoped) {
-    recordBySegPath.set(pathSegments(r.folder_path).join('/').toLowerCase(), r);
+    recordBySegPath.set(pathSegments(ownPath(r)).join('/').toLowerCase(), r);
   }
 
   // Build nodes bottom-up via a path -> node map, then wire parent/child by
@@ -100,7 +124,7 @@ export function buildScopedDriveTree(
     const record = recordBySegPath.get(key) ?? null;
     const node: DriveTreeNode = {
       name: segs[segs.length - 1],
-      fullPath: segs.join('/'),
+      fullPath: segs.join(' > '),
       isFolder: record ? record.is_folder : true, // implied intermediate folders
       record,
       children: [],
@@ -112,7 +136,7 @@ export function buildScopedDriveTree(
   const rootNode = getOrCreateNode(rootSegs);
 
   for (const r of scoped) {
-    const segs = pathSegments(r.folder_path);
+    const segs = pathSegments(ownPath(r));
     // Walk every level from rootSegs.length up to this row's own depth,
     // wiring each level as a child of the previous, so intermediate
     // folders that have no row of their own still appear in the tree.

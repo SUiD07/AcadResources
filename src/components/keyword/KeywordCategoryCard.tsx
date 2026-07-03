@@ -341,7 +341,7 @@ export function KeywordCategoryCard({
           {showTreeForFocusedKey ? (
             <>
               <Label className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-                <Folder className="w-4 h-4 text-[#E5007D]" />
+                <Folder className=" w-4 h-4 text-[#E5007D] pl-2" />
                 Folder Contents — "{lastSegment(focusedKeyValue!)}"
               </Label>
               <div className="min-w-0 overflow-hidden rounded-lg border border-slate-100">

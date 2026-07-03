@@ -245,6 +245,7 @@ function FolderGroup({
   isAdmin,
   onEdit,
   onDelete,
+  depth = 0, // NEW
 }: {
   node: FolderNode;
   categoryName: string;
@@ -252,16 +253,15 @@ function FolderGroup({
   isAdmin: boolean;
   onEdit?: (item: ContentItem) => void;
   onDelete?: (item: ContentItem) => void;
+  depth?: number; // NEW
 }) {
   const [open, setOpen] = useState(false);
   const total = countDescendants(node);
 
-  // Sort children alphabetically
   const sortedChildren = [...node.children.values()].sort((a, b) =>
     a.name.localeCompare(b.name)
   );
 
-  // Children with only 1 descendant render as flat FileCards, not nested folders
   const realFolderChildren = sortedChildren.filter(
     (c) => countDescendants(c) > 1
   );
@@ -270,6 +270,8 @@ function FolderGroup({
     .flatMap((c) => collectAllItems(c));
 
   const flatItems = [...node.items, ...flatFromChildren];
+
+ const cardMinWidth = Math.max(260 - depth * 40, 160);
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
@@ -312,8 +314,13 @@ function FolderGroup({
       </div>
 
       {open && (
-        <div className="border-t border-slate-100 bg-slate-50/50 p-4 flex flex-col gap-3">
-          {/* Nested sub-folders (2+ files each) */}
+       <div
+          className={
+            depth === 0
+              ? "border-t border-slate-100 bg-slate-50/50 p-4 flex flex-col gap-3"
+              : "border-l-2 border-slate-200 ml-3 pl-3 py-3 flex flex-col gap-3"
+          }
+        >
           {realFolderChildren.length > 0 && (
             <div className="flex flex-col gap-2">
               {realFolderChildren.map((child) => (
@@ -325,17 +332,17 @@ function FolderGroup({
                   isAdmin={isAdmin}
                   onEdit={onEdit}
                   onDelete={onDelete}
+                  depth={depth + 1} // NEW
                 />
               ))}
             </div>
           )}
 
-          {/* Direct files + single-descendant child items */}
           {flatItems.length > 0 && (
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+                gridTemplateColumns: `repeat(auto-fill, minmax(${cardMinWidth}px, 1fr))`, // CHANGED
                 gap: "12px",
               }}
             >
