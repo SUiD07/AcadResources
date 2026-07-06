@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Card, CardContent } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -194,12 +194,13 @@ export function KeywordCategoryCard({
   onDelete,
 }: KeywordCategoryCardProps) {
   const isFocusedHere = focusedKey?.configId === config.id;
-  const matchingFiles = getMatchingFiles(documents, config, isFocusedHere ? focusedKey.keyIndex : undefined);
-  const beforeKeyFiles = isFocusedHere
+  const keyIndex = isFocusedHere ? focusedKey.keyIndex : undefined;
+  const matchingFiles = useMemo(() => getMatchingFiles(documents, config, keyIndex), [documents, config, keyIndex]);
+  const beforeKeyFiles = useMemo(() => isFocusedHere
     ? getMatchingFilesExcludingKey(documents, config, focusedKey.keyIndex)
-    : [];
+    : [], [isFocusedHere, documents, config, focusedKey?.keyIndex]);
 
-  const driveFolderPaths = getDriveSyncFolderPaths(driveSyncRecords);
+  const driveFolderPaths = useMemo(() => getDriveSyncFolderPaths(driveSyncRecords), [driveSyncRecords]);
 
   const handleAddFolder = useCallback(
     (folderPath: string) => {

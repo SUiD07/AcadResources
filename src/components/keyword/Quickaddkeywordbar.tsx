@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Card, CardContent } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -40,9 +41,9 @@ export function QuickAddKeywordBar({
   isSubmitting,
   onSubmit,
 }: QuickAddKeywordBarProps) {
-  const categoryOptions = configs.filter((c) => c.config_type === type);
-  const matchingFiles = getFilesMatchingKeyword(documents, keyword);
-  const nonMatchingFiles = getFilesNotMatchingKeyword(documents, keyword);
+  const categoryOptions = useMemo(() => configs.filter((c) => c.config_type === type), [configs, type]);
+  const matchingFiles = useMemo(() => getFilesMatchingKeyword(documents, keyword), [documents, keyword]);
+  const nonMatchingFiles = useMemo(() => getFilesNotMatchingKeyword(documents, keyword), [documents, keyword]);
   const isCreatingNew = categoryId === 'NEW';
 
   return (

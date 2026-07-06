@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent } from '../ui/card';
 import { Button } from '../ui/button';
 import { Loader2, Plus, Settings, AlertTriangle, ChevronDown, ChevronUp, Check, X } from 'lucide-react';
@@ -279,8 +279,8 @@ export function KeywordManagementSection() {
     setQuickAddCategoryId('');
   };
 
-  const filteredConfigs = configs.filter((c) => c.config_type === activeTab);
-  const overlaps = findOverlaps(documents, configs, activeTab);
+  const filteredConfigs = useMemo(() => configs.filter((c) => c.config_type === activeTab), [configs, activeTab]);
+  const overlaps = useMemo(() => findOverlaps(documents, configs, activeTab), [documents, configs, activeTab]);
 
   const TAB_LABELS: Record<KeywordConfig['config_type'], string> = {
     doc_type: 'Document Types',

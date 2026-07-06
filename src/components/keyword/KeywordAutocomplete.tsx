@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Folder, File, ChevronRight, ArrowLeft, FolderCheck } from 'lucide-react';
 import type { DriveSyncRecord, StudentDocument } from '../../lib/types';
@@ -155,8 +155,8 @@ export function KeywordAutocomplete({
   const dropRef = useRef<HTMLDivElement>(null);
   const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const suggestions = open && !drill ? searchSuggestions(value, driveSyncRecords, foldersOnly) : [];
-  const drillItems = open && drill ? drillChildren(driveSyncRecords, drill.folderPath, foldersOnly) : [];
+  const suggestions = useMemo(() => open && !drill ? searchSuggestions(value, driveSyncRecords, foldersOnly) : [], [open, drill, value, driveSyncRecords, foldersOnly]);
+  const drillItems = useMemo(() => open && drill ? drillChildren(driveSyncRecords, drill.folderPath, foldersOnly) : [], [open, drill, driveSyncRecords, foldersOnly]);
   const showDropdown = open && (suggestions.length > 0 || drill !== null);
 
   useEffect(() => {
