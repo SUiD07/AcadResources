@@ -18,7 +18,7 @@ interface AddResourceDialogProps {
 
 export interface ResourceFormData {
   blockName: string;
-  blockCode: string;
+  // blockCode: string;
   generation: string;
   block: string;
   category: string;
@@ -34,7 +34,7 @@ export function AddResourceDialog({ open, onOpenChange, onSubmit, categoryName }
   const [keywordConfigs, setKeywordConfigs] = useState<KeywordConfig[]>([]);
   const [formData, setFormData] = useState<ResourceFormData>({
     blockName: '',
-    blockCode: '',
+    // blockCode: '',
     generation: 'MDCU 81',
     block: 'Block 1',
     category: categoryName || 'AC',
@@ -116,7 +116,7 @@ export function AddResourceDialog({ open, onOpenChange, onSubmit, categoryName }
       // Reset form
       setFormData({
         blockName: '',
-        blockCode: '',
+        // blockCode: '',
         generation: 'MDCU 81',
         block: blockOptions[0] || 'Block 1',
         category: categoryName || categoryOptions[0] || 'AC',
@@ -169,7 +169,7 @@ export function AddResourceDialog({ open, onOpenChange, onSubmit, categoryName }
             </div>
 
             {/* Block Code */}
-            <div className="space-y-2">
+            {/* <div className="space-y-2">
               <Label htmlFor="blockCode">Block Code</Label>
               <Input
                 id="blockCode"
@@ -177,7 +177,7 @@ export function AddResourceDialog({ open, onOpenChange, onSubmit, categoryName }
                 value={formData.blockCode}
                 onChange={(e) => setFormData({ ...formData, blockCode: e.target.value })}
               />
-            </div>
+            </div> */}
 
             {/* Generation and Block - Row */}
             <div className="grid grid-cols-2 gap-4">

@@ -36,7 +36,7 @@ const ViewModeContext = createContext<"grid" | "list">("grid");
 interface ContentItem {
   id: string;
   block_name: string;
-  block_code?: string;
+  // block_code?: string;
   thumbnail: string;
   drive_link: string;
   generation: string;
@@ -178,9 +178,9 @@ function FileCard({
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            {item.block_code && (
+            {/* {item.block_code && (
               <span className="text-xs text-slate-400">{item.block_code}</span>
-            )}
+            )} */}
             <span
               className="text-[5px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-lg"
               style={{ color: accentColor, background: `${accentColor}18`, paddingLeft: "10px", paddingRight: "10px" }}
@@ -267,9 +267,9 @@ function FileCard({
         </span>
 
         <div className="flex-1">
-          {item.block_code && (
+          {/* {item.block_code && (
             <p className="text-xs text-slate-400 mb-0.5">{item.block_code}</p>
-          )}
+          )} */}
           <p className="text-sm font-semibold text-slate-900 leading-snug line-clamp-2">
             {item.block_name}
           </p>
@@ -334,7 +334,7 @@ function FolderGroup({
   isAdmin,
   onEdit,
   onDelete,
-  depth = 0, // NEW
+  depth = 0,
 }: {
   node: FolderNode;
   categoryName: string;
@@ -342,7 +342,7 @@ function FolderGroup({
   isAdmin: boolean;
   onEdit?: (item: ContentItem) => void;
   onDelete?: (item: ContentItem) => void;
-  depth?: number; // NEW
+  depth?: number;
 }) {
   const [open, setOpen] = useState(false);
   const viewMode = useContext(ViewModeContext);
@@ -361,7 +361,7 @@ function FolderGroup({
 
   const flatItems = [...node.items, ...flatFromChildren];
 
- const cardMinWidth = Math.max(260 - depth * 40, 160);
+  const cardMinWidth = Math.max(260 - depth * 40, 160);
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
@@ -404,7 +404,7 @@ function FolderGroup({
       </div>
 
       {open && (
-       <div
+        <div
           className={
             depth === 0
               ? "border-t border-slate-100 bg-slate-50/50 p-4 flex flex-col gap-3"
@@ -422,7 +422,7 @@ function FolderGroup({
                   isAdmin={isAdmin}
                   onEdit={onEdit}
                   onDelete={onDelete}
-                  depth={depth + 1} // NEW
+                  depth={depth + 1}
                 />
               ))}
             </div>
@@ -514,6 +514,16 @@ export function ContentCategory({
   const folderCount = realFolders.length;
   const flatCount = flatItems.length;
 
+  // ─── NEW: Single folder unwrap logic ───
+  // If there's exactly 1 real folder at the top level, unwrap it
+  const singleFolder = realFolders.length === 1 ? realFolders[0] : null;
+  const unWrappedFolderChildren = singleFolder?.children
+    ? [...singleFolder.children.values()].sort((a, b) =>
+        a.name.localeCompare(b.name)
+      )
+    : [];
+  const unWrappedFolderFiles = singleFolder?.items ?? [];
+
   return (
     <ViewModeContext.Provider value={viewMode}>
       <div
@@ -558,7 +568,19 @@ export function ContentCategory({
                 {categoryName}
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                {folderCount > 0
+                {singleFolder
+                  ? `${unWrappedFolderChildren.length} folder${
+                      unWrappedFolderChildren.length !== 1 ? "s" : ""
+                    }${
+                      unWrappedFolderFiles.length + flatCount > 0
+                        ? ` · ${unWrappedFolderFiles.length + flatCount} file${
+                            unWrappedFolderFiles.length + flatCount !== 1
+                              ? "s"
+                              : ""
+                          }`
+                        : ""
+                    }`
+                  : folderCount > 0
                   ? `${folderCount} folder${folderCount !== 1 ? "s" : ""}${
                       flatCount > 0
                         ? ` · ${flatCount} file${flatCount !== 1 ? "s" : ""}`
@@ -591,52 +613,113 @@ export function ContentCategory({
               background: "white",
             }}
           >
-            {/* Real folders (2+ files) — recursive */}
-            {realFolders.length > 0 && (
-              <div className="flex flex-col gap-2">
-                {realFolders.map((node) => (
-                  <FolderGroup
-                    key={node.fullPath}
-                    node={node}
-                    categoryName={categoryName}
-                    accentColor={accentColor}
-                    isAdmin={isAdmin}
-                    onEdit={onEdit}
-                    onDelete={onDelete}
-                  />
-                ))}
-              </div>
+            {/* Single folder unwrap case */}
+            {singleFolder && (
+              <>
+                {/* Unwrapped folder's subfolders */}
+                {unWrappedFolderChildren.length > 0 && (
+                  <div className="flex flex-col gap-2">
+                    {unWrappedFolderChildren.map((child) => (
+                      <FolderGroup
+                        key={child.fullPath}
+                        node={child}
+                        categoryName={categoryName}
+                        accentColor={accentColor}
+                        isAdmin={isAdmin}
+                        onEdit={onEdit}
+                        onDelete={onDelete}
+                        depth={0}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {/* Unwrapped folder's direct files + flat items */}
+                {(unWrappedFolderFiles.length > 0 || flatCount > 0) && (
+                  <div
+                    style={
+                      viewMode === "grid"
+                        ? {
+                            display: "grid",
+                            gridTemplateColumns:
+                              "repeat(auto-fill, minmax(280px, 1fr))",
+                            gap: "12px",
+                          }
+                        : {
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "8px",
+                          }
+                    }
+                  >
+                    {[...unWrappedFolderFiles, ...flatItems].map((item) => (
+                      <FileCard
+                        key={item.id}
+                        item={item}
+                        categoryName={categoryName}
+                        accentColor={accentColor}
+                        isAdmin={isAdmin}
+                        onEdit={onEdit}
+                        onDelete={onDelete}
+                      />
+                    ))}
+                  </div>
+                )}
+              </>
             )}
 
-            {/* Flat files */}
-            {flatItems.length > 0 && (
-              <div
-                style={
-                  viewMode === "grid"
-                    ? {
-                        display: "grid",
-                        gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-                        gap: "12px",
-                      }
-                    : {
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "8px",
-                      }
-                }
-              >
-                {flatItems.map((item) => (
-                  <FileCard
-                    key={item.id}
-                    item={item}
-                    categoryName={categoryName}
-                    accentColor={accentColor}
-                    isAdmin={isAdmin}
-                    onEdit={onEdit}
-                    onDelete={onDelete}
-                  />
-                ))}
-              </div>
+            {/* Multiple folders case (original logic) */}
+            {!singleFolder && (
+              <>
+                {/* Real folders (2+ files) — recursive */}
+                {realFolders.length > 0 && (
+                  <div className="flex flex-col gap-2">
+                    {realFolders.map((node) => (
+                      <FolderGroup
+                        key={node.fullPath}
+                        node={node}
+                        categoryName={categoryName}
+                        accentColor={accentColor}
+                        isAdmin={isAdmin}
+                        onEdit={onEdit}
+                        onDelete={onDelete}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {/* Flat files */}
+                {flatItems.length > 0 && (
+                  <div
+                    style={
+                      viewMode === "grid"
+                        ? {
+                            display: "grid",
+                            gridTemplateColumns:
+                              "repeat(auto-fill, minmax(280px, 1fr))",
+                            gap: "12px",
+                          }
+                        : {
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "8px",
+                          }
+                    }
+                  >
+                    {flatItems.map((item) => (
+                      <FileCard
+                        key={item.id}
+                        item={item}
+                        categoryName={categoryName}
+                        accentColor={accentColor}
+                        isAdmin={isAdmin}
+                        onEdit={onEdit}
+                        onDelete={onDelete}
+                      />
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}
