@@ -441,7 +441,7 @@ export function PeerSupportSection({
         const catMatch = selectedCategory.length === 0 || (catVal === "other" ? selectedCategory.includes("other") || selectedCategory.length === 0 : selectedCategory.includes(catVal));
 
         const boardVal = !item.board_exam || item.board_exam === "None" ? "other" : item.board_exam;
-        const boardMatch = selectedBoardExam.length === 0 || (boardVal === "other" ? selectedBoardExam.includes("other") || selectedBoardExam.length === 0 : selectedBoardExam.includes(boardVal));
+        const boardMatch = selectedBoardExam.length === 0 ? boardVal === "other" : selectedBoardExam.includes(boardVal);
 
         if (!genMatch || !blockMatch || !catMatch || !boardMatch) return false;
         return evaluateSearch(item, searchBoxes, searchOperators);
@@ -560,7 +560,7 @@ export function PeerSupportSection({
                   knownTypes={knownDocTypes}
                   viewMode={viewMode}
                   onEdit={(item) => {
-                    setEditingItem({ id: item.id, blockName: item.block_name, blockCode: "", generation: item.generation, block: item.block, category: item.category, driveLink: item.drive_link, thumbnail: item.thumbnail });
+                    setEditingItem({ id: item.id, blockName: item.block_name, generation: item.generation, block: item.block, category: item.category, driveLink: item.drive_link, thumbnail: item.thumbnail });
                     setEditDialogOpen(true);
                   }}
                   onDelete={(item) => {

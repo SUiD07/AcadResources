@@ -52,7 +52,21 @@ export async function fetchPeerSupportData(): Promise<PeerSupportItem[]> {
   return allDocuments;
 }
 
-export async function fetchStudentDocuments(): Promise<StudentDocument[]> {
+export async function fetchStudentDocuments(limit?: number, offset?: number): Promise<StudentDocument[]> {
+  if (limit !== undefined && offset !== undefined) {
+    const { data, error } = await supabase
+      .from('student_documents')
+      .select('*')
+      .order('upload_date', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (error) {
+      console.error('Fetch Error (Student Documents):', error.message);
+      return [];
+    }
+    return data || [];
+  }
+
   const PAGE_SIZE = 1000;
   let from = 0;
   let allDocuments: StudentDocument[] = [];
