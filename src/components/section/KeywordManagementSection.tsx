@@ -21,6 +21,7 @@ import {
 import { QuickAddKeywordBar } from '../../components/keyword/Quickaddkeywordbar';
 import { KeywordCategoryCard } from '../../components/keyword/KeywordCategoryCard';
 import { getDriveSync } from '../../lib/dataService';
+import { Virtuoso } from "react-virtuoso"
 
 interface FocusedKey {
   configId: string;
@@ -58,9 +59,11 @@ function OverlapAuditPanel({
       </button>
 
       {expanded && (
-        <ul className="max-h-72 overflow-y-auto border-t border-amber-200 divide-y divide-amber-200">
-          {overlaps.map(({ doc, winner, winnerScore, loserScores }) => (
-            <li key={doc.id} className="px-4 sm:px-5 py-3 text-xs min-w-0 bg-white/60">
+        <Virtuoso
+          style={{ height: 288, width: "100%" }} // 288px ≈ your old max-h-72 (72 * 4px)
+          data={overlaps}
+          itemContent={(index, { doc, winner, winnerScore, loserScores }) => (
+            <li key={doc.id} className="px-4 sm:px-5 py-3 text-xs min-w-0 bg-white/60 border-t border-amber-200">
               <p className="font-medium text-slate-900 truncate mb-1">{doc.title}</p>
               <p className="font-mono text-slate-500 truncate mb-2">{doc.folder_path}</p>
               <div className="flex flex-wrap gap-2">
@@ -69,18 +72,15 @@ function OverlapAuditPanel({
                   <span className="font-mono opacity-70">score {winnerScore}</span>
                 </span>
                 {loserScores.map(({ config, score }) => (
-                  <span
-                    key={config.id}
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-400 line-through"
-                  >
+                  <span key={config.id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-400 line-through">
                     {config.label}
                     <span className="font-mono no-underline">score {score}</span>
                   </span>
                 ))}
               </div>
             </li>
-          ))}
-        </ul>
+          )}
+        />
       )}
     </Card>
   );
@@ -337,11 +337,10 @@ export function KeywordManagementSection() {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`whitespace-nowrap px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-semibold border-b-2 transition-colors ${
-                  isActive
+                className={`whitespace-nowrap px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-semibold border-b-2 transition-colors ${isActive
                     ? 'border-[#E5007D] text-[#E5007D]'
                     : 'border-transparent text-slate-500 hover:text-slate-700'
-                }`}
+                  }`}
               >
                 {TAB_LABELS[tab]}
               </button>

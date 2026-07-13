@@ -24,6 +24,7 @@ import { EditResourceDialog } from "../admin/EditResourceDialog";
 import { DeleteConfirmDialog } from "../admin/DeleteConfirmDialog";
 import { SearchBar, createEmptyBox, evaluateSearch } from "../SearchBar";
 import type { SearchBox, LogicOp } from "../SearchBar";
+import { Virtuoso } from "react-virtuoso";
 
 // ─── TYPE ORDER ─────────────────────────────────────────────────────────────
 const DOC_TYPE_ORDER = [
@@ -551,24 +552,30 @@ export function PeerSupportSection({
 
           {!isLoading &&
             (groupedBySubject.length > 0
-              ? groupedBySubject.map(({ subject, items }) => (
-                <SubjectCard
-                  key={subject}
-                  subject={subject}
-                  items={items}
-                  isAdmin={isAdmin}
-                  knownTypes={knownDocTypes}
-                  viewMode={viewMode}
-                  onEdit={(item) => {
-                    setEditingItem({ id: item.id, blockName: item.block_name, blockCode: "", generation: item.generation, block: item.block, category: item.category, driveLink: item.drive_link, thumbnail: item.thumbnail });
-                    setEditDialogOpen(true);
-                  }}
-                  onDelete={(item) => {
-                    setDeletingItem({ id: item.id, name: item.block_name });
-                    setDeleteDialogOpen(true);
-                  }}
+              ? (
+                <Virtuoso
+                  style={{ height: "80vh", width: "100%" }}
+                  data={groupedBySubject}
+                  itemContent={(index, { subject, items }) => (
+                    <SubjectCard
+                      key={subject}
+                      subject={subject}
+                      items={items}
+                      isAdmin={isAdmin}
+                      knownTypes={knownDocTypes}
+                      viewMode={viewMode}
+                      onEdit={(item) => {
+                        setEditingItem({ id: item.id, blockName: item.block_name, generation: item.generation, block: item.block, category: item.category, driveLink: item.drive_link, thumbnail: item.thumbnail });
+                        setEditDialogOpen(true);
+                      }}
+                      onDelete={(item) => {
+                        setDeletingItem({ id: item.id, name: item.block_name });
+                        setDeleteDialogOpen(true);
+                      }}
+                    />
+                  )}
                 />
-              ))
+              )
               : (
                 <div className="text-center py-20 bg-white rounded-xl border border-dashed border-slate-300">
                   <br />
