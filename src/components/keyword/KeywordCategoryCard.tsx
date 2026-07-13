@@ -17,6 +17,7 @@ import {
   type DriveTreeNode,
 } from '../../lib/DriveTree';
 import { KeywordAutocomplete } from './KeywordAutocomplete';
+import { Virtuoso } from 'react-virtuoso';
 
 interface FocusedKey {
   configId: string;
@@ -55,16 +56,18 @@ function FileList({ files, emptyLabel, dimmed = false }: {
     return <p className="p-4 text-sm italic text-slate-400">{emptyLabel}</p>;
   }
   return (
-    <ul className="overflow-y-auto divide-y divide-slate-100" style={{ maxHeight: '10rem' }}>
-      {files.map((doc) => (
-        <li key={doc.id} className={`p-3 flex items-start gap-3 min-w-0 ${dimmed ? 'opacity-60 bg-slate-50' : 'bg-pink-50/40'}`}>
+    <Virtuoso
+      style={{ height: '10rem' }}
+      data={files}
+      itemContent={(index, doc) => (
+        <li key={doc.id} className={`p-3 flex items-start gap-3 min-w-0 border-t border-slate-100 ${dimmed ? 'opacity-60 bg-slate-50' : 'bg-pink-50/40'}`}>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium text-slate-800 truncate">{doc.title}</p>
             <p className="text-xs font-mono text-slate-500 truncate">{doc.folder_path}</p>
           </div>
         </li>
-      ))}
-    </ul>
+      )}
+    />
   );
 }
 

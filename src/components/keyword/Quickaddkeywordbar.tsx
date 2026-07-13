@@ -5,6 +5,7 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Loader2, Plus, Zap } from 'lucide-react';
+import { Virtuoso } from 'react-virtuoso';
 import type { KeywordConfig, StudentDocument } from '../../lib/types';
 import { getFilesMatchingKeyword, getFilesNotMatchingKeyword } from '../../lib/KeywordMatching';
 
@@ -23,6 +24,42 @@ interface QuickAddKeywordBarProps {
   onNewYearChange: (value: string) => void;
   isSubmitting: boolean;
   onSubmit: () => void;
+}
+
+// ─── Shared virtualized file list ───────────────────────────────────────────
+// Replaces plain `.map()` over an unbounded array. `maxHeight` alone never
+// stopped React from mounting every matching row — it only made the
+// overflow scroll. Virtuoso only mounts the rows actually in view, so a
+// keyword matching hundreds/thousands of docs stays cheap to render.
+function VirtualFileList({
+  files,
+  emptyLabel,
+  heightRem,
+  dimmed = false,
+}: {
+  files: StudentDocument[];
+  emptyLabel: string;
+  heightRem: number;
+  dimmed?: boolean;
+}) {
+  if (files.length === 0) {
+    return <p className="p-3 text-sm italic text-slate-400">{emptyLabel}</p>;
+  }
+  return (
+    <Virtuoso
+      style={{ height: `${heightRem}rem` }}
+      data={files}
+      itemContent={(index, doc) => (
+        <li
+          key={doc.id}
+          className={`p-2 px-3 min-w-0 border-t border-slate-100 ${dimmed ? 'opacity-60 bg-slate-50' : 'bg-pink-50/50'}`}
+        >
+          <p className="text-sm font-medium text-slate-800 truncate">{doc.title}</p>
+          <p className="text-xs font-mono text-slate-500 truncate">{doc.folder_path}</p>
+        </li>
+      )}
+    />
+  );
 }
 
 export function QuickAddKeywordBar({
@@ -169,18 +206,11 @@ export function QuickAddKeywordBar({
                   Matching "{keyword.trim()}" ({matchingFiles.length})
                 </Label>
                 <div className="overflow-hidden rounded-lg border border-slate-100">
-                  {matchingFiles.length > 0 ? (
-                    <ul className="overflow-y-auto divide-y divide-slate-100" style={{ maxHeight: '8rem' }}>
-                      {matchingFiles.map((doc) => (
-                        <li key={doc.id} className="p-2 px-3 min-w-0 bg-pink-50/50">
-                          <p className="text-sm font-medium text-slate-800 truncate">{doc.title}</p>
-                          <p className="text-xs font-mono text-slate-500 truncate">{doc.folder_path}</p>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="p-3 text-sm italic text-slate-400">No matching files found.</p>
-                  )}
+                  <VirtualFileList
+                    files={matchingFiles}
+                    emptyLabel="No matching files found."
+                    heightRem={8}
+                  />
                 </div>
               </div>
 
@@ -189,18 +219,12 @@ export function QuickAddKeywordBar({
                   Other Files ({nonMatchingFiles.length})
                 </Label>
                 <div className="overflow-hidden rounded-lg border border-slate-100">
-                  {nonMatchingFiles.length > 0 ? (
-                    <ul className="overflow-y-auto divide-y divide-slate-100" style={{ maxHeight: '8rem' }}>
-                      {nonMatchingFiles.map((doc) => (
-                        <li key={doc.id} className="p-2 px-3 min-w-0 opacity-60 bg-slate-50">
-                          <p className="text-sm font-medium text-slate-800 truncate">{doc.title}</p>
-                          <p className="text-xs font-mono text-slate-500 truncate">{doc.folder_path}</p>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="p-3 text-sm italic text-slate-400">No other files.</p>
-                  )}
+                  <VirtualFileList
+                    files={nonMatchingFiles}
+                    emptyLabel="No other files."
+                    heightRem={8}
+                    dimmed
+                  />
                 </div>
               </div>
             </div>

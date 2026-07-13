@@ -64,17 +64,36 @@ function directChildren(records: DriveSyncRecord[], parentPath: string): DriveSy
   return records.filter((r) => r.folder_path === parentPath);
 }
 
-function countDescendants(records: DriveSyncRecord[], ownFullPath: string): number {
-  const prefix = ownFullPath + ' > ';
-  return records.filter(
-    (r) => r.folder_path === ownFullPath || r.folder_path.startsWith(prefix),
-  ).length;
+// ─── Descendant counting ────────────────────────────────────────────────────
+// Instead of, for every folder, re-scanning ALL records to count how many
+// live underneath it (O(records) per folder, repeated on every keystroke),
+// we walk `records` ONCE and credit every ancestor path along the way.
+// The result is a lookup table: descendantCountMap.get(folderPath) is an
+// O(1) read. This only needs to be rebuilt when driveSyncRecords itself
+// changes — never while the user is just typing.
+function buildDescendantCountMap(records: DriveSyncRecord[]): Map<string, number> {
+  const map = new Map<string, number>();
+
+  for (const r of records) {
+    const parentPath = r.folder_path;
+    if (!parentPath) continue; // top-level items have no parent folder to credit
+
+    const segments = parentPath.split('>').map((s) => s.trim()).filter(Boolean);
+    let current = '';
+    for (let i = 0; i < segments.length; i++) {
+      current = i === 0 ? segments[0] : `${current} > ${segments[i]}`;
+      map.set(current, (map.get(current) ?? 0) + 1);
+    }
+  }
+
+  return map;
 }
 
 function searchSuggestions(
   query: string,
   records: DriveSyncRecord[],
   foldersOnly: boolean,
+  descendantCountMap: Map<string, number>,
 ): SuggestionItem[] {
   const q = query.trim().toLowerCase();
   if (!q) return [];
@@ -90,7 +109,7 @@ function searchSuggestions(
     if (foldersOnly && !isFolder) continue;
 
     const name = lastName(path);
-    const childCount = isFolder ? countDescendants(records, path) : 0;
+    const childCount = isFolder ? (descendantCountMap.get(path) ?? 0) : 0;
 
     seen.set(path, { fullPath: path, name, parentCrumb: parentCrumb(path), isFolder, childCount });
   }
@@ -107,7 +126,12 @@ function searchSuggestions(
   return items.slice(0, 12);
 }
 
-function drillChildren(records: DriveSyncRecord[], parentPath: string, foldersOnly: boolean): SuggestionItem[] {
+function drillChildren(
+  records: DriveSyncRecord[],
+  parentPath: string,
+  foldersOnly: boolean,
+  descendantCountMap: Map<string, number>,
+): SuggestionItem[] {
   const children = directChildren(records, parentPath);
   const seen = new Map<string, SuggestionItem>();
 
@@ -117,7 +141,7 @@ function drillChildren(records: DriveSyncRecord[], parentPath: string, foldersOn
     const isFolder = !!r.is_folder;
     if (foldersOnly && !isFolder) continue;
     const name = lastName(path);
-    const childCount = isFolder ? countDescendants(records, path) : 0;
+    const childCount = isFolder ? (descendantCountMap.get(path) ?? 0) : 0;
     seen.set(path, {
       fullPath: path,
       name,
@@ -155,8 +179,37 @@ export function KeywordAutocomplete({
   const dropRef = useRef<HTMLDivElement>(null);
   const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const suggestions = useMemo(() => open && !drill ? searchSuggestions(value, driveSyncRecords, foldersOnly) : [], [open, drill, value, driveSyncRecords, foldersOnly]);
-  const drillItems = useMemo(() => open && drill ? drillChildren(driveSyncRecords, drill.folderPath, foldersOnly) : [], [open, drill, driveSyncRecords, foldersOnly]);
+  // Debounced copy of `value` — only updates ~150ms after typing pauses.
+  // The <input> below still binds to `value` directly, so what's on
+  // screen updates instantly; only the (expensive) search is delayed.
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedValue(value), 150);
+    return () => clearTimeout(t);
+  }, [value]);
+
+  // Built once per driveSyncRecords change, reused across every keystroke.
+  const descendantCountMap = useMemo(
+    () => buildDescendantCountMap(driveSyncRecords),
+    [driveSyncRecords],
+  );
+
+  const suggestions = useMemo(
+    () =>
+      open && !drill
+        ? searchSuggestions(debouncedValue, driveSyncRecords, foldersOnly, descendantCountMap)
+        : [],
+    [open, drill, debouncedValue, driveSyncRecords, foldersOnly, descendantCountMap],
+  );
+
+  const drillItems = useMemo(
+    () =>
+      open && drill
+        ? drillChildren(driveSyncRecords, drill.folderPath, foldersOnly, descendantCountMap)
+        : [],
+    [open, drill, driveSyncRecords, foldersOnly, descendantCountMap],
+  );
+
   const showDropdown = open && (suggestions.length > 0 || drill !== null);
 
   useEffect(() => {
