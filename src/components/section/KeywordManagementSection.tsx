@@ -86,7 +86,7 @@ function OverlapAuditPanel({
   );
 }
 
-export function KeywordManagementSection() {
+export function KeywordManagementSection({ defaultYear = '1' }: { defaultYear?: string }) {
   const [configs, setConfigs] = useState<KeywordConfig[]>([]);
   const [documents, setDocuments] = useState<StudentDocument[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -99,7 +99,7 @@ export function KeywordManagementSection() {
   const [quickAddType, setQuickAddType] = useState<KeywordConfig['config_type']>('doc_type');
   const [quickAddCategoryId, setQuickAddCategoryId] = useState<string>('');
   const [quickAddNewLabel, setQuickAddNewLabel] = useState('');
-  const [quickAddNewYear, setQuickAddNewYear] = useState('1');
+  const [quickAddNewYear, setQuickAddNewYear] = useState(defaultYear);
   const [isQuickAdding, setIsQuickAdding] = useState(false);
 
   useEffect(() => {
@@ -232,7 +232,7 @@ export function KeywordManagementSection() {
       config_type: activeTab,
       label: 'New Category',
       keys: [''],
-      year: activeTab === 'block_mapping' ? '1' : undefined,
+      year: activeTab === 'block_mapping' ? defaultYear : undefined,
     };
     setConfigs((prev) => [...prev, newConfig]);
   };
@@ -265,7 +265,7 @@ export function KeywordManagementSection() {
       setQuickAddKeyword('');
       setQuickAddCategoryId('');
       setQuickAddNewLabel('');
-      setQuickAddNewYear('1');
+      setQuickAddNewYear(defaultYear);
       await loadData();
     } catch (error) {
       console.error('Error quick-adding keyword:', error);
@@ -338,8 +338,8 @@ export function KeywordManagementSection() {
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 className={`whitespace-nowrap px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-semibold border-b-2 transition-colors ${isActive
-                    ? 'border-[#E5007D] text-[#E5007D]'
-                    : 'border-transparent text-slate-500 hover:text-slate-700'
+                  ? 'border-[#E5007D] text-[#E5007D]'
+                  : 'border-transparent text-slate-500 hover:text-slate-700'
                   }`}
               >
                 {TAB_LABELS[tab]}

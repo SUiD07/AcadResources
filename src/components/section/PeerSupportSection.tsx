@@ -75,6 +75,7 @@ function isUnclassifiedCategory(
 interface PeerSupportSectionProps {
   isAdmin?: boolean;
   isMobile?: boolean;
+  defaultYear?: string;
 }
 
 interface SubjectCardProps {
@@ -194,6 +195,7 @@ function SubjectCard({
 export function PeerSupportSection({
   isAdmin = false,
   isMobile = false,
+  defaultYear,
 }: PeerSupportSectionProps) {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -310,7 +312,7 @@ export function PeerSupportSection({
   };
 
   const isMobileScreen = useIsMobile();
-  const [selectedYear, setSelectedYear] = useState<string[]>([]);
+  const [selectedYear, setSelectedYear] = useState<string[]>(defaultYear ? [defaultYear] : []);
   const [selectedGeneration, setSelectedGeneration] = useState<string[]>([]);
   const [selectedBlock, setSelectedBlock] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string[]>([]);

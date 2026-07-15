@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { LoginPage } from './components/LoginPage';
+import { YearSelectionPage } from './components/YearSelectionPage';
 import { Sidebar } from './components/Sidebar';
 import { MobileNav } from './components/MobileNav';
 import { PeerSupportSection } from './components/section/PeerSupportSection';
@@ -9,43 +10,111 @@ import CareerNavigationSection from './components/section/CareerNavigationSectio
 import { BoardSection } from './components/section/BoardSection';
 import { KeywordManagementSection } from './components/section/KeywordManagementSection';
 import { Section } from './lib/types';
+import { getUserPreference, saveUserPreference } from './lib/dataService';
 
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [userYear, setUserYear] = useState<string | null>(null);
+  const [isCheckingYear, setIsCheckingYear] = useState(false);
+  const [isSavingYear, setIsSavingYear] = useState(false);
+
   const [activeSection, setActiveSection] = useState<Section>('peer-support');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-    // Check localStorage ตอน mount
+  // Check localStorage on mount
   useEffect(() => {
     const savedLoginState = localStorage.getItem('acadresources_login');
     if (savedLoginState) {
-      const { isLoggedIn: loggedIn, isAdmin: admin } = JSON.parse(savedLoginState);
+      const { isLoggedIn: loggedIn, isAdmin: admin, email, year } = JSON.parse(savedLoginState);
       setIsLoggedIn(loggedIn);
       setIsAdmin(admin);
+      if (email) setUserEmail(email);
+      if (year) setUserYear(year);
     }
   }, []);
-  // เพิ่ม: Save ตอนล็อกอิน
-  const handleLogin = (adminMode: boolean) => {
+
+  // Save on login
+  const handleLogin = async (adminMode: boolean, email?: string) => {
     setIsLoggedIn(true);
     setIsAdmin(adminMode);
-    // บันทึกลง localStorage
+    if (email) {
+      setUserEmail(email);
+      // Fetch year from DB if possible
+      setIsCheckingYear(true);
+      try {
+        const prefYear = await getUserPreference(email);
+        if (prefYear) {
+          setUserYear(prefYear);
+          localStorage.setItem('acadresources_login', JSON.stringify({
+            isLoggedIn: true,
+            isAdmin: adminMode,
+            email,
+            year: prefYear,
+            timestamp: Date.now()
+          }));
+          return; // Skip below localstorage set
+        }
+      } catch (err) {
+        console.error("Error fetching user pref:", err);
+      } finally {
+        setIsCheckingYear(false);
+      }
+    }
+
+    // Save to localStorage without year yet
     localStorage.setItem('acadresources_login', JSON.stringify({
       isLoggedIn: true,
       isAdmin: adminMode,
+      email,
       timestamp: Date.now()
     }));
+  };
+
+  const handleYearSelected = async (year: string) => {
+    setIsSavingYear(true);
+    try {
+      if (userEmail) {
+        await saveUserPreference(userEmail, year);
+      }
+      setUserYear(year);
+      localStorage.setItem('acadresources_login', JSON.stringify({
+        isLoggedIn: true,
+        isAdmin,
+        email: userEmail,
+        year,
+        timestamp: Date.now()
+      }));
+    } catch (error) {
+      console.error("Error saving year:", error);
+      alert("Could not save your year. Continuing anyway.");
+      setUserYear(year);
+    } finally {
+      setIsSavingYear(false);
+    }
   };
 
   const handleLogout = () => {
     setIsLoggedIn(false);
     setIsAdmin(false);
+    setUserEmail(null);
+    setUserYear(null);
     localStorage.removeItem('acadresources_login');
   };
 
   // Show login page if not logged in
   if (!isLoggedIn) {
     return <LoginPage onLogin={handleLogin} />;
+  }
+
+  if (isCheckingYear) {
+    return <div className="min-h-screen flex items-center justify-center bg-slate-50">Loading your profile...</div>;
+  }
+
+  // Show year selection if they are logged in BUT haven't picked a year (and are not admin)
+  if (isLoggedIn && !userYear && !isAdmin) { 
+    return <YearSelectionPage onYearSelected={handleYearSelected} isSaving={isSavingYear} />;
   }
 
   // Show main application after login
@@ -77,12 +146,12 @@ export default function App() {
 
         <main className="flex-1 lg:ml-64 min-w-0 overflow-hidden">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8 pt-20 sm:pt-24 lg:pt-12">
-            {activeSection === 'peer-support' && <PeerSupportSection isAdmin={isAdmin} />}
+            {activeSection === 'peer-support' && <PeerSupportSection isAdmin={isAdmin} defaultYear={userYear || '1'} />}
             {activeSection === 'academic-activities' && <AcademicActivitiesSection isAdmin={isAdmin} />}
             {activeSection === 'academic-resources' && <AcademicResourcesSection isAdmin={isAdmin} />}
             {activeSection === 'career-navigation' && <CareerNavigationSection />}
             {activeSection === 'board' && <BoardSection isAdmin={isAdmin} />}
-            {activeSection === 'keyword-management' && <KeywordManagementSection />}
+            {activeSection === 'keyword-management' && <KeywordManagementSection defaultYear={userYear || '1'} />}
           </div>
         </main>
       </div>

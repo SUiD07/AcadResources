@@ -264,3 +264,26 @@ export async function upsertStudentDocuments(
     return await supabaseApi.upsertStudentDocuments(records);
   }
 }
+
+// ============================================
+// User Preferences
+// ============================================
+
+export async function getUserPreference(email: string): Promise<string | null> {
+  if (USE_SUPABASE) {
+    return await supabaseApi.fetchUserPreference(email);
+  }
+  return null;
+}
+
+export async function saveUserPreference(email: string, year: string): Promise<void> {
+  if (USE_SUPABASE) {
+    return await supabaseApi.upsertUserPreference(email, year);
+  }
+}
+
+export async function runAdminUpgradeYear(): Promise<void> {
+  if (USE_SUPABASE) {
+    return await supabaseApi.adminUpgradeYearOneToTwo();
+  }
+}

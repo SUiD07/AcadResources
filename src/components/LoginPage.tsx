@@ -9,7 +9,7 @@ import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import * as googleDrive from '../lib/googleDriveService';
 
 interface LoginPageProps {
-  onLogin: (isAdmin: boolean) => void;
+  onLogin: (isAdmin: boolean, email?: string) => void;
   initialAdminMode?: boolean;
 }
 
@@ -56,7 +56,7 @@ export function LoginPage({ onLogin, initialAdminMode = false }: LoginPageProps)
             if (hasAccess) {
               // Automatically grant admin if email is admin@docchula.com
               const isActuallyAdmin = isAdminLogin || userInfo.email === 'admin@docchula.com';
-              onLogin(isActuallyAdmin);
+              onLogin(isActuallyAdmin, userInfo.email);
             } else {
               setError('Access Denied: Your @docchula.com account does not have permission to access the required Drive folder.');
             }
@@ -77,7 +77,7 @@ export function LoginPage({ onLogin, initialAdminMode = false }: LoginPageProps)
     // Admin login only (email + password)
     if (email === "admin@docchula.com") {
       if (password === "admin") {
-        onLogin(true);
+        onLogin(true, email);
       } else {
         setError("Invalid admin credentials.");
       }

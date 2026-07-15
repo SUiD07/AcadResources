@@ -563,4 +563,34 @@ export async function upsertStudentDocuments(
  
   if (error) throw error;
 }
- 
+
+// ============================================
+// USER PREFERENCES
+// ============================================
+
+export async function fetchUserPreference(email: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('user_preferences')
+    .select('default_year')
+    .eq('email', email)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Fetch Error (User Preference):', error.message);
+    return null;
+  }
+  return data?.default_year || null;
+}
+
+export async function upsertUserPreference(email: string, default_year: string): Promise<void> {
+  const { error } = await supabase
+    .from('user_preferences')
+    .upsert({ email, default_year }, { onConflict: 'email' });
+
+  if (error) throw error;
+}
+
+export async function adminUpgradeYearOneToTwo(): Promise<void> {
+  const { error } = await supabase.rpc('admin_upgrade_year_one_to_two');
+  if (error) throw error;
+}
