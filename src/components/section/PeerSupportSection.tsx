@@ -119,20 +119,20 @@ function SubjectCard({
   );
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden mb-3">
+    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden mb-3 w-full">
       <div
         role="button"
         aria-expanded={expanded}
         onClick={() => setExpanded((e) => !e)}
-        className="flex items-start sm:items-center justify-between gap-3 cursor-pointer select-none px-4 sm:px-6 py-4 hover:bg-slate-50 transition-colors"
+        className="flex items-start sm:items-center justify-between gap-2 cursor-pointer select-none px-4 sm:px-6 py-4 hover:bg-slate-50 transition-colors"
       >
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <h3 className="font-bold text-slate-900 text-base break-words">{subject}</h3>
           <div className="flex flex-wrap gap-1.5 mt-2">
             {typesPresent.map((t) => (
               <span
                 key={t}
-                className="text-xs px-2 py-0.5 rounded-full font-semibold"
+                className="text-xs px-2 py-0.5 rounded-full font-semibold whitespace-nowrap"
                 style={{
                   background: `${TYPE_COLORS[t] ?? "#6B7280"}18`,
                   color: TYPE_COLORS[t] ?? "#6B7280",
@@ -150,18 +150,18 @@ function SubjectCard({
               </span>
             ))}
             {gens.map((g) => (
-              <span key={g} className="text-xs px-2 py-0.5 rounded-full" style={{ background: "#F1F5F9", color: "#64748B" }}>
+              <span key={g} className="text-xs px-2 py-0.5 rounded-full whitespace-nowrap" style={{ background: "#F1F5F9", color: "#64748B" }}>
                 {g}
               </span>
             ))}
             {hasUnknownGen && (
-              <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "#F1F5F9", color: "#94A3B8" }}>
+              <span className="text-xs px-2 py-0.5 rounded-full whitespace-nowrap" style={{ background: "#F1F5F9", color: "#94A3B8" }}>
                 ไม่ระบุรุ่น
               </span>
             )}
           </div>
         </div>
-        <span className="text-slate-400 ml-2 sm:ml-4 shrink-0">
+        <span className="text-slate-400 ml-2 sm:ml-4 shrink-0 mt-1 sm:mt-0">
           {expanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
         </span>
       </div>
@@ -351,9 +351,9 @@ export function PeerSupportSection({
         const yearNumbers = selectedYear
           .map(y => parseInt(y, 10))
           .filter(y => !isNaN(y));
-          
-        const docs = await getStudentDocuments({ 
-          years: yearNumbers.length > 0 ? yearNumbers : undefined 
+
+        const docs = await getStudentDocuments({
+          years: yearNumbers.length > 0 ? yearNumbers : undefined
         });
         setStudentDocs(docs);
       } catch (error) {
@@ -491,18 +491,19 @@ export function PeerSupportSection({
   }, [filteredItems]);
 
   return (
-    <div className="pb-20 lg:pb-8">
+    <div className="pb-20 lg:pb-8 w-full max-w-full overflow-x-hidden">
       <div className="mb-6 sm:mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
-          <h1 className="text-slate-900 font-bold text-[24px]">Peer Support Resources</h1>
+          <h1 className="text-slate-900 font-bold text-[22px] sm:text-[24px]">Peer Support Resources</h1>
           {isAdmin && (
-            <Button size="sm" onClick={() => setAddDialogOpen(true)} className="bg-[#E5007D] hover:bg-[#c00069] text-white">
+            <Button size="sm" onClick={() => setAddDialogOpen(true)} className="bg-[#E5007D] hover:bg-[#c00069] text-white w-full sm:w-auto">
               <Plus className="w-4 h-4 mr-2" /> Add New Resource
             </Button>
           )}
         </div>
         <p className="text-slate-600 text-sm sm:text-base">Browse and access peer-created academic materials</p>
       </div>
+
       <SearchBar
         boxes={searchBoxes}
         operators={searchOperators}
@@ -512,16 +513,8 @@ export function PeerSupportSection({
         }}
       />
 
-      <div
-        className="flex flex-col lg:flex-row items-start gap-5 w-full"
-      >
-        <div
-          className="w-full lg:w-[230px] shrink-0 lg:sticky lg:top-5"
-          style={{
-            maxHeight: isMobileScreen ? "none" : "calc(100vh - 40px)",
-            overflowY: isMobileScreen ? "visible" : "auto",
-          }}
-        >
+      <div style={{ display: "flex", flexDirection: isMobileScreen ? "column" : "row", gap: 20, alignItems: isMobileScreen ? "stretch" : "flex-start" }}>
+        <div style={{ width: isMobileScreen ? "100%" : 230, flexShrink: 0, position: isMobileScreen ? "static" : "sticky", top: 20, maxHeight: isMobileScreen ? "auto" : "calc(100vh - 40px)", overflowY: isMobileScreen ? "visible" : "auto" }}>
           <FilterBar
             generationOptions={filterOptions.generations}
             blockOptions={filterOptions.blocks}
@@ -541,7 +534,7 @@ export function PeerSupportSection({
           />
         </div>
 
-        <div className="flex-1 min-w-0 w-full">
+        <div style={{ flex: 1, minWidth: 0, width: isMobileScreen ? "100%" : "auto" }}>
           {isLoading && (
             <div className="flex justify-center items-center py-12">
               <RefreshCcw className="w-6 h-6 text-[#E5007D] animate-spin mr-2" />
@@ -551,8 +544,8 @@ export function PeerSupportSection({
 
           {/* ── Count row + view toggle ── */}
           {!isLoading && (
-            <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
-              <span className="text-xs text-slate-400">
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <span className="text-xs text-slate-400 truncate">
                 พบ {filteredItems.length} รายการ จาก {groupedBySubject.length} วิชา
               </span>
               <div className="flex items-center rounded-lg border border-slate-200 overflow-hidden shrink-0">
@@ -586,8 +579,7 @@ export function PeerSupportSection({
             (groupedBySubject.length > 0
               ? (
                 <Virtuoso
-                  useWindowScroll
-                  style={{ width: "100%" }}
+                  style={{ height: isMobileScreen ? "70vh" : "80vh", width: "100%" }}
                   data={groupedBySubject}
                   itemContent={(index, { subject, items }) => (
                     <SubjectCard
