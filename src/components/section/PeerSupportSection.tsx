@@ -124,10 +124,10 @@ function SubjectCard({
         role="button"
         aria-expanded={expanded}
         onClick={() => setExpanded((e) => !e)}
-        className="flex items-center justify-between cursor-pointer select-none px-4 sm:px-6 py-4 hover:bg-slate-50 transition-colors"
+        className="flex items-start sm:items-center justify-between gap-3 cursor-pointer select-none px-4 sm:px-6 py-4 hover:bg-slate-50 transition-colors"
       >
-        <div>
-          <h3 className="font-bold text-slate-900 text-base">{subject}</h3>
+        <div className="min-w-0">
+          <h3 className="font-bold text-slate-900 text-base break-words">{subject}</h3>
           <div className="flex flex-wrap gap-1.5 mt-2">
             {typesPresent.map((t) => (
               <span
@@ -161,7 +161,7 @@ function SubjectCard({
             )}
           </div>
         </div>
-        <span className="text-slate-400 ml-4 shrink-0">
+        <span className="text-slate-400 ml-2 sm:ml-4 shrink-0">
           {expanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
         </span>
       </div>
@@ -282,7 +282,8 @@ export function PeerSupportSection({
       await createStudentDocument(recordToCreate);
     }
 
-    const updated = await getStudentDocuments();
+    const yearNumbers = selectedYear.map(y => parseInt(y, 10)).filter(y => !isNaN(y));
+    const updated = await getStudentDocuments({ years: yearNumbers.length > 0 ? yearNumbers : undefined });
     setStudentDocs(updated);
   };
 
@@ -299,7 +300,8 @@ export function PeerSupportSection({
     };
 
     await updateStudentDocument(docId, updates);
-    const updated = await getStudentDocuments();
+    const yearNumbers = selectedYear.map(y => parseInt(y, 10)).filter(y => !isNaN(y));
+    const updated = await getStudentDocuments({ years: yearNumbers.length > 0 ? yearNumbers : undefined });
     setStudentDocs(updated);
   };
 
@@ -307,7 +309,8 @@ export function PeerSupportSection({
     if (!deletingItem) return;
     const docId = parseInt(deletingItem.id.replace("doc-", ""), 10);
     await deleteStudentDocument(docId);
-    const updated = await getStudentDocuments();
+    const yearNumbers = selectedYear.map(y => parseInt(y, 10)).filter(y => !isNaN(y));
+    const updated = await getStudentDocuments({ years: yearNumbers.length > 0 ? yearNumbers : undefined });
     setStudentDocs(updated);
   };
 
@@ -326,22 +329,41 @@ export function PeerSupportSection({
   const [peerItems, setPeerItems] = useState<PeerSupportItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Load configs once on mount
   useEffect(() => {
-    async function loadData() {
+    async function loadConfigs() {
+      try {
+        const cfgs = await getKeywordConfigs();
+        initializeCategorizer(cfgs);
+        setConfigs(cfgs);
+      } catch (error) {
+        console.error("Error loading configs:", error);
+      }
+    }
+    loadConfigs();
+  }, []);
+
+  // Load documents whenever selectedYear changes
+  useEffect(() => {
+    async function loadDocs() {
       try {
         setIsLoading(true);
-        const [docs, cfgs] = await Promise.all([getStudentDocuments(), getKeywordConfigs()]);
-        initializeCategorizer(cfgs);
+        const yearNumbers = selectedYear
+          .map(y => parseInt(y, 10))
+          .filter(y => !isNaN(y));
+          
+        const docs = await getStudentDocuments({ 
+          years: yearNumbers.length > 0 ? yearNumbers : undefined 
+        });
         setStudentDocs(docs);
-        setConfigs(cfgs);
       } catch (error) {
         console.error("Error loading documents:", error);
       } finally {
         setIsLoading(false);
       }
     }
-    loadData();
-  }, []);
+    loadDocs();
+  }, [selectedYear]);
 
   const allItems = useMemo<PeerSupportItem[]>(
     () => {
@@ -490,8 +512,16 @@ export function PeerSupportSection({
         }}
       />
 
-      <div style={{ display: "flex", flexDirection: isMobileScreen ? "column" : "row", gap: 20, alignItems: "flex-start" }}>
-        <div style={{ width: isMobileScreen ? "100%" : 230, flexShrink: 0, position: isMobileScreen ? "static" : "sticky", top: 20, maxHeight: isMobileScreen ? "auto" : "calc(100vh - 40px)", overflowY: isMobileScreen ? "visible" : "auto" }}>
+      <div
+        className="flex flex-col lg:flex-row items-start gap-5 w-full"
+      >
+        <div
+          className="w-full lg:w-[230px] shrink-0 lg:sticky lg:top-5"
+          style={{
+            maxHeight: isMobileScreen ? "none" : "calc(100vh - 40px)",
+            overflowY: isMobileScreen ? "visible" : "auto",
+          }}
+        >
           <FilterBar
             generationOptions={filterOptions.generations}
             blockOptions={filterOptions.blocks}
@@ -511,7 +541,7 @@ export function PeerSupportSection({
           />
         </div>
 
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="flex-1 min-w-0 w-full">
           {isLoading && (
             <div className="flex justify-center items-center py-12">
               <RefreshCcw className="w-6 h-6 text-[#E5007D] animate-spin mr-2" />
@@ -521,11 +551,11 @@ export function PeerSupportSection({
 
           {/* ── Count row + view toggle ── */}
           {!isLoading && (
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
               <span className="text-xs text-slate-400">
                 พบ {filteredItems.length} รายการ จาก {groupedBySubject.length} วิชา
               </span>
-              <div className="flex items-center rounded-lg border border-slate-200 overflow-hidden">
+              <div className="flex items-center rounded-lg border border-slate-200 overflow-hidden shrink-0">
                 <button
                   onClick={() => setViewMode("grid")}
                   className="flex items-center justify-center px-2.5 py-1.5 transition-colors"
@@ -556,7 +586,8 @@ export function PeerSupportSection({
             (groupedBySubject.length > 0
               ? (
                 <Virtuoso
-                  style={{ height: "80vh", width: "100%" }}
+                  useWindowScroll
+                  style={{ width: "100%" }}
                   data={groupedBySubject}
                   itemContent={(index, { subject, items }) => (
                     <SubjectCard
