@@ -9,9 +9,21 @@ import {
   removeKeywordConfig,
   getStudentDocuments,
   updateStudentDocument,
+  getPromoteYearUserCount,
+  adminPromoteYear,
 } from '../../lib/dataService';
 import type { KeywordConfig, StudentDocument, DriveSyncRecord } from '../../lib/types';
 import { initializeCategorizer } from '../categorize';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '../ui/dialog';
+import { toast } from 'sonner';
 import {
   classifyDocument,
   getMatchingFiles,
@@ -26,6 +38,116 @@ import { Virtuoso } from "react-virtuoso"
 interface FocusedKey {
   configId: string;
   keyIndex: number;
+}
+
+function PromoteYearDialog() {
+  const [open, setOpen] = useState(false);
+  const [sourceYear, setSourceYear] = useState('1');
+  const [targetYear, setTargetYear] = useState('2');
+  const [count, setCount] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setCount(null);
+      setConfirming(false);
+    }
+  }, [open]);
+
+  const handleCheckCount = async () => {
+    setLoading(true);
+    try {
+      const c = await getPromoteYearUserCount(sourceYear);
+      setCount(c);
+      setConfirming(true);
+    } catch (e) {
+      toast.error('Failed to get user count');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePromote = async () => {
+    setLoading(true);
+    try {
+      const result = await adminPromoteYear(sourceYear, targetYear, 'admin@example.com');
+      if (result.success) {
+        toast.success(`Successfully promoted ${result.count} users from Year ${sourceYear} to Year ${targetYear}`);
+        setOpen(false);
+      } else {
+        toast.error(`Error promoting users: ${result.error}`);
+      }
+    } catch (e: any) {
+      toast.error(`Error: ${e.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" className="border-pink-200 text-[#E5007D] hover:bg-pink-50 text-sm h-9 px-4 hidden sm:flex">
+          Promote Year
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Promote Students Year</DialogTitle>
+          <DialogDescription>
+            Bulk update user preferences from a source year to a target year.
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <label className="text-right text-sm font-medium">Source Year</label>
+            <input 
+              className="col-span-3 flex h-10 w-full rounded-md border border-slate-300 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#E5007D] disabled:opacity-50" 
+              value={sourceYear} 
+              onChange={e => setSourceYear(e.target.value)} 
+              disabled={confirming || loading}
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <label className="text-right text-sm font-medium">Target Year</label>
+            <input 
+              className="col-span-3 flex h-10 w-full rounded-md border border-slate-300 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#E5007D] disabled:opacity-50" 
+              value={targetYear} 
+              onChange={e => setTargetYear(e.target.value)} 
+              disabled={confirming || loading}
+            />
+          </div>
+
+          {confirming && count !== null && (
+            <div className="rounded-md bg-amber-50 p-4 border border-amber-200 mt-2">
+              <p className="text-sm text-amber-800 font-medium text-center">
+                Are you sure? This will update {count} user{count !== 1 ? 's' : ''}.
+              </p>
+            </div>
+          )}
+        </div>
+
+        <DialogFooter>
+          {!confirming ? (
+            <Button onClick={handleCheckCount} disabled={loading || !sourceYear || !targetYear} className="bg-[#E5007D] hover:bg-pink-700 text-white">
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Count Users
+            </Button>
+          ) : (
+            <>
+              <Button variant="outline" onClick={() => setConfirming(false)} disabled={loading}>Cancel</Button>
+              <Button onClick={handlePromote} disabled={loading} className="bg-[#E5007D] hover:bg-pink-700 text-white">
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Confirm Promote
+              </Button>
+            </>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 function OverlapAuditPanel({
@@ -86,7 +208,7 @@ function OverlapAuditPanel({
   );
 }
 
-export function KeywordManagementSection() {
+export function KeywordManagementSection({ defaultYear = '1' }: { defaultYear?: string }) {
   const [configs, setConfigs] = useState<KeywordConfig[]>([]);
   const [documents, setDocuments] = useState<StudentDocument[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -99,7 +221,7 @@ export function KeywordManagementSection() {
   const [quickAddType, setQuickAddType] = useState<KeywordConfig['config_type']>('doc_type');
   const [quickAddCategoryId, setQuickAddCategoryId] = useState<string>('');
   const [quickAddNewLabel, setQuickAddNewLabel] = useState('');
-  const [quickAddNewYear, setQuickAddNewYear] = useState('1');
+  const [quickAddNewYear, setQuickAddNewYear] = useState(defaultYear);
   const [isQuickAdding, setIsQuickAdding] = useState(false);
 
   useEffect(() => {
@@ -232,7 +354,7 @@ export function KeywordManagementSection() {
       config_type: activeTab,
       label: 'New Category',
       keys: [''],
-      year: activeTab === 'block_mapping' ? '1' : undefined,
+      year: activeTab === 'block_mapping' ? defaultYear : undefined,
     };
     setConfigs((prev) => [...prev, newConfig]);
   };
@@ -265,7 +387,7 @@ export function KeywordManagementSection() {
       setQuickAddKeyword('');
       setQuickAddCategoryId('');
       setQuickAddNewLabel('');
-      setQuickAddNewYear('1');
+      setQuickAddNewYear(defaultYear);
       await loadData();
     } catch (error) {
       console.error('Error quick-adding keyword:', error);
@@ -297,18 +419,21 @@ export function KeywordManagementSection() {
   return (
     <div className="pb-20 lg:pb-8 space-y-6 sm:space-y-8">
       {/* Header */}
-      <div className="mb-6 sm:mb-8">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
-          <h1 className="text-slate-900 text-[24px] font-bold flex items-center gap-2">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-pink-100 rounded-lg flex items-center justify-center shrink-0">
-              <Settings className="w-5 h-5 text-[#E5007D]" />
-            </div>
-            Keyword Management
-          </h1>
+      <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
+            <h1 className="text-slate-900 text-[24px] font-bold flex items-center gap-2">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-pink-100 rounded-lg flex items-center justify-center shrink-0">
+                <Settings className="w-5 h-5 text-[#E5007D]" />
+              </div>
+              Keyword Management
+            </h1>
+          </div>
+          <p className="text-slate-600 text-sm sm:text-base">
+            Configure how files are automatically categorized based on keywords
+          </p>
         </div>
-        <p className="text-slate-600 text-sm sm:text-base">
-          Configure how files are automatically categorized based on keywords
-        </p>
+        <PromoteYearDialog />
       </div>
 
       <QuickAddKeywordBar
@@ -338,8 +463,8 @@ export function KeywordManagementSection() {
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 className={`whitespace-nowrap px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-semibold border-b-2 transition-colors ${isActive
-                    ? 'border-[#E5007D] text-[#E5007D]'
-                    : 'border-transparent text-slate-500 hover:text-slate-700'
+                  ? 'border-[#E5007D] text-[#E5007D]'
+                  : 'border-transparent text-slate-500 hover:text-slate-700'
                   }`}
               >
                 {TAB_LABELS[tab]}

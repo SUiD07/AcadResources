@@ -20,9 +20,9 @@ export async function getPeerSupportData(): Promise<PeerSupportItem[]> {
   return [];
 }
 
-export async function getStudentDocuments(): Promise<StudentDocument[]> {
+export async function getStudentDocuments(filters?: { years?: number[], blocks?: string[] }): Promise<StudentDocument[]> {
   if (USE_SUPABASE) {
-    return await supabaseApi.fetchStudentDocuments();
+    return await supabaseApi.fetchStudentDocuments(filters);
   }
   return [];
 }
@@ -263,4 +263,41 @@ export async function upsertStudentDocuments(
   if (USE_SUPABASE) {
     return await supabaseApi.upsertStudentDocuments(records);
   }
+}
+
+// ============================================
+// User Preferences
+// ============================================
+
+export async function getUserPreference(email: string): Promise<string | null> {
+  if (USE_SUPABASE) {
+    return await supabaseApi.fetchUserPreference(email);
+  }
+  return null;
+}
+
+export async function saveUserPreference(email: string, year: string): Promise<void> {
+  if (USE_SUPABASE) {
+    return await supabaseApi.upsertUserPreference(email, year);
+  }
+}
+
+export async function runAdminUpgradeYear(): Promise<void> {
+  if (USE_SUPABASE) {
+    return await supabaseApi.adminUpgradeYearOneToTwo();
+  }
+}
+
+export async function getPromoteYearUserCount(sourceYear: string): Promise<number> {
+  if (USE_SUPABASE) {
+    return await supabaseApi.getPromoteYearUserCount(sourceYear);
+  }
+  return 0;
+}
+
+export async function adminPromoteYear(sourceYear: string, targetYear: string, adminId: string): Promise<{ success: boolean; count: number; error?: string }> {
+  if (USE_SUPABASE) {
+    return await supabaseApi.adminPromoteYear(sourceYear, targetYear, adminId);
+  }
+  return { success: true, count: 0 };
 }

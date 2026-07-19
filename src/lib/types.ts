@@ -113,3 +113,10 @@ export interface DriveSyncRecord {
   modified_time?: string;
   synced_at?: string;
 }
+
+export interface UserPreference {
+  email: string;
+  default_year: string;
+  created_at?: string;
+  updated_at?: string;
+}

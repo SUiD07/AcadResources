@@ -9,7 +9,7 @@ import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import * as googleDrive from '../lib/googleDriveService';
 
 interface LoginPageProps {
-  onLogin: (isAdmin: boolean) => void;
+  onLogin: (isAdmin: boolean, email?: string) => void;
   initialAdminMode?: boolean;
 }
 
@@ -56,7 +56,7 @@ export function LoginPage({ onLogin, initialAdminMode = false }: LoginPageProps)
             if (hasAccess) {
               // Automatically grant admin if email is admin@docchula.com
               const isActuallyAdmin = isAdminLogin || userInfo.email === 'admin@docchula.com';
-              onLogin(isActuallyAdmin);
+              onLogin(isActuallyAdmin, userInfo.email);
             } else {
               setError('Access Denied: Your @docchula.com account does not have permission to access the required Drive folder.');
             }
@@ -77,7 +77,7 @@ export function LoginPage({ onLogin, initialAdminMode = false }: LoginPageProps)
     // Admin login only (email + password)
     if (email === "admin@docchula.com") {
       if (password === "admin") {
-        onLogin(true);
+        onLogin(true, email);
       } else {
         setError("Invalid admin credentials.");
       }
@@ -96,17 +96,17 @@ export function LoginPage({ onLogin, initialAdminMode = false }: LoginPageProps)
   };
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-slate-50 via-white to-pink-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-linear-to-br from-slate-50 via-white to-pink-50 flex items-center justify-center p-4 py-8 sm:py-4">
       <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
         {/* Left Side - Branding & Illustration */}
         <div className="hidden lg:flex flex-col justify-center space-y-6">
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-[#E5007D] rounded-xl flex items-center justify-center">
+              <div className="w-12 h-12 bg-[#E5007D] rounded-xl flex items-center justify-center shrink-0">
                 <BookOpen className="w-7 h-7 text-white" />
               </div>
               <div>
-                <h1 className="text-slate-900 tracking-tight">
+                <h1 className="text-slate-900 tracking-tight text-2xl xl:text-3xl">
                   Academic Resources Portal
                 </h1>
                 <p className="text-slate-600 text-sm mt-1">
@@ -136,23 +136,23 @@ export function LoginPage({ onLogin, initialAdminMode = false }: LoginPageProps)
         {/* Right Side - Login Form */}
         <div className="w-full max-w-md mx-auto lg:mx-0">
           {/* Mobile Header */}
-          <div className="lg:hidden mb-8 text-center">
+          <div className="lg:hidden mb-6 sm:mb-8 text-center">
             <div className="flex items-center justify-center gap-3 mb-4">
-              <div className="w-12 h-12 bg-[#E5007D] rounded-xl flex items-center justify-center">
-                <BookOpen className="w-7 h-7 text-white" />
+              <div className="w-11 h-11 sm:w-12 sm:h-12 bg-[#E5007D] rounded-xl flex items-center justify-center shrink-0">
+                <BookOpen className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
               </div>
             </div>
-            <h1 className="text-slate-900 mb-2">
+            <h1 className="text-slate-900 mb-2 text-xl sm:text-2xl px-2">
               Academic Resources Portal
             </h1>
-            <p className="text-slate-600 text-sm">
+            <p className="text-slate-600 text-sm px-2">
               Faculty of Medicine, Chulalongkorn University
             </p>
           </div>
 
           <Card className="border-slate-200 shadow-xl">
             <CardHeader className="space-y-2 text-center lg:text-left">
-              <CardTitle className="text-slate-900">
+              <CardTitle className="text-slate-900 text-lg sm:text-xl">
                 {isAdminLogin ? 'Admin Sign In' : 'Welcome Back'}
               </CardTitle>
               <CardDescription className="text-sm">
@@ -165,9 +165,9 @@ export function LoginPage({ onLogin, initialAdminMode = false }: LoginPageProps)
             <CardContent className="space-y-6">
               {error && (
                 <Alert variant="destructive" className="bg-red-50 text-red-900 border-red-200">
-                  <AlertCircle className="h-4" />
+                  <AlertCircle className="h-4 w-4 shrink-0" />
                   <AlertTitle>Error</AlertTitle>
-                  <AlertDescription>{error}</AlertDescription>
+                  <AlertDescription className="break-words">{error}</AlertDescription>
                 </Alert>
               )}
 
@@ -237,7 +237,7 @@ export function LoginPage({ onLogin, initialAdminMode = false }: LoginPageProps)
                   <Button
                     type="button"
                     variant="outline"
-                    className="w-full border-slate-300 hover:bg-slate-50"
+                    className="w-full border-slate-300 hover:bg-slate-50 h-auto min-h-10 py-2.5"
                     size="lg"
                     onClick={handleGoogleLogin}
                     disabled={isVerifying}
@@ -248,8 +248,8 @@ export function LoginPage({ onLogin, initialAdminMode = false }: LoginPageProps)
                         Verifying...
                       </span>
                     ) : (
-                      <>
-                        <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
+                      <span className="flex items-center justify-center flex-wrap gap-x-2 gap-y-1 text-center">
+                        <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
                           <path
                             fill="#4285F4"
                             d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -267,11 +267,11 @@ export function LoginPage({ onLogin, initialAdminMode = false }: LoginPageProps)
                             d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                           />
                         </svg>
-                        Login with Google
-                        <span className="text-xs text-slate-500 ml-2">
+                        <span>Login with Google</span>
+                        <span className="text-xs text-slate-500">
                           (docchula only)
                         </span>
-                      </>
+                      </span>
                     )}
                   </Button>
 
@@ -297,7 +297,7 @@ export function LoginPage({ onLogin, initialAdminMode = false }: LoginPageProps)
               Faculty of Medicine, Chulalongkorn University
             </p>
             <div className="text-center">
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 break-words px-2">
                 Having trouble logging in?{' '}
                 <a
                   href="mailto:it@docchula.com"
