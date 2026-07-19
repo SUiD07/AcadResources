@@ -264,3 +264,18 @@ export async function upsertStudentDocuments(
     return await supabaseApi.upsertStudentDocuments(records);
   }
 }
+
+// Activity content functions
+export async function getActivityById(id: string) {
+  if (USE_SUPABASE) return await supabaseApi.fetchActivityById(id);
+  return null;
+}
+
+export async function getActivityContent(activityId: string) {
+  if (USE_SUPABASE) return await supabaseApi.fetchActivityContent(activityId);
+  return null;
+}
+
+export async function saveActivityContentData(activityId: string, content: object) {
+  if (USE_SUPABASE) return await supabaseApi.saveActivityContent(activityId, content);
+}

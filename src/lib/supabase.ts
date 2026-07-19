@@ -563,4 +563,44 @@ export async function upsertStudentDocuments(
  
   if (error) throw error;
 }
+
+// Activity content functions
+export async function fetchActivityById(id: string): Promise<Activity | null> {
+  const { data, error } = await supabase
+    .from('activities')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Fetch Error (Activity):', error.message);
+    return null;
+  }
+  return data;
+}
+
+export async function fetchActivityContent(activityId: string): Promise<{ content: object } | null> {
+  const { data, error } = await supabase
+    .from('activity_content')
+    .select('*')
+    .eq('activity_id', activityId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Fetch Error (Activity Content):', error.message);
+    return null;
+  }
+  return data;
+}
+
+export async function saveActivityContent(activityId: string, content: object): Promise<void> {
+  const { error } = await supabase
+    .from('activity_content')
+    .upsert(
+      { activity_id: activityId, content, updated_at: new Date().toISOString() },
+      { onConflict: 'activity_id' }
+    );
+
+  if (error) throw error;
+}
  

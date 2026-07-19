@@ -22,6 +22,7 @@ import { Loader2 } from "lucide-react";
 import type { ActivityFormData } from "./AddActivityDialog";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import { ActivityImageUpload } from "./ActivityImageUpload";
 
 interface EditActivityDialogProps {
   open: boolean;
@@ -44,6 +45,7 @@ export function EditActivityDialog({
     date: "",
     status: "Upcoming",
     icon: "Calendar",
+    image_url: null,
   });
 
   // Update form when initialData changes
@@ -120,7 +122,7 @@ export function EditActivityDialog({
               /> */}
               <DatePicker
                 selected={formData.date}
-                onChange={(date) =>
+                onChange={(date:any) =>
                   setFormData({
                     ...formData,
                     date,
@@ -131,6 +133,13 @@ export function EditActivityDialog({
                 placeholderText="Select date and time"
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 popperPlacement="bottom-start"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>รูปภาพกิจกรรม</Label>
+              <ActivityImageUpload
+                value={formData.image_url}
+                onChange={(url) => setFormData({ ...formData, image_url: url })}
               />
             </div>
 

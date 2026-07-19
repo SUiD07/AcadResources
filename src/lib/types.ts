@@ -43,6 +43,7 @@ export interface Activity {
   date: string;
   status: "Upcoming" | "Ongoing" | "Completed";
   icon: string;
+  image_url: string | null;
 }
 
 export interface ResourceCategory {
