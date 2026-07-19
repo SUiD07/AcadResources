@@ -287,3 +287,17 @@ export async function runAdminUpgradeYear(): Promise<void> {
     return await supabaseApi.adminUpgradeYearOneToTwo();
   }
 }
+
+export async function getPromoteYearUserCount(sourceYear: string): Promise<number> {
+  if (USE_SUPABASE) {
+    return await supabaseApi.getPromoteYearUserCount(sourceYear);
+  }
+  return 0;
+}
+
+export async function adminPromoteYear(sourceYear: string, targetYear: string, adminId: string): Promise<{ success: boolean; count: number; error?: string }> {
+  if (USE_SUPABASE) {
+    return await supabaseApi.adminPromoteYear(sourceYear, targetYear, adminId);
+  }
+  return { success: true, count: 0 };
+}

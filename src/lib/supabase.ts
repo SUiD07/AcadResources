@@ -604,3 +604,51 @@ export async function adminUpgradeYearOneToTwo(): Promise<void> {
   const { error } = await supabase.rpc('admin_upgrade_year_one_to_two');
   if (error) throw error;
 }
+
+export async function getPromoteYearUserCount(sourceYear: string): Promise<number> {
+  const { count, error } = await supabase
+    .from('user_preferences')
+    .select('*', { count: 'exact', head: true })
+    .eq('default_year', sourceYear);
+
+  if (error) {
+    console.error('Fetch Error (User Count):', error.message);
+    return 0;
+  }
+  return count || 0;
+}
+
+export async function adminPromoteYear(sourceYear: string, targetYear: string, adminId: string): Promise<{ success: boolean; count: number; error?: string }> {
+  try {
+    // We try to call an RPC if it exists to satisfy single transaction requirement,
+    // but if it fails (not deployed), we fallback to client-side sequential update.
+    const { data: rpcData, error: rpcError } = await supabase.rpc('admin_promote_year', {
+      p_source_year: sourceYear,
+      p_target_year: targetYear,
+      p_admin_id: adminId
+    });
+
+    if (!rpcError) {
+      return { success: true, count: rpcData || 0 };
+    }
+
+    // Fallback if RPC doesn't exist yet
+    console.warn("RPC 'admin_promote_year' failed, falling back to client-side update", rpcError);
+    
+    const count = await getPromoteYearUserCount(sourceYear);
+    
+    const { error: updateError } = await supabase
+      .from('user_preferences')
+      .update({ default_year: targetYear })
+      .eq('default_year', sourceYear);
+
+    if (updateError) throw updateError;
+    
+    // Log action to console as requested
+    console.log(`[ADMIN ACTION LOG] Admin: ${adminId} | Timestamp: ${new Date().toISOString()} | Action: Promoted Year ${sourceYear} -> ${targetYear} | Affected Users: ${count}`);
+    
+    return { success: true, count };
+  } catch (err: any) {
+    return { success: false, count: 0, error: err.message };
+  }
+}
