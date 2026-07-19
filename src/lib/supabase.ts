@@ -62,11 +62,11 @@ export async function fetchStudentDocuments(filters?: { years?: number[], blocks
       .from('student_documents')
       .select('*')
       .order('upload_date', { ascending: false })
-      
+
     if (filters?.years && filters.years.length > 0) {
       query = query.in('student_year', filters.years);
     }
-    
+
     if (filters?.blocks && filters.blocks.length > 0) {
       // If we have both, we might want OR logic, but Supabase standard chained filters are AND. 
       // Assuming we just filter by year for now, we'll rely on student_year primarily if passed.
@@ -129,6 +129,20 @@ export async function deletePeerSupportItem(id: string): Promise<void> {
     .eq('id', id);
 
   if (error) throw error;
+}
+
+export async function checkDriveIdExists(driveId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('student_documents')
+    .select('id')
+    .eq('drive_id', driveId)
+    .limit(1);
+
+  if (error) {
+    console.error('Fetch Error (Check Drive ID):', error.message);
+    return false;
+  }
+  return (data?.length ?? 0) > 0;
 }
 
 // ============================================
@@ -536,41 +550,41 @@ export async function fetchDriveSync(): Promise<DriveSyncRecord[]> {
   const PAGE_SIZE = 1000;
   let from = 0;
   let allRecords: DriveSyncRecord[] = [];
- 
+
   while (true) {
     const { data, error } = await supabase
       .from('drive_sync')
       .select('*')
       .range(from, from + PAGE_SIZE - 1);
- 
+
     if (error) {
       console.error('Fetch Error (Drive Sync):', error.message);
       return [];
     }
- 
+
     if (!data || data.length === 0) {
       break;
     }
- 
+
     allRecords.push(...data);
- 
+
     if (data.length < PAGE_SIZE) {
       break;
     }
- 
+
     from += PAGE_SIZE;
   }
- 
+
   return allRecords;
 }
- 
+
 export async function upsertStudentDocuments(
   records: Partial<StudentDocument>[]
 ): Promise<void> {
   const { error } = await supabase
     .from('student_documents')
     .upsert(records, { onConflict: 'drive_id' });
- 
+
   if (error) throw error;
 }
 
@@ -634,21 +648,21 @@ export async function adminPromoteYear(sourceYear: string, targetYear: string, a
 
     // Fallback if RPC doesn't exist yet
     console.warn("RPC 'admin_promote_year' failed, falling back to client-side update", rpcError);
-    
+
     const count = await getPromoteYearUserCount(sourceYear);
-    
+
     const { error: updateError } = await supabase
       .from('user_preferences')
       .update({ default_year: targetYear })
       .eq('default_year', sourceYear);
 
     if (updateError) throw updateError;
-    
+
     // Log action to console as requested
     console.log(`[ADMIN ACTION LOG] Admin: ${adminId} | Timestamp: ${new Date().toISOString()} | Action: Promoted Year ${sourceYear} -> ${targetYear} | Affected Users: ${count}`);
-    
+
     return { success: true, count };
   } catch (err: any) {
     return { success: false, count: 0, error: err.message };
   }
-}
+}

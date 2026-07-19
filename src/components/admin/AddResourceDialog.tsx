@@ -6,7 +6,7 @@ import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Loader2, Upload, X } from 'lucide-react';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
-import { extractDriveId, fetchKeywordConfigs, fetchStudentDocuments } from '../../lib/supabase';
+import { extractDriveId, checkDriveIdExists, fetchKeywordConfigs } from '../../lib/supabase';
 import type { KeywordConfig } from '../../lib/types';
 
 interface AddResourceDialogProps {
@@ -85,22 +85,20 @@ export function AddResourceDialog({ open, onOpenChange, onSubmit, categoryName }
       return;
     }
 
-    const checkExistingDrive = async () => {
+    const timeoutId = setTimeout(async () => {
       try {
-        const documents = await fetchStudentDocuments();
-        const hasMatchingDriveId = documents.some((doc) => doc.drive_id === driveId);
+        const exists = await checkDriveIdExists(driveId);
         if (isMounted) {
-          setFormData((prev) => ({ ...prev, isOverridden: hasMatchingDriveId ? true : prev.isOverridden || false }));
+          setFormData((prev) => ({ ...prev, isOverridden: exists ? true : prev.isOverridden || false }));
         }
       } catch (error) {
         console.error('Error checking existing drive id:', error);
       }
-    };
-
-    checkExistingDrive();
+    }, 400); // wait 400ms after typing stops before hitting the DB
 
     return () => {
       isMounted = false;
+      clearTimeout(timeoutId);
     };
   }, [formData.driveLink]);
 
@@ -148,11 +146,11 @@ export function AddResourceDialog({ open, onOpenChange, onSubmit, categoryName }
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">        <DialogHeader>
-          <DialogTitle>Add New Resource</DialogTitle>
-          <DialogDescription>
-            Fill in the details for the new academic resource. All fields are required.
-          </DialogDescription>
-        </DialogHeader>
+        <DialogTitle>Add New Resource</DialogTitle>
+        <DialogDescription>
+          Fill in the details for the new academic resource. All fields are required.
+        </DialogDescription>
+      </DialogHeader>
 
         <form onSubmit={handleSubmit}>
           <div className="space-y-4 py-4">
@@ -312,7 +310,7 @@ export function AddResourceDialog({ open, onOpenChange, onSubmit, categoryName }
 
             {/* Thumbnail Upload */}
             <div className="space-y-2">
-              <Label htmlFor="thumbnail">Thumbnail Image *</Label>
+              <Label htmlFor="thumbnail">Thumbnail Image (optional)</Label>
               <div className="flex items-start gap-4">
                 {thumbnailPreview ? (
                   <div className="relative">
@@ -342,11 +340,10 @@ export function AddResourceDialog({ open, onOpenChange, onSubmit, categoryName }
                     type="file"
                     accept="image/*"
                     onChange={handleImageUpload}
-                    required={!thumbnailPreview}
                     className="cursor-pointer"
                   />
                   <p className="text-xs text-slate-500 mt-2">
-                    Upload a thumbnail image for this resource (JPG, PNG, max 5MB)
+                    Upload a thumbnail image for this resource (JPG, PNG, max 5MB). Leave empty to use a default placeholder.
                   </p>
                 </div>
               </div>
