@@ -279,3 +279,26 @@ export async function getActivityContent(activityId: string) {
 export async function saveActivityContentData(activityId: string, content: object) {
   if (USE_SUPABASE) return await supabaseApi.saveActivityContent(activityId, content);
 }
+
+export async function getResourceCategoryById(id: string) {
+  if (USE_SUPABASE) return await supabaseApi.fetchResourceCategoryById(id);
+  return null;
+}
+
+export async function getResourceItemContent(itemId: string) {
+  if (USE_SUPABASE) return await supabaseApi.fetchResourceItemContent(itemId);
+  return null;
+}
+
+export async function saveResourceItemContentData(itemId: string, categoryId: string, content: object) {
+  if (USE_SUPABASE) return await supabaseApi.saveResourceItemContent(itemId, categoryId, content);
+}
+
+export async function getResourceCategoryContent(categoryId: string) {
+  if (USE_SUPABASE) return await supabaseApi.fetchResourceCategoryContent(categoryId);
+  return null;
+}
+
+export async function saveResourceCategoryContentData(categoryId: string, content: object) {
+  if (USE_SUPABASE) return await supabaseApi.saveResourceCategoryContent(categoryId, content);
+}

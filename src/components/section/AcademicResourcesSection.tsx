@@ -8,6 +8,7 @@ import {
   Plus,
   Pencil,
   Trash2,
+  ArrowRight,
 } from "lucide-react";
 import {
   Card,
@@ -27,6 +28,8 @@ import type { ResourceCategory } from "../../lib/types";
 import { AddResourceCategoryDialog } from "../admin/AddResourceCategoryDialog";
 import { EditResourceCategoryDialog } from "../admin/EditResourceCategoryDialog";
 import { DeleteConfirmDialog } from "../admin/DeleteConfirmDialog";
+import { Link } from "react-router-dom";
+import { motion } from "motion/react";
 
 const iconMap: Record<string, any> = { BookOpen, FileText, Video, LinkIcon };
 
@@ -125,75 +128,80 @@ export function AcademicResourcesSection({
           {resourceCategories.map((category) => {
             const Icon = iconMap[category.icon] || BookOpen;
             return (
-              <Card
-                key={category.id}
-                className="hover:shadow-lg transition-shadow"
-              >
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between mb-3 sm:mb-4">
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-pink-100 rounded-lg flex items-center justify-center">
-                      <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-[#E5007D]" />
+              <motion.div key={category.id} whileHover={{ y: -6 }}>
+                <Card className="hover:shadow-lg transition-shadow overflow-hidden">
+                  {/* รูปปก (แสดงเฉพาะถ้ามี image_url) */}
+                  {category.image_url && (
+                    <div className="relative h-40 overflow-hidden">
+                      <img
+                        src={category.image_url}
+                        alt={category.title}
+                        className="w-full h-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
                     </div>
-                    {isAdmin && (
-                      <div className="flex gap-1">
-                        {/* ✅ ส่ง category object ทั้งก้อน ไม่ใช่แค่ id */}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEditCategory(category)}
-                          className="border-[#E5007D] text-[#E5007D] hover:bg-pink-50 h-8 w-8 p-0"
-                        >
-                          <Pencil className="w-3 h-3" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDeleteCategory(category)}
-                          className="border-red-300 text-red-600 hover:bg-red-50 h-8 w-8 p-0"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
+                  )}
+
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between mb-3 sm:mb-4">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-pink-100 rounded-lg flex items-center justify-center">
+                        <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-[#E5007D]" />
                       </div>
-                    )}
-                  </div>
-                  <CardTitle className="text-base sm:text-lg">
-                    {category.title}
-                  </CardTitle>
-                  <CardDescription className="text-sm">
-                    {category.description}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2 mb-4">
-                    {category.items.map((item, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between py-2 px-3 bg-slate-50 rounded-lg"
-                      >
-                        <span className="text-xs sm:text-sm text-slate-700 truncate pr-2">
-                          {item.name}
-                        </span>
-                        <span className="text-xs text-slate-500 shrink-0">
-                          {item.type}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                  <Button
-                    variant="default"
-                    className="w-full"
-                    size="sm"
-                    asChild
-                  >
-                    <a
-                      href={category.link}
-                      className="inline-flex items-center gap-2"
+                      {isAdmin && (
+                        <div className="flex gap-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditCategory(category)}
+                            className="border-[#E5007D] text-[#E5007D] hover:bg-pink-50 h-8 w-8 p-0"
+                          >
+                            <Pencil className="w-3 h-3" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteCategory(category)}
+                            className="border-red-300 text-red-600 hover:bg-red-50 h-8 w-8 p-0"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                    <CardTitle className="text-base sm:text-lg">
+                      {category.title}
+                    </CardTitle>
+                    <CardDescription className="text-sm">
+                      {category.description}
+                    </CardDescription>
+                  </CardHeader>
+
+                  <CardContent>
+                    <div className="space-y-2 mb-4">
+                      {category.items.map((item) => (
+                        <div
+                          key={item.id}
+                          className="flex items-center justify-between py-2 px-3 bg-slate-50 rounded-lg"
+                        >
+                          <span className="text-xs sm:text-sm text-slate-700 truncate pr-2">
+                            {item.name}
+                          </span>
+                          <span className="text-xs text-slate-500 shrink-0">
+                            {item.type}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <Link
+                      to={`/resources/${category.id}`}
+                      className="inline-flex items-center gap-2 text-[#E5007D] font-bold text-sm"
                     >
-                      View All Resources <ExternalLink className="w-4 h-4" />
-                    </a>
-                  </Button>
-                </CardContent>
-              </Card>
+                      View Detail <ArrowRight size={16} />
+                    </Link>
+                  </CardContent>
+                </Card>
+              </motion.div>
             );
           })}
         </div>

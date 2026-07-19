@@ -53,9 +53,11 @@ export interface ResourceCategory {
   icon: string; // Icon name as string for Supabase storage
   items: ResourceItem[];
   link: string;
+  image_url: string | null;
 }
 
 export interface ResourceItem {
+  id: string;      
   name: string;
   type: string;
 }

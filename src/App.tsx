@@ -9,6 +9,7 @@ import CareerNavigationSection from './components/section/CareerNavigationSectio
 import { BoardSection } from './components/section/BoardSection';
 import { KeywordManagementSection } from './components/section/KeywordManagementSection';
 import { ActivityDetail } from './components/admin/ActivityDetail';
+import { ResourceCategoryDetail } from './components/admin/ResourceCategoryDetail';
 
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -52,6 +53,7 @@ export default function App() {
         <Route path="/activities" element={<AcademicActivitiesSection isAdmin={isAdmin} />} />
         <Route path="/activities/:id" element={<ActivityDetail isAdmin={isAdmin} />} />
         <Route path="/resources" element={<AcademicResourcesSection isAdmin={isAdmin} />} />
+        <Route path="/resources/:categoryId" element={<ResourceCategoryDetail isAdmin={isAdmin} />} />        
         <Route path="/career" element={<CareerNavigationSection />} />
         <Route path="/board" element={<BoardSection isAdmin={isAdmin} />} />
         {isAdmin && (

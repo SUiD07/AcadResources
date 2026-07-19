@@ -603,4 +603,71 @@ export async function saveActivityContent(activityId: string, content: object): 
 
   if (error) throw error;
 }
+
+export async function fetchResourceCategoryById(id: string): Promise<ResourceCategory | null> {
+  const { data, error } = await supabase
+    .from('resource_categories')
+    .select('*, items:resource_items(*)')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Fetch Error (ResourceCategory):', error.message);
+    return null;
+  }
+  return data;
+}
+
+export async function fetchResourceItemContent(itemId: string): Promise<{ content: object } | null> {
+  const { data, error } = await supabase
+    .from('resource_item_content')
+    .select('*')
+    .eq('item_id', itemId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Fetch Error (ResourceItemContent):', error.message);
+    return null;
+  }
+  return data;
+}
+
+export async function saveResourceItemContent(
+  itemId: string,
+  categoryId: string,
+  content: object
+): Promise<void> {
+  const { error } = await supabase
+    .from('resource_item_content')
+    .upsert(
+      { item_id: itemId, category_id: categoryId, content, updated_at: new Date().toISOString() },
+      { onConflict: 'item_id' }
+    );
+
+  if (error) throw error;
+}
  
+export async function fetchResourceCategoryContent(categoryId: string): Promise<{ content: object } | null> {
+  const { data, error } = await supabase
+    .from('resource_category_content')
+    .select('*')
+    .eq('category_id', categoryId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Fetch Error (ResourceCategoryContent):', error.message);
+    return null;
+  }
+  return data;
+}
+
+export async function saveResourceCategoryContent(categoryId: string, content: object): Promise<void> {
+  const { error } = await supabase
+    .from('resource_category_content')
+    .upsert(
+      { category_id: categoryId, content, updated_at: new Date().toISOString() },
+      { onConflict: 'category_id' }
+    );
+
+  if (error) throw error;
+}
