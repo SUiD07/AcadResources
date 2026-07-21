@@ -75,6 +75,7 @@ function isUnclassifiedCategory(
 interface PeerSupportSectionProps {
   isAdmin?: boolean;
   isMobile?: boolean;
+  defaultYear?: string;
 }
 
 interface SubjectCardProps {
@@ -118,20 +119,20 @@ function SubjectCard({
   );
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden mb-3">
+    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden mb-3 w-full">
       <div
         role="button"
         aria-expanded={expanded}
         onClick={() => setExpanded((e) => !e)}
-        className="flex items-center justify-between cursor-pointer select-none px-4 sm:px-6 py-4 hover:bg-slate-50 transition-colors"
+        className="flex items-start sm:items-center justify-between gap-2 cursor-pointer select-none px-4 sm:px-6 py-4 hover:bg-slate-50 transition-colors"
       >
-        <div>
-          <h3 className="font-bold text-slate-900 text-base">{subject}</h3>
+        <div className="min-w-0 flex-1">
+          <h3 className="font-bold text-slate-900 text-base break-words">{subject}</h3>
           <div className="flex flex-wrap gap-1.5 mt-2">
             {typesPresent.map((t) => (
               <span
                 key={t}
-                className="text-xs px-2 py-0.5 rounded-full font-semibold"
+                className="text-xs px-2 py-0.5 rounded-full font-semibold whitespace-nowrap"
                 style={{
                   background: `${TYPE_COLORS[t] ?? "#6B7280"}18`,
                   color: TYPE_COLORS[t] ?? "#6B7280",
@@ -149,18 +150,18 @@ function SubjectCard({
               </span>
             ))}
             {gens.map((g) => (
-              <span key={g} className="text-xs px-2 py-0.5 rounded-full" style={{ background: "#F1F5F9", color: "#64748B" }}>
+              <span key={g} className="text-xs px-2 py-0.5 rounded-full whitespace-nowrap" style={{ background: "#F1F5F9", color: "#64748B" }}>
                 {g}
               </span>
             ))}
             {hasUnknownGen && (
-              <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "#F1F5F9", color: "#94A3B8" }}>
+              <span className="text-xs px-2 py-0.5 rounded-full whitespace-nowrap" style={{ background: "#F1F5F9", color: "#94A3B8" }}>
                 ไม่ระบุรุ่น
               </span>
             )}
           </div>
         </div>
-        <span className="text-slate-400 ml-4 shrink-0">
+        <span className="text-slate-400 ml-2 sm:ml-4 shrink-0 mt-1 sm:mt-0">
           {expanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
         </span>
       </div>
@@ -194,6 +195,7 @@ function SubjectCard({
 export function PeerSupportSection({
   isAdmin = false,
   isMobile = false,
+  defaultYear,
 }: PeerSupportSectionProps) {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -280,7 +282,8 @@ export function PeerSupportSection({
       await createStudentDocument(recordToCreate);
     }
 
-    const updated = await getStudentDocuments();
+    const yearNumbers = selectedYear.map(y => parseInt(y, 10)).filter(y => !isNaN(y));
+    const updated = await getStudentDocuments({ years: yearNumbers.length > 0 ? yearNumbers : undefined });
     setStudentDocs(updated);
   };
 
@@ -297,7 +300,8 @@ export function PeerSupportSection({
     };
 
     await updateStudentDocument(docId, updates);
-    const updated = await getStudentDocuments();
+    const yearNumbers = selectedYear.map(y => parseInt(y, 10)).filter(y => !isNaN(y));
+    const updated = await getStudentDocuments({ years: yearNumbers.length > 0 ? yearNumbers : undefined });
     setStudentDocs(updated);
   };
 
@@ -305,12 +309,13 @@ export function PeerSupportSection({
     if (!deletingItem) return;
     const docId = parseInt(deletingItem.id.replace("doc-", ""), 10);
     await deleteStudentDocument(docId);
-    const updated = await getStudentDocuments();
+    const yearNumbers = selectedYear.map(y => parseInt(y, 10)).filter(y => !isNaN(y));
+    const updated = await getStudentDocuments({ years: yearNumbers.length > 0 ? yearNumbers : undefined });
     setStudentDocs(updated);
   };
 
   const isMobileScreen = useIsMobile();
-  const [selectedYear, setSelectedYear] = useState<string[]>([]);
+  const [selectedYear, setSelectedYear] = useState<string[]>(defaultYear ? [defaultYear] : []);
   const [selectedGeneration, setSelectedGeneration] = useState<string[]>([]);
   const [selectedBlock, setSelectedBlock] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string[]>([]);
@@ -324,22 +329,41 @@ export function PeerSupportSection({
   const [peerItems, setPeerItems] = useState<PeerSupportItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Load configs once on mount
   useEffect(() => {
-    async function loadData() {
+    async function loadConfigs() {
+      try {
+        const cfgs = await getKeywordConfigs();
+        initializeCategorizer(cfgs);
+        setConfigs(cfgs);
+      } catch (error) {
+        console.error("Error loading configs:", error);
+      }
+    }
+    loadConfigs();
+  }, []);
+
+  // Load documents whenever selectedYear changes
+  useEffect(() => {
+    async function loadDocs() {
       try {
         setIsLoading(true);
-        const [docs, cfgs] = await Promise.all([getStudentDocuments(), getKeywordConfigs()]);
-        initializeCategorizer(cfgs);
+        const yearNumbers = selectedYear
+          .map(y => parseInt(y, 10))
+          .filter(y => !isNaN(y));
+
+        const docs = await getStudentDocuments({
+          years: yearNumbers.length > 0 ? yearNumbers : undefined
+        });
         setStudentDocs(docs);
-        setConfigs(cfgs);
       } catch (error) {
         console.error("Error loading documents:", error);
       } finally {
         setIsLoading(false);
       }
     }
-    loadData();
-  }, []);
+    loadDocs();
+  }, [selectedYear]);
 
   const allItems = useMemo<PeerSupportItem[]>(
     () => {
@@ -467,18 +491,19 @@ export function PeerSupportSection({
   }, [filteredItems]);
 
   return (
-    <div className="pb-20 lg:pb-8">
+    <div className="pb-20 lg:pb-8 w-full max-w-full overflow-x-hidden">
       <div className="mb-6 sm:mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
-          <h1 className="text-slate-900 font-bold text-[24px]">Peer Support Resources</h1>
+          <h1 className="text-slate-900 font-bold text-[22px] sm:text-[24px]">Peer Support Resources</h1>
           {isAdmin && (
-            <Button size="sm" onClick={() => setAddDialogOpen(true)} className="bg-[#E5007D] hover:bg-[#c00069] text-white">
+            <Button size="sm" onClick={() => setAddDialogOpen(true)} className="bg-[#E5007D] hover:bg-[#c00069] text-white w-full sm:w-auto">
               <Plus className="w-4 h-4 mr-2" /> Add New Resource
             </Button>
           )}
         </div>
         <p className="text-slate-600 text-sm sm:text-base">Browse and access peer-created academic materials</p>
       </div>
+
       <SearchBar
         boxes={searchBoxes}
         operators={searchOperators}
@@ -488,7 +513,7 @@ export function PeerSupportSection({
         }}
       />
 
-      <div style={{ display: "flex", flexDirection: isMobileScreen ? "column" : "row", gap: 20, alignItems: "flex-start" }}>
+      <div style={{ display: "flex", flexDirection: isMobileScreen ? "column" : "row", gap: 20, alignItems: isMobileScreen ? "stretch" : "flex-start" }}>
         <div style={{ width: isMobileScreen ? "100%" : 230, flexShrink: 0, position: isMobileScreen ? "static" : "sticky", top: 20, maxHeight: isMobileScreen ? "auto" : "calc(100vh - 40px)", overflowY: isMobileScreen ? "visible" : "auto" }}>
           <FilterBar
             generationOptions={filterOptions.generations}
@@ -509,7 +534,7 @@ export function PeerSupportSection({
           />
         </div>
 
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ flex: 1, minWidth: 0, width: isMobileScreen ? "100%" : "auto" }}>
           {isLoading && (
             <div className="flex justify-center items-center py-12">
               <RefreshCcw className="w-6 h-6 text-[#E5007D] animate-spin mr-2" />
@@ -519,11 +544,11 @@ export function PeerSupportSection({
 
           {/* ── Count row + view toggle ── */}
           {!isLoading && (
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs text-slate-400">
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <span className="text-xs text-slate-400 truncate">
                 พบ {filteredItems.length} รายการ จาก {groupedBySubject.length} วิชา
               </span>
-              <div className="flex items-center rounded-lg border border-slate-200 overflow-hidden">
+              <div className="flex items-center rounded-lg border border-slate-200 overflow-hidden shrink-0">
                 <button
                   onClick={() => setViewMode("grid")}
                   className="flex items-center justify-center px-2.5 py-1.5 transition-colors"
@@ -554,7 +579,7 @@ export function PeerSupportSection({
             (groupedBySubject.length > 0
               ? (
                 <Virtuoso
-                  style={{ height: "80vh", width: "100%" }}
+                  style={{ height: isMobileScreen ? "70vh" : "80vh", width: "100%" }}
                   data={groupedBySubject}
                   itemContent={(index, { subject, items }) => (
                     <SubjectCard

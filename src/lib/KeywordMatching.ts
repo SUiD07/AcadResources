@@ -27,12 +27,14 @@ function keyMatchScore(doc: StudentDocument, key: string): number {
 
   const inTitle = doc.title.toLowerCase().includes(k);
   const inFolder = doc.folder_path.toLowerCase().includes(k);
+  const inFileUrl = (doc.file_url || '').toLowerCase().includes(k);
 
-  if (!inTitle && !inFolder) return -1; // no match
+  if (!inTitle && !inFolder && !inFileUrl) return -1; // no match
 
   let score = k.length; // base specificity
 
   if (inTitle) score += 20; // title hit bonus
+  if (inFileUrl) score += 10; // drive-link hit bonus
 
   // Folder-depth bonus: "A > B > C" has depth 3 → +10, shallower keys score less
   const depth = (k.match(/>/g) ?? []).length + 1;
@@ -89,7 +91,8 @@ function textIncludesKey(doc: StudentDocument, key: string): boolean {
   if (!k) return false;
   return (
     doc.title.toLowerCase().includes(k) ||
-    doc.folder_path.toLowerCase().includes(k)
+    doc.folder_path.toLowerCase().includes(k) ||
+    (doc.file_url || '').toLowerCase().includes(k)
   );
 }
 

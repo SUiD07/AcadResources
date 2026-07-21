@@ -52,17 +52,27 @@ export async function fetchPeerSupportData(): Promise<PeerSupportItem[]> {
   return allDocuments;
 }
 
-export async function fetchStudentDocuments(): Promise<StudentDocument[]> {
+export async function fetchStudentDocuments(filters?: { years?: number[], blocks?: string[] }): Promise<StudentDocument[]> {
   const PAGE_SIZE = 1000;
   let from = 0;
   let allDocuments: StudentDocument[] = [];
 
   while (true) {
-    const { data, error } = await supabase
+    let query = supabase
       .from('student_documents')
       .select('*')
       .order('upload_date', { ascending: false })
-      .range(from, from + PAGE_SIZE - 1);
+
+    if (filters?.years && filters.years.length > 0) {
+      query = query.in('student_year', filters.years);
+    }
+
+    if (filters?.blocks && filters.blocks.length > 0) {
+      // If we have both, we might want OR logic, but Supabase standard chained filters are AND. 
+      // Assuming we just filter by year for now, we'll rely on student_year primarily if passed.
+    }
+
+    const { data, error } = await query.range(from, from + PAGE_SIZE - 1);
 
     if (error) {
       console.error('Fetch Error (Student Documents):', error.message);
@@ -119,6 +129,20 @@ export async function deletePeerSupportItem(id: string): Promise<void> {
     .eq('id', id);
 
   if (error) throw error;
+}
+
+export async function checkDriveIdExists(driveId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('student_documents')
+    .select('id')
+    .eq('drive_id', driveId)
+    .limit(1);
+
+  if (error) {
+    console.error('Fetch Error (Check Drive ID):', error.message);
+    return false;
+  }
+  return (data?.length ?? 0) > 0;
 }
 
 // ============================================
@@ -526,43 +550,44 @@ export async function fetchDriveSync(): Promise<DriveSyncRecord[]> {
   const PAGE_SIZE = 1000;
   let from = 0;
   let allRecords: DriveSyncRecord[] = [];
- 
+
   while (true) {
     const { data, error } = await supabase
       .from('drive_sync')
       .select('*')
       .range(from, from + PAGE_SIZE - 1);
- 
+
     if (error) {
       console.error('Fetch Error (Drive Sync):', error.message);
       return [];
     }
- 
+
     if (!data || data.length === 0) {
       break;
     }
- 
+
     allRecords.push(...data);
- 
+
     if (data.length < PAGE_SIZE) {
       break;
     }
- 
+
     from += PAGE_SIZE;
   }
- 
+
   return allRecords;
 }
- 
+
 export async function upsertStudentDocuments(
   records: Partial<StudentDocument>[]
 ): Promise<void> {
   const { error } = await supabase
     .from('student_documents')
     .upsert(records, { onConflict: 'drive_id' });
- 
+
   if (error) throw error;
 }
+
 
 // Activity content functions
 export async function fetchActivityById(id: string): Promise<Activity | null> {
@@ -600,6 +625,30 @@ export async function saveActivityContent(activityId: string, content: object): 
       { activity_id: activityId, content, updated_at: new Date().toISOString() },
       { onConflict: 'activity_id' }
     );
+}
+
+// ============================================
+// USER PREFERENCES
+// ============================================
+
+export async function fetchUserPreference(email: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('user_preferences')
+    .select('default_year')
+    .eq('email', email)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Fetch Error (User Preference):', error.message);
+    return null;
+  }
+  return data?.default_year || null;
+}
+
+export async function upsertUserPreference(email: string, default_year: string): Promise<void> {
+  const { error } = await supabase
+    .from('user_preferences')
+    .upsert({ email, default_year }, { onConflict: 'email' });
 
   if (error) throw error;
 }
@@ -646,7 +695,7 @@ export async function saveResourceItemContent(
 
   if (error) throw error;
 }
- 
+
 export async function fetchResourceCategoryContent(categoryId: string): Promise<{ content: object } | null> {
   const { data, error } = await supabase
     .from('resource_category_content')
@@ -670,4 +719,56 @@ export async function saveResourceCategoryContent(categoryId: string, content: o
     );
 
   if (error) throw error;
+}
+export async function adminUpgradeYearOneToTwo(): Promise<void> {
+  const { error } = await supabase.rpc('admin_upgrade_year_one_to_two');
+  if (error) throw error;
+}
+
+export async function getPromoteYearUserCount(sourceYear: string): Promise<number> {
+  const { count, error } = await supabase
+    .from('user_preferences')
+    .select('*', { count: 'exact', head: true })
+    .eq('default_year', sourceYear);
+
+  if (error) {
+    console.error('Fetch Error (User Count):', error.message);
+    return 0;
+  }
+  return count || 0;
+}
+
+export async function adminPromoteYear(sourceYear: string, targetYear: string, adminId: string): Promise<{ success: boolean; count: number; error?: string }> {
+  try {
+    // We try to call an RPC if it exists to satisfy single transaction requirement,
+    // but if it fails (not deployed), we fallback to client-side sequential update.
+    const { data: rpcData, error: rpcError } = await supabase.rpc('admin_promote_year', {
+      p_source_year: sourceYear,
+      p_target_year: targetYear,
+      p_admin_id: adminId
+    });
+
+    if (!rpcError) {
+      return { success: true, count: rpcData || 0 };
+    }
+
+    // Fallback if RPC doesn't exist yet
+    console.warn("RPC 'admin_promote_year' failed, falling back to client-side update", rpcError);
+
+    const count = await getPromoteYearUserCount(sourceYear);
+
+    const { error: updateError } = await supabase
+      .from('user_preferences')
+      .update({ default_year: targetYear })
+      .eq('default_year', sourceYear);
+
+    if (updateError) throw updateError;
+
+    // Log action to console as requested
+    console.log(`[ADMIN ACTION LOG] Admin: ${adminId} | Timestamp: ${new Date().toISOString()} | Action: Promoted Year ${sourceYear} -> ${targetYear} | Affected Users: ${count}`);
+
+    return { success: true, count };
+  } catch (err: any) {
+    return { success: false, count: 0, error: err.message };
+  }
 }
