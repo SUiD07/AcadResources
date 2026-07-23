@@ -172,9 +172,9 @@ export async function checkDriveIdExists(driveId: string, excludeId?: string): P
 
 export function extractDriveId(url: string): string | null {
   const patterns = [
-    /\/file\/d\/([a-zA-Z0-9_-]+)/,
-    /id=([a-zA-Z0-9_-]+)/,
+    /\/d\/([a-zA-Z0-9_-]+)/,        // covers /file/d/, /document/d/, /spreadsheets/d/, /presentation/d/, /forms/d/
     /\/folders\/([a-zA-Z0-9_-]+)/,
+    /id=([a-zA-Z0-9_-]+)/,
   ];
   for (const pattern of patterns) {
     const match = url.match(pattern);
