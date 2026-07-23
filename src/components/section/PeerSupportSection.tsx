@@ -214,15 +214,16 @@ export function PeerSupportSection({
       : null;
 
     const shouldOverride = Boolean(data.isOverridden ?? existingDoc);
-
     const generation = Number.parseInt(data.generation.replace("MDCU ", ""), 10) || 0;
     const fallbackTitle = data.fileName || data.driveLink || "Untitled resource";
+
+    const folderPath = existingDoc?.folder_path || data.folderPath || "";
 
     const classifiedDoc: StudentDocument = {
       id: existingDoc?.id ?? -1,
       title: fallbackTitle,
       file_url: data.driveLink,
-      folder_path: data.fileName || data.driveLink || "",
+      folder_path: folderPath,
       uploaded_by: "admin",
       upload_date: new Date().toISOString(),
       block: data.block,
@@ -238,7 +239,7 @@ export function PeerSupportSection({
       const updates: Partial<StudentDocument> = {
         title: fallbackTitle,
         file_url: data.driveLink,
-        folder_path: data.fileName || data.driveLink || existingDoc.folder_path || "",
+        folder_path: folderPath,
         thumbnail_url: data.thumbnail || undefined,
         generation,
         block: shouldOverride ? data.block : existingDoc.block,
@@ -247,7 +248,7 @@ export function PeerSupportSection({
         drive_id: driveId,
         is_overridden: shouldOverride,
       };
-
+      
       if (!shouldOverride) {
         const blockConfig = classifyDocument(classifiedDoc, configs, "block_mapping");
         const typeConfig = classifyDocument(classifiedDoc, configs, "doc_type");
@@ -267,7 +268,7 @@ export function PeerSupportSection({
       const recordToCreate: Partial<StudentDocument> = {
         title: fallbackTitle,
         file_url: data.driveLink,
-        folder_path: data.fileName || data.driveLink || "",
+        folder_path: folderPath,
         uploaded_by: "admin",
         upload_date: new Date().toISOString(),
         block: shouldOverride ? data.block : blockConfig ? blockConfig.label : "Unclassified",
@@ -293,6 +294,7 @@ export function PeerSupportSection({
     const updates: any = {
       title: data.fileName,
       block: data.block,
+      folder_path: data.folderPath,
       doc_type: data.category,
       board_exam: data.boardExam || null,
       generation: parseInt(data.generation.replace("MDCU ", ""), 10) || 0,

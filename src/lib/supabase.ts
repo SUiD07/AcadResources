@@ -125,7 +125,7 @@ export async function updatePeerSupportItem(id: string, updates: Partial<PeerSup
 export async function fetchResourceByDriveId(driveId: string, excludeId?: string) {
   let query = supabase
     .from('student_documents')
-    .select('id, title') // ← will rename to match your actual column
+    .select('id, title, thumbnail_url, folder_path, block, doc_type, generation')
     .eq('drive_id', driveId);
 
   if (excludeId) query = query.neq('id', excludeId);

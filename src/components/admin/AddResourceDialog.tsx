@@ -6,7 +6,7 @@ import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Loader2, Upload, X } from 'lucide-react';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
-import { extractDriveId, checkDriveIdExists, fetchKeywordConfigs } from '../../lib/supabase';
+import { extractDriveId, checkDriveIdExists, fetchKeywordConfigs, fetchResourceByDriveId } from '../../lib/supabase';
 import type { KeywordConfig } from '../../lib/types';
 
 interface AddResourceDialogProps {
@@ -25,6 +25,7 @@ export interface ResourceFormData {
   driveLink: string;
   thumbnail: string;
   isOverridden?: boolean;
+  folderPath?: string;
 }
 
 export interface ResourceCategoryFormData {
@@ -95,8 +96,24 @@ export function AddResourceDialog({ open, onOpenChange, onSubmit, categoryName }
     const timeoutId = setTimeout(async () => {
       try {
         const exists = await checkDriveIdExists(driveId);
-        if (isMounted) {
-          setFormData((prev) => ({ ...prev, isOverridden: exists ? true : prev.isOverridden || false }));
+        if (!isMounted) return;
+        setFormData((prev) => ({ ...prev, isOverridden: exists ? true : prev.isOverridden || false }));
+
+        if (exists) {
+          const match = await fetchResourceByDriveId(driveId);
+          if (isMounted && match) {
+            setFormData((prev) => ({
+              ...prev,
+              fileName: prev.fileName || match.title || prev.fileName,
+              generation: match.generation ? `MDCU ${match.generation}` : prev.generation,
+              block: match.block || prev.block,
+              category: match.doc_type || prev.category,
+              folderPath: match.folder_path || prev.folderPath,
+            }));
+            if (match.thumbnail_url) {
+              setThumbnailPreview(match.thumbnail_url);
+            }
+          }
         }
       } catch (error) {
         console.error('Error checking existing drive id:', error);
