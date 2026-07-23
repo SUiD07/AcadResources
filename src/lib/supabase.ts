@@ -609,6 +609,45 @@ export async function upsertStudentDocuments(
   if (error) throw error;
 }
 
+
+// Activity content functions
+export async function fetchActivityById(id: string): Promise<Activity | null> {
+  const { data, error } = await supabase
+    .from('activities')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Fetch Error (Activity):', error.message);
+    return null;
+  }
+  return data;
+}
+
+export async function fetchActivityContent(activityId: string): Promise<{ content: object } | null> {
+  const { data, error } = await supabase
+    .from('activity_content')
+    .select('*')
+    .eq('activity_id', activityId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Fetch Error (Activity Content):', error.message);
+    return null;
+  }
+  return data;
+}
+
+export async function saveActivityContent(activityId: string, content: object): Promise<void> {
+  const { error } = await supabase
+    .from('activity_content')
+    .upsert(
+      { activity_id: activityId, content, updated_at: new Date().toISOString() },
+      { onConflict: 'activity_id' }
+    );
+}
+
 // ============================================
 // USER PREFERENCES
 // ============================================
@@ -635,6 +674,73 @@ export async function upsertUserPreference(email: string, default_year: string):
   if (error) throw error;
 }
 
+export async function fetchResourceCategoryById(id: string): Promise<ResourceCategory | null> {
+  const { data, error } = await supabase
+    .from('resource_categories')
+    .select('*, items:resource_items(*)')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Fetch Error (ResourceCategory):', error.message);
+    return null;
+  }
+  return data;
+}
+
+export async function fetchResourceItemContent(itemId: string): Promise<{ content: object } | null> {
+  const { data, error } = await supabase
+    .from('resource_item_content')
+    .select('*')
+    .eq('item_id', itemId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Fetch Error (ResourceItemContent):', error.message);
+    return null;
+  }
+  return data;
+}
+
+export async function saveResourceItemContent(
+  itemId: string,
+  categoryId: string,
+  content: object
+): Promise<void> {
+  const { error } = await supabase
+    .from('resource_item_content')
+    .upsert(
+      { item_id: itemId, category_id: categoryId, content, updated_at: new Date().toISOString() },
+      { onConflict: 'item_id' }
+    );
+
+  if (error) throw error;
+}
+
+export async function fetchResourceCategoryContent(categoryId: string): Promise<{ content: object } | null> {
+  const { data, error } = await supabase
+    .from('resource_category_content')
+    .select('*')
+    .eq('category_id', categoryId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Fetch Error (ResourceCategoryContent):', error.message);
+    return null;
+  }
+  return data;
+}
+
+export async function saveResourceCategoryContent(categoryId: string, content: object): Promise<void> {
+  const { error } = await supabase
+    .from('resource_category_content')
+    .upsert(
+      { category_id: categoryId, content, updated_at: new Date().toISOString() },
+      { onConflict: 'category_id' }
+    );
+
+  if (error) throw error;
+}
 export async function adminUpgradeYearOneToTwo(): Promise<void> {
   const { error } = await supabase.rpc('admin_upgrade_year_one_to_two');
   if (error) throw error;

@@ -21,7 +21,7 @@ import { Textarea } from "../ui/textarea";
 import { Loader2 } from "lucide-react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-
+import { ActivityImageUpload } from "./ActivityImageUpload";
 interface AddActivityDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -34,6 +34,7 @@ export interface ActivityFormData {
   date: string;
   status: "Upcoming" | "Ongoing" | "Completed";
   icon: string;
+  image_url: string | null;
 }
 
 export function AddActivityDialog({
@@ -48,6 +49,7 @@ export function AddActivityDialog({
     date: "",
     status: "Upcoming",
     icon: "Calendar",
+    image_url: null,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -62,6 +64,7 @@ export function AddActivityDialog({
         date: "",
         status: "Upcoming",
         icon: "Calendar",
+        image_url: null,
       });
       onOpenChange(false);
     } catch (error) {
@@ -128,7 +131,7 @@ export function AddActivityDialog({
               {/* มันมีบัคแต่มันwork somehow ?-? ว่างๆเดี๋ยวมาแก้ต่อ ต้งอแก้ type ด้วยแต่่ทำไมมันใช้งานได้ฏ้ไม่รู้ */}
               <DatePicker
                 selected={formData.date}
-                onChange={(date) =>
+                onChange={(date:any) =>
                   setFormData({
                     ...formData,
                     date,
@@ -140,6 +143,13 @@ export function AddActivityDialog({
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 // withPortal
                  popperPlacement="bottom-start"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>รูปภาพกิจกรรม</Label>
+              <ActivityImageUpload
+                value={formData.image_url}
+                onChange={(url) => setFormData({ ...formData, image_url: url })}
               />
             </div>
 

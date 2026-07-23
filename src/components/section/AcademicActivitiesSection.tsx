@@ -8,6 +8,7 @@ import {
   Plus,
   Pencil,
   Trash2,
+  ArrowRight,
 } from "lucide-react";
 import {
   Card,
@@ -17,7 +18,6 @@ import {
   CardContent,
 } from "../ui/card";
 import { Button } from "../ui/button";
-// import { getActivities } from "../../lib/dataService";
 import {
   getActivities,
   addActivity,
@@ -31,6 +31,8 @@ import {
 } from "../admin/AddActivityDialog";
 import { EditActivityDialog } from "../admin/EditActivityDialog";
 import { DeleteConfirmDialog } from "../admin/DeleteConfirmDialog";
+import { motion } from "motion/react";
+import { Link } from "react-router-dom";
 
 interface AcademicActivitiesSectionProps {
   isAdmin?: boolean;
@@ -103,7 +105,7 @@ export function AcademicActivitiesSection({
   };
 
   return (
-    <div className="pb-20 lg:pb-8">
+    <div className="pb-20 lg:pb-10">
       <div className="mb-6 sm:mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
           <h1 className="text-slate-900 font-bold text-[24px]">
@@ -135,85 +137,104 @@ export function AcademicActivitiesSection({
             const Icon = iconMap[activity.icon] || Calendar;
 
             return (
-              <Card
-                key={activity.id}
-                className="hover:shadow-lg transition-shadow"
-              >
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-pink-100 rounded-lg flex items-center justify-center mb-3 sm:mb-4">
-                      <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-[#E5007D]" />
+              <motion.div key={activity.id} whileHover={{ y: -6 }}>
+                <Card className="hover:shadow-lg transition-shadow overflow-hidden">
+                  {/* รูปภาพ (แสดงเฉพาะถ้ามี image_url) */}
+                  {activity.image_url && (
+                    <div className="relative h-40 overflow-hidden">
+                      <img
+                        src={activity.image_url}
+                        alt={activity.title}
+                        className="w-full h-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
                     </div>
-                    <span
-                      className={`px-2.5 py-1 rounded-full text-xs ${
-                        activity.status === "Completed"
-                          ? "bg-green-50 text-green-700"
-                          : activity.status === "Upcoming"
-                            ? "bg-yellow-50 text-yellow-700"
-                            : "bg-pink-50 text-[#E5007D]"
-                      }`}
-                    >
-                      {activity.status}
-                    </span>
-                  </div>
-                  <CardTitle className="text-base sm:text-lg">
-                    {activity.title}
-                  </CardTitle>
-                  <CardDescription className="text-sm">
-                    {activity.description}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-2 text-sm text-slate-600 mb-4">
-                    <Calendar className="w-4 h-4 shrink-0" />
-                    <div className="flex items-center gap-2 text-sm text-slate-600">
-                      {/* <Calendar className="h-4 w-4" /> */}
-                      <span>
-                        {new Date(activity.date).toLocaleDateString("th-TH", {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                        })}
-                      </span>
+                  )}
 
-                      <Clock className="h-4 w-4 ml-2" />
-                      <span>
-                        {new Date(activity.date).toLocaleTimeString("th-TH", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      {" "}น.
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-pink-100 rounded-lg flex items-center justify-center mb-3 sm:mb-4">
+                        <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-[#E5007D]" />
+                      </div>
+                      <span
+                        className={`px-2.5 py-1 rounded-full text-xs ${
+                          activity.status === "Completed"
+                            ? "bg-green-50 text-green-700"
+                            : activity.status === "Upcoming"
+                              ? "bg-yellow-50 text-yellow-700"
+                              : "bg-pink-50 text-[#E5007D]"
+                        }`}
+                      >
+                        {activity.status}
                       </span>
                     </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" className="flex-1" size="sm">
-                      View Details
-                    </Button>
-                    {isAdmin && (
-                      <>
-                        {/* ✅ ส่ง activity object ทั้งก้อน */}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEditActivity(activity)}
-                          className="border-[#E5007D] text-[#E5007D] hover:bg-pink-50"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDeleteActivity(activity)}
-                          className="border-red-300 text-red-600 hover:bg-red-50"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+                    <CardTitle className="text-base sm:text-lg">
+                      {activity.title}
+                    </CardTitle>
+                    <CardDescription className="text-sm">
+                      {activity.description}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-2 text-sm text-slate-600 mb-4">
+                      <Calendar className="w-4 h-4 shrink-0" />
+                      <div className="flex items-center gap-2 text-sm text-slate-600">
+                        <span>
+                          {new Date(activity.date).toLocaleDateString(
+                            "th-TH",
+                            {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            },
+                          )}
+                        </span>
+
+                        <Clock className="h-4 w-4 ml-2" />
+                        <span>
+                          {new Date(activity.date).toLocaleTimeString(
+                            "th-TH",
+                            {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            },
+                          )}{" "}
+                          น.
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <Link
+                        to={`/activities/${activity.id}`}
+                        className="inline-flex items-center gap-2 text-[#E5007D] font-bold text-sm"
+                      >
+                        View Details <ArrowRight size={16} />
+                      </Link>
+
+                      {isAdmin && (
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditActivity(activity)}
+                            className="border-[#E5007D] text-[#E5007D] hover:bg-pink-50"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteActivity(activity)}
+                            className="border-red-300 text-red-600 hover:bg-red-50"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
             );
           })}
         </div>

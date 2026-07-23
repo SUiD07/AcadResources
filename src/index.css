@@ -2324,6 +2324,12 @@
   --sidebar-ring: oklch(.439 0 0);
 }
 
+/* ทำให้ editor ของแต่ละ resource item ย่อตามเนื้อหาจริง ไม่บังคับ min-height 400px */
+.compact-editor .ProseMirror {
+  min-height: 2.5rem !important;
+  padding: 0.25rem 0 !important;
+}
+
 html {
   font-size: var(--font-size);
 }

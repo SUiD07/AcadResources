@@ -19,6 +19,7 @@ import {
 } from "../ui/select";
 import { Textarea } from "../ui/textarea";
 import { Loader2, Plus, X } from "lucide-react";
+import { ResourceImageUpload } from "./ResourceImageUpload";
 
 interface AddResourceCategoryDialogProps {
   open: boolean;
@@ -31,7 +32,8 @@ export interface ResourceCategoryFormData {
   description: string;
   icon: string;
   link: string;
-  items: { name: string; type: string }[];
+  image_url: string | null;
+  items: { id: string; name: string; type: string }[];
 }
 
 export function AddResourceCategoryDialog({
@@ -45,7 +47,8 @@ export function AddResourceCategoryDialog({
     description: "",
     icon: "BookOpen",
     link: "",
-    items: [{ name: "", type: "PDF" }],
+    image_url: null,
+    items: [{ id: crypto.randomUUID(), name: "", type: "PDF" }],
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -59,7 +62,8 @@ export function AddResourceCategoryDialog({
         description: "",
         icon: "BookOpen",
         link: "",
-        items: [{ name: "", type: "PDF" }],
+        image_url: null,
+        items: [{ id: crypto.randomUUID(), name: "", type: "PDF" }],
       });
       onOpenChange(false);
     } catch (error) {
@@ -74,7 +78,10 @@ export function AddResourceCategoryDialog({
     e?.stopPropagation();
     setFormData({
       ...formData,
-      items: [...formData.items, { name: "", type: "PDF" }],
+      items: [
+        ...formData.items,
+        { id: crypto.randomUUID(), name: "", type: "PDF" },
+      ],
     });
   };
 
@@ -136,6 +143,14 @@ export function AddResourceCategoryDialog({
               />
             </div>
 
+            <div className="space-y-2">
+              <Label>รูปปกหมวดหมู่</Label>
+              <ResourceImageUpload
+                value={formData.image_url}
+                onChange={(url) => setFormData({ ...formData, image_url: url })}
+              />
+            </div>
+
             {/* Icon and Link - Row */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -155,7 +170,7 @@ export function AddResourceCategoryDialog({
                 </select>
               </div>
 
-              <div className="space-y-2">
+              {/* <div className="space-y-2">
                 <Label htmlFor="category-link">Resource Link *</Label>
                 <Input
                   id="category-link"
@@ -167,7 +182,7 @@ export function AddResourceCategoryDialog({
                   }
                   required
                 />
-              </div>
+              </div> */}
             </div>
 
             {/* Items */}

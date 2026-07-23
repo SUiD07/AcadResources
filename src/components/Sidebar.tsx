@@ -1,26 +1,35 @@
-import { Home, Calendar, BookOpen, GraduationCap, LogOut, Users, Settings } from 'lucide-react';
-import { Button } from './ui/button';
-import { Section } from '../lib/types';
+import { NavLink } from "react-router-dom";
+import {
+  Home,
+  Calendar,
+  BookOpen,
+  GraduationCap,
+  LogOut,
+  Users,
+  Settings,
+} from "lucide-react";
+import { Button } from "./ui/button";
 
 interface SidebarProps {
-  activeSection: Section;
-  onSectionChange: (section: Section) => void;
   onLogout: () => void;
   isAdmin?: boolean;
 }
 
-export function Sidebar({ activeSection, onSectionChange, onLogout, isAdmin }: SidebarProps) {
-  const navItems = [
-    { id: 'peer-support' as Section, label: 'Peer Support', icon: Home },
-    { id: 'academic-activities' as Section, label: 'Academic Activities', icon: Calendar },
-    { id: 'academic-resources' as Section, label: 'Academic Resources', icon: BookOpen },
-    { id: 'career-navigation' as Section, label: 'Career Navigation', icon: GraduationCap },
-    { id: 'board' as Section, label: 'Board', icon: Users },
-  ];
+const navItems = [
+  { path: "/", label: "Peer Support", icon: Home },
+  { path: "/activities", label: "Academic Activities", icon: Calendar },
+  { path: "/resources", label: "Academic Resources", icon: BookOpen },
+  { path: "/career", label: "Career Navigation", icon: GraduationCap },
+  { path: "/board", label: "Board", icon: Users },
+];
 
-  if (isAdmin) {
-    navItems.push({ id: 'keyword-management' as Section, label: 'Manage Keywords', icon: Settings });
-  }
+export function Sidebar({ onLogout, isAdmin }: SidebarProps) {
+  const items = isAdmin
+    ? [
+        ...navItems,
+        { path: "/keywords", label: "Manage Keywords", icon: Settings },
+      ]
+    : navItems;
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-64 bg-white border-r border-slate-200 flex flex-col">
@@ -36,23 +45,24 @@ export function Sidebar({ activeSection, onSectionChange, onLogout, isAdmin }: S
         </div>
 
         <nav className="space-y-1">
-          {navItems.map((item) => {
+          {items.map((item) => {
             const Icon = item.icon;
-            const isActive = activeSection === item.id;
-            
             return (
-              <button
-                key={item.id}
-                onClick={() => onSectionChange(item.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                  isActive
-                    ? 'bg-pink-50 text-[#E5007D] font-semibold shadow-sm shadow-pink-100/50'
-                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                }`}
+              <NavLink
+                key={item.path}
+                to={item.path}
+                end={item.path === "/"}
+                className={({ isActive }) =>
+                  `w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                    isActive
+                      ? "bg-pink-50 text-[#E5007D] font-semibold shadow-sm shadow-pink-100/50"
+                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                  }`
+                }
               >
-                <Icon className={`w-5 h-5 ${isActive ? 'text-[#E5007D]' : 'text-slate-400'}`} />
+                <Icon className="w-5 h-5" />
                 <span className="text-sm">{item.label}</span>
-              </button>
+              </NavLink>
             );
           })}
         </nav>

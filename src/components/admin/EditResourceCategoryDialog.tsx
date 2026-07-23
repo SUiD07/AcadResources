@@ -20,6 +20,7 @@ import {
 import { Textarea } from "../ui/textarea";
 import { Loader2, Plus, X } from "lucide-react";
 import type { ResourceCategoryFormData } from "./AddResourceCategoryDialog";
+import { ResourceImageUpload } from "./ResourceImageUpload";
 
 interface EditResourceCategoryDialogProps {
   open: boolean;
@@ -43,7 +44,8 @@ export function EditResourceCategoryDialog({
     description: "",
     icon: "BookOpen",
     link: "",
-    items: [{ name: "", type: "PDF" }],
+    image_url: null,
+    items: [{ id: crypto.randomUUID(), name: "", type: "PDF" }],
   });
 
   // Update form when initialData changes
@@ -69,7 +71,10 @@ export function EditResourceCategoryDialog({
   const addItem = () => {
     setFormData({
       ...formData,
-      items: [...formData.items, { name: "", type: "PDF" }],
+      items: [
+        ...formData.items,
+        { id: crypto.randomUUID(), name: "", type: "PDF" },
+      ],
     });
   };
 
@@ -127,6 +132,14 @@ export function EditResourceCategoryDialog({
               />
             </div>
 
+            <div className="space-y-2">
+              <Label>รูปปกหมวดหมู่</Label>
+              <ResourceImageUpload
+                value={formData.image_url}
+                onChange={(url) => setFormData({ ...formData, image_url: url })}
+              />
+            </div>
+
             {/* Icon and Link - Row */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -146,7 +159,7 @@ export function EditResourceCategoryDialog({
                 </select>
               </div>
 
-              <div className="space-y-2">
+              {/* <div className="space-y-2">
                 <Label htmlFor="edit-category-link">Resource Link *</Label>
                 <Input
                   id="edit-category-link"
@@ -158,7 +171,7 @@ export function EditResourceCategoryDialog({
                   }
                   required
                 />
-              </div>
+              </div> */}
             </div>
 
             {/* Items */}
