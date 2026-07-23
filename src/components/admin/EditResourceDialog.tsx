@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Loader2, Upload, X } from 'lucide-react';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import type { ResourceFormData } from './AddResourceDialog';
-import { fetchKeywordConfigs } from '../../lib/supabase';
+import { extractDriveId, checkDriveIdExists, fetchKeywordConfigs, fetchResourceByDriveId } from '../../lib/supabase';
 import type { KeywordConfig } from '../../lib/types';
 
 interface EditResourceDialogProps {
@@ -23,13 +23,14 @@ export function EditResourceDialog({ open, onOpenChange, onSubmit, initialData }
   const [keywordConfigs, setKeywordConfigs] = useState<KeywordConfig[]>([]);
   const [formData, setFormData] = useState<ResourceFormData & { id: string }>({
     id: '',
-    blockName: '',
-    blockCode: '',
+    fileName: '',
+    // blockCode: '',?
     generation: 'MDCU 81',
     block: 'Block 1',
     category: 'AC',
     driveLink: '',
     thumbnail: '',
+    isOverridden: false,
   });
 
   useEffect(() => {
@@ -50,21 +51,125 @@ export function EditResourceDialog({ open, onOpenChange, onSubmit, initialData }
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [open]); // refetch each time dialog opens, per earlier fix
 
-  // Update form when initialData changes
   useEffect(() => {
-    if (initialData) {
+    if (open && initialData) {
       setFormData(initialData);
-      setThumbnailPreview(initialData.thumbnail);
+      setThumbnailPreview(initialData.thumbnail || '');
     }
-  }, [initialData]);
+  }, [open, initialData]);
 
+  // Live override check: re-verify drive ID conflict whenever a non-drive field changes
+  // useEffect(() => {
+  //   if (!initialData || formData.isOverridden) return; // already true, nothing to check
+
+  //   const nonDriveFieldsChanged =
+  //     formData.fileName !== initialData.fileName ||
+  //     formData.generation !== initialData.generation ||
+  //     formData.block !== initialData.block ||
+  //     formData.category !== initialData.category ||
+  //     (formData.boardExam || '') !== (initialData.boardExam || '');
+
+  //   if (!nonDriveFieldsChanged) return;
+
+  //   const driveId = extractDriveId(formData.driveLink);
+  //   if (!driveId) return;
+
+  //   let isMounted = true;
+  //   const timeoutId = setTimeout(async () => {
+  //     try {
+  //       const exists = await checkDriveIdExists(driveId, formData.id);
+  //       if (isMounted) {
+  //         setFormData((prev) => ({ ...prev, isOverridden: exists ? true : prev.isOverridden || false }));
+  //         if (exists) {
+  //           const match = await fetchResourceByDriveId(driveId, formData.id);
+  //           if (match && !formData.fileName) {
+  //             setFormData((prev) => ({ ...prev, fileName: match.title }));
+  //           }
+  //         }
+  //       }
+  //     } catch (error) {
+  //       console.error('Error checking existing drive id:', error);
+  //     }
+  //   }, 400);
+
+  //   return () => {
+  //     isMounted = false;
+  //     clearTimeout(timeoutId);
+  //   };
+  // }, [formData.fileName, formData.generation, formData.block, formData.category, formData.boardExam, formData.driveLink, formData.id, formData.isOverridden, initialData]);
+
+  useEffect(() => {
+    if (!initialData || formData.isOverridden) return;
+
+    const nonDriveFieldsChanged =
+      formData.fileName !== initialData.fileName ||
+      formData.generation !== initialData.generation ||
+      formData.block !== initialData.block ||
+      formData.category !== initialData.category ||
+      (formData.boardExam || '') !== (initialData.boardExam || '');
+
+    if (nonDriveFieldsChanged) {
+      setFormData((prev) => ({ ...prev, isOverridden: true }));
+    }
+  }, [
+    formData.fileName,
+    formData.generation,
+    formData.block,
+    formData.category,
+    formData.boardExam,
+    formData.isOverridden,
+    initialData,
+  ]);
+
+  // const handleSubmit = async (e: React.FormEvent) => {
+  //   e.preventDefault();
+  //   setIsLoading(true);
+  //   try {
+  //     let updatedIsOverridden = formData.isOverridden;
+
+  //     const nonDriveFieldsChanged =
+  //       initialData &&
+  //       (formData.fileName !== initialData.fileName ||
+  //         formData.generation !== initialData.generation ||
+  //         formData.block !== initialData.block ||
+  //         formData.category !== initialData.category ||
+  //         (formData.boardExam || '') !== (initialData.boardExam || ''));
+
+  //     if (nonDriveFieldsChanged && !formData.isOverridden) {
+  //       const driveId = extractDriveId(formData.driveLink);
+  //       if (driveId) {
+  //         const exists = await checkDriveIdExists(driveId, formData.id);
+  //         if (exists) {
+  //           updatedIsOverridden = true;
+  //         }
+  //       }
+  //     }
+
+  //     await onSubmit({ ...formData, thumbnail: thumbnailPreview, isOverridden: updatedIsOverridden });
+  //     onOpenChange(false);
+  //   } catch (error) {
+  //     console.error('Error submitting form:', error);
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      await onSubmit({ ...formData, thumbnail: thumbnailPreview });
+      const nonDriveFieldsChanged =
+        initialData &&
+        (formData.fileName !== initialData.fileName ||
+          formData.generation !== initialData.generation ||
+          formData.block !== initialData.block ||
+          formData.category !== initialData.category ||
+          (formData.boardExam || '') !== (initialData.boardExam || ''));
+
+      const finalIsOverridden = formData.isOverridden || Boolean(nonDriveFieldsChanged);
+
+      await onSubmit({ ...formData, thumbnail: thumbnailPreview, isOverridden: finalIsOverridden });
       onOpenChange(false);
     } catch (error) {
       console.error('Error submitting form:', error);
@@ -72,7 +177,6 @@ export function EditResourceDialog({ open, onOpenChange, onSubmit, initialData }
       setIsLoading(false);
     }
   };
-
   const blockOptions = keywordConfigs.filter((config) => config.config_type === 'block_mapping').map((config) => config.label);
   const categoryOptions = keywordConfigs.filter((config) => config.config_type === 'doc_type').map((config) => config.label);
   const boardExamOptions = keywordConfigs.filter((config) => config.config_type === 'board_exam').map((config) => config.label);
@@ -102,18 +206,18 @@ export function EditResourceDialog({ open, onOpenChange, onSubmit, initialData }
           <div className="space-y-4 py-4">
             {/* Block Name */}
             <div className="space-y-2">
-              <Label htmlFor="edit-blockName">Block Name *</Label>
+              <Label htmlFor="edit-fileName">File Name *</Label>
               <Input
-                id="edit-blockName"
+                id="edit-fileName"
                 placeholder="e.g., Cardiovascular System"
-                value={formData.blockName}
-                onChange={(e) => setFormData({ ...formData, blockName: e.target.value })}
+                value={formData.fileName}
+                onChange={(e) => setFormData({ ...formData, fileName: e.target.value })}
                 required
               />
             </div>
 
             {/* Block Code */}
-            <div className="space-y-2">
+            {/* <div className="space-y-2">
               <Label htmlFor="edit-blockCode">Block Code</Label>
               <Input
                 id="edit-blockCode"
@@ -121,30 +225,36 @@ export function EditResourceDialog({ open, onOpenChange, onSubmit, initialData }
                 value={formData.blockCode}
                 onChange={(e) => setFormData({ ...formData, blockCode: e.target.value })}
               />
-            </div>
+            </div> */}
 
             {/* Generation and Block - Row */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-generation">Generation *</Label>
+                <Label htmlFor="generation">Generation *</Label>
                 <Select
                   value={formData.generation}
                   onValueChange={(value: any) => setFormData({ ...formData, generation: value })}
                 >
-                  <SelectTrigger id="edit-generation">
+                  <SelectTrigger id="generation">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="MDCU 82">MDCU 82</SelectItem>
                     <SelectItem value="MDCU 81">MDCU 81</SelectItem>
                     <SelectItem value="MDCU 80">MDCU 80</SelectItem>
                     <SelectItem value="MDCU 79">MDCU 79</SelectItem>
                     <SelectItem value="MDCU 78">MDCU 78</SelectItem>
                     <SelectItem value="MDCU 77">MDCU 77</SelectItem>
                     <SelectItem value="MDCU 76">MDCU 76</SelectItem>
+                    <SelectItem value="MDCU 75">MDCU 75</SelectItem>
+                    <SelectItem value="MDCU 74">MDCU 74</SelectItem>
+                    <SelectItem value="MDCU 73">MDCU 73</SelectItem>
+                    <SelectItem value="MDCU 72">MDCU 72</SelectItem>
+                    <SelectItem value="MDCU 71">MDCU 71</SelectItem>
+                    <SelectItem value="MDCU 70">MDCU 70</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="edit-block">Block *</Label>
                 <Select
@@ -155,15 +265,14 @@ export function EditResourceDialog({ open, onOpenChange, onSubmit, initialData }
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {blockOptions.length > 0 ? (
-                      blockOptions.map((option) => (
-                        <SelectItem key={option} value={option}>
-                          {option}
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <SelectItem value="Block 1">Block 1</SelectItem>
+                    {formData.block && !blockOptions.includes(formData.block) && (
+                      <SelectItem value={formData.block}>{formData.block}</SelectItem>
                     )}
+                    {blockOptions.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -180,22 +289,14 @@ export function EditResourceDialog({ open, onOpenChange, onSubmit, initialData }
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {categoryOptions.length > 0 ? (
-                    categoryOptions.map((option) => (
-                      <SelectItem key={option} value={option}>
-                        {option}
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <>
-                      <SelectItem value="AC">AC</SelectItem>
-                      <SelectItem value="Peer Tutoring">Peer Tutoring</SelectItem>
-                      <SelectItem value="Summary">Summary</SelectItem>
-                      <SelectItem value="Mock Exam">Mock Exam</SelectItem>
-                      <SelectItem value="Resources">Resources</SelectItem>
-                      <SelectItem value="Survival Guide">Survival Guide</SelectItem>
-                    </>
+                  {formData.category && !categoryOptions.includes(formData.category) && (
+                    <SelectItem value={formData.category}>{formData.category}</SelectItem>
                   )}
+                  {categoryOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -204,24 +305,43 @@ export function EditResourceDialog({ open, onOpenChange, onSubmit, initialData }
             <div className="space-y-2">
               <Label htmlFor="edit-boardExam">Board Exam</Label>
               <Select
-                value={formData.boardExam || ''}
-                onValueChange={(value: any) => setFormData({ ...formData, boardExam: value })}
+                value={formData.boardExam || '__none__'}
+                onValueChange={(value: any) =>
+                  setFormData({ ...formData, boardExam: value === '__none__' ? '' : value })
+                }
               >
                 <SelectTrigger id="edit-boardExam">
                   <SelectValue placeholder="Select board exam" />
                 </SelectTrigger>
                 <SelectContent>
-                  {boardExamOptions.length > 0 ? (
-                    boardExamOptions.map((option) => (
-                      <SelectItem key={option} value={option}>
-                        {option}
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value="">None</SelectItem>
+                  <SelectItem value="__none__">None</SelectItem>
+                  {formData.boardExam && !boardExamOptions.includes(formData.boardExam) && (
+                    <SelectItem value={formData.boardExam}>{formData.boardExam}</SelectItem>
                   )}
+                  {boardExamOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Override Toggle */}
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <label className="flex items-start gap-3 opacity-70 cursor-not-allowed">
+                <input
+                  type="checkbox"
+                  checked={Boolean(formData.isOverridden)}
+                  disabled
+                  className="mt-1 h-4 w-4 rounded border-slate-300 text-[#E5007D]"
+                />
+                <span className="text-sm text-slate-700">
+                  <span className="font-medium text-slate-900">Manual override {formData.isOverridden ? 'enabled' : 'disabled'} for this resource</span>
+                  <br />
+                  This was set when the resource was created and can't be changed here.
+                </span>
+              </label>
             </div>
 
             {/* Google Drive Link */}
@@ -230,11 +350,14 @@ export function EditResourceDialog({ open, onOpenChange, onSubmit, initialData }
               <Input
                 id="edit-driveLink"
                 type="url"
-                placeholder="https://drive.google.com/..."
                 value={formData.driveLink}
-                onChange={(e) => setFormData({ ...formData, driveLink: e.target.value })}
-                required
+                disabled
+                readOnly
+                className="bg-slate-100 cursor-not-allowed text-slate-500"
               />
+              <p className="text-xs text-slate-500">
+                Drive link can't be changed after creation. Delete and re-add the resource if it needs to point elsewhere.
+              </p>
             </div>
 
             {/* Thumbnail Upload */}

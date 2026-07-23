@@ -122,6 +122,22 @@ export async function updatePeerSupportItem(id: string, updates: Partial<PeerSup
   return data;
 }
 
+export async function fetchResourceByDriveId(driveId: string, excludeId?: string) {
+  let query = supabase
+    .from('student_documents')
+    .select('id, title') // ← will rename to match your actual column
+    .eq('drive_id', driveId);
+
+  if (excludeId) query = query.neq('id', excludeId);
+
+  const { data, error } = await query.limit(1).maybeSingle();
+  if (error) {
+    console.error('Fetch Error (Resource by Drive ID):', error.message);
+    return null;
+  }
+  return data;
+}
+
 export async function deletePeerSupportItem(id: string): Promise<void> {
   const { error } = await supabase
     .from('peer_support')
@@ -131,12 +147,17 @@ export async function deletePeerSupportItem(id: string): Promise<void> {
   if (error) throw error;
 }
 
-export async function checkDriveIdExists(driveId: string): Promise<boolean> {
-  const { data, error } = await supabase
+export async function checkDriveIdExists(driveId: string, excludeId?: string): Promise<boolean> {
+  let query = supabase
     .from('student_documents')
     .select('id')
-    .eq('drive_id', driveId)
-    .limit(1);
+    .eq('drive_id', driveId);
+
+  if (excludeId) {
+    query = query.neq('id', excludeId);
+  }
+
+  const { data, error } = await query.limit(1);
 
   if (error) {
     console.error('Fetch Error (Check Drive ID):', error.message);

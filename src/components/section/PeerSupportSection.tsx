@@ -216,13 +216,13 @@ export function PeerSupportSection({
     const shouldOverride = Boolean(data.isOverridden ?? existingDoc);
 
     const generation = Number.parseInt(data.generation.replace("MDCU ", ""), 10) || 0;
-    const fallbackTitle = data.blockName || data.driveLink || "Untitled resource";
+    const fallbackTitle = data.fileName || data.driveLink || "Untitled resource";
 
     const classifiedDoc: StudentDocument = {
       id: existingDoc?.id ?? -1,
       title: fallbackTitle,
       file_url: data.driveLink,
-      folder_path: data.blockName || data.driveLink || "",
+      folder_path: data.fileName || data.driveLink || "",
       uploaded_by: "admin",
       upload_date: new Date().toISOString(),
       block: data.block,
@@ -238,7 +238,7 @@ export function PeerSupportSection({
       const updates: Partial<StudentDocument> = {
         title: fallbackTitle,
         file_url: data.driveLink,
-        folder_path: data.blockName || data.driveLink || existingDoc.folder_path || "",
+        folder_path: data.fileName || data.driveLink || existingDoc.folder_path || "",
         thumbnail_url: data.thumbnail || undefined,
         generation,
         block: shouldOverride ? data.block : existingDoc.block,
@@ -267,7 +267,7 @@ export function PeerSupportSection({
       const recordToCreate: Partial<StudentDocument> = {
         title: fallbackTitle,
         file_url: data.driveLink,
-        folder_path: data.blockName || data.driveLink || "",
+        folder_path: data.fileName || data.driveLink || "",
         uploaded_by: "admin",
         upload_date: new Date().toISOString(),
         block: shouldOverride ? data.block : blockConfig ? blockConfig.label : "Unclassified",
@@ -288,15 +288,15 @@ export function PeerSupportSection({
   };
 
   const handleEdit = async (data: ResourceFormData & { id: string }) => {
-    // Strip "doc-" prefix and convert to number for student_documents
     const docId = parseInt(data.id.replace("doc-", ""), 10);
 
-    // Map ResourceFormData back to StudentDocument partial
-    // This allows admins to "fix keys" in the database
     const updates: any = {
+      title: data.fileName,
       block: data.block,
       doc_type: data.category,
+      board_exam: data.boardExam || null,
       generation: parseInt(data.generation.replace("MDCU ", ""), 10) || 0,
+      is_overridden: data.isOverridden,
     };
 
     await updateStudentDocument(docId, updates);
@@ -590,7 +590,7 @@ export function PeerSupportSection({
                       knownTypes={knownDocTypes}
                       viewMode={viewMode}
                       onEdit={(item) => {
-                        setEditingItem({ id: item.id, blockName: item.block_name, generation: item.generation, block: item.block, category: item.category, driveLink: item.drive_link, thumbnail: item.thumbnail });
+                        setEditingItem({ id: item.id, fileName: item.block_name, generation: item.generation, block: item.block, category: item.category, driveLink: item.drive_link, thumbnail: item.thumbnail });
                         setEditDialogOpen(true);
                       }}
                       onDelete={(item) => {

@@ -17,8 +17,7 @@ interface AddResourceDialogProps {
 }
 
 export interface ResourceFormData {
-  blockName: string;
-  // blockCode: string;
+  fileName: string;
   generation: string;
   block: string;
   category: string;
@@ -28,13 +27,21 @@ export interface ResourceFormData {
   isOverridden?: boolean;
 }
 
+export interface ResourceCategoryFormData {
+  title: string;
+  description: string;
+  icon: string;
+  thumbnail: string;
+  link: string;
+  items: { name: string; type: string }[];
+  isOverridden?: boolean;
+}
 export function AddResourceDialog({ open, onOpenChange, onSubmit, categoryName }: AddResourceDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [thumbnailPreview, setThumbnailPreview] = useState<string>('');
   const [keywordConfigs, setKeywordConfigs] = useState<KeywordConfig[]>([]);
   const [formData, setFormData] = useState<ResourceFormData>({
-    blockName: '',
-    // blockCode: '',
+    fileName: '',
     generation: 'MDCU 81',
     block: 'Block 1',
     category: categoryName || 'AC',
@@ -62,7 +69,7 @@ export function AddResourceDialog({ open, onOpenChange, onSubmit, categoryName }
               : configs.find((c) => c.config_type === 'doc_type')?.label || prev.category,
             boardExam: configs.some((c) => c.config_type === 'board_exam' && c.label === prev.boardExam)
               ? prev.boardExam || ''
-              : configs.find((c) => c.config_type === 'board_exam')?.label || prev.boardExam || '',
+              : '',
           }));
         }
       } catch (error) {
@@ -94,7 +101,7 @@ export function AddResourceDialog({ open, onOpenChange, onSubmit, categoryName }
       } catch (error) {
         console.error('Error checking existing drive id:', error);
       }
-    }, 400); // wait 400ms after typing stops before hitting the DB
+    }, 400);
 
     return () => {
       isMounted = false;
@@ -111,14 +118,12 @@ export function AddResourceDialog({ open, onOpenChange, onSubmit, categoryName }
     setIsLoading(true);
     try {
       await onSubmit({ ...formData, thumbnail: thumbnailPreview });
-      // Reset form
       setFormData({
-        blockName: '',
-        // blockCode: '',
+        fileName: '',
         generation: 'MDCU 81',
         block: blockOptions[0] || 'Block 1',
         category: categoryName || categoryOptions[0] || 'AC',
-        boardExam: boardExamOptions[0] || '',
+        boardExam: '',
         driveLink: '',
         thumbnail: '',
         isOverridden: false,
@@ -145,37 +150,27 @@ export function AddResourceDialog({ open, onOpenChange, onSubmit, categoryName }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">        <DialogHeader>
-        <DialogTitle>Add New Resource</DialogTitle>
-        <DialogDescription>
-          Fill in the details for the new academic resource. All fields are required.
-        </DialogDescription>
-      </DialogHeader>
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Add New Resource</DialogTitle>
+          <DialogDescription>
+            Fill in the details for the new academic resource. All fields are required.
+          </DialogDescription>
+        </DialogHeader>
 
         <form onSubmit={handleSubmit}>
           <div className="space-y-4 py-4">
             {/* Block Name */}
             <div className="space-y-2">
-              <Label htmlFor="blockName">Block Name *</Label>
+              <Label htmlFor="fileName">File Name *</Label>
               <Input
-                id="blockName"
+                id="fileName"
                 placeholder="e.g., Cardiovascular System"
-                value={formData.blockName}
-                onChange={(e) => setFormData({ ...formData, blockName: e.target.value })}
+                value={formData.fileName}
+                onChange={(e) => setFormData({ ...formData, fileName: e.target.value })}
                 required
               />
             </div>
-
-            {/* Block Code */}
-            {/* <div className="space-y-2">
-              <Label htmlFor="blockCode">Block Code</Label>
-              <Input
-                id="blockCode"
-                placeholder="e.g., CV-101"
-                value={formData.blockCode}
-                onChange={(e) => setFormData({ ...formData, blockCode: e.target.value })}
-              />
-            </div> */}
 
             {/* Generation and Block - Row */}
             <div className="grid grid-cols-2 gap-4">
@@ -189,12 +184,19 @@ export function AddResourceDialog({ open, onOpenChange, onSubmit, categoryName }
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="MDCU 82">MDCU 82</SelectItem>
                     <SelectItem value="MDCU 81">MDCU 81</SelectItem>
                     <SelectItem value="MDCU 80">MDCU 80</SelectItem>
                     <SelectItem value="MDCU 79">MDCU 79</SelectItem>
                     <SelectItem value="MDCU 78">MDCU 78</SelectItem>
                     <SelectItem value="MDCU 77">MDCU 77</SelectItem>
                     <SelectItem value="MDCU 76">MDCU 76</SelectItem>
+                    <SelectItem value="MDCU 75">MDCU 75</SelectItem>
+                    <SelectItem value="MDCU 74">MDCU 74</SelectItem>
+                    <SelectItem value="MDCU 73">MDCU 73</SelectItem>
+                    <SelectItem value="MDCU 72">MDCU 72</SelectItem>
+                    <SelectItem value="MDCU 71">MDCU 71</SelectItem>
+                    <SelectItem value="MDCU 70">MDCU 70</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -224,6 +226,7 @@ export function AddResourceDialog({ open, onOpenChange, onSubmit, categoryName }
             </div>
 
             {/* Category */}
+
             <div className="space-y-2">
               <Label htmlFor="category">Category *</Label>
               <Select
@@ -234,22 +237,11 @@ export function AddResourceDialog({ open, onOpenChange, onSubmit, categoryName }
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {categoryOptions.length > 0 ? (
-                    categoryOptions.map((option) => (
-                      <SelectItem key={option} value={option}>
-                        {option}
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <>
-                      <SelectItem value="AC">AC</SelectItem>
-                      <SelectItem value="Peer Tutoring">Peer Tutoring</SelectItem>
-                      <SelectItem value="Summary">Summary</SelectItem>
-                      <SelectItem value="Mock Exam">Mock Exam</SelectItem>
-                      <SelectItem value="Resources">Resources</SelectItem>
-                      <SelectItem value="Survival Guide">Survival Guide</SelectItem>
-                    </>
-                  )}
+                  {categoryOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -258,22 +250,21 @@ export function AddResourceDialog({ open, onOpenChange, onSubmit, categoryName }
             <div className="space-y-2">
               <Label htmlFor="boardExam">Board Exam</Label>
               <Select
-                value={formData.boardExam || ''}
-                onValueChange={(value: any) => setFormData({ ...formData, boardExam: value })}
+                value={formData.boardExam || '__none__'}
+                onValueChange={(value: any) =>
+                  setFormData({ ...formData, boardExam: value === '__none__' ? '' : value })
+                }
               >
                 <SelectTrigger id="boardExam">
                   <SelectValue placeholder="Select board exam" />
                 </SelectTrigger>
                 <SelectContent>
-                  {boardExamOptions.length > 0 ? (
-                    boardExamOptions.map((option) => (
-                      <SelectItem key={option} value={option}>
-                        {option}
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value="">None</SelectItem>
-                  )}
+                  <SelectItem value="__none__">None</SelectItem>
+                  {boardExamOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
