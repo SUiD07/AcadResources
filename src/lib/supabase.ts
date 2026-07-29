@@ -225,7 +225,7 @@ export async function fetchActivities(): Promise<Activity[]> {
   const { data, error } = await supabase
     .from('activities')
     .select('*')
-    .order('date', { ascending: true });
+    .order('order_index', { ascending: true });
 
   if (error) {
     console.error('Fetch Error (Activities):', error.message);
@@ -235,9 +235,18 @@ export async function fetchActivities(): Promise<Activity[]> {
 }
 
 export async function createActivity(activity: Omit<Activity, 'id'>): Promise<Activity> {
+  const { data: maxData } = await supabase
+    .from('activities')
+    .select('order_index')
+    .order('order_index', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const nextOrder = (maxData?.order_index ?? -1) + 1;
+
   const { data, error } = await supabase
     .from('activities')
-    .insert(activity)
+    .insert({ ...activity, order_index: nextOrder })
     .select()
     .single();
 
@@ -266,6 +275,14 @@ export async function deleteActivity(id: string): Promise<void> {
   if (error) throw error;
 }
 
+export async function reorderActivities(orderedIds: string[]): Promise<void> {
+  await Promise.all(
+    orderedIds.map((id, index) =>
+      supabase.from('activities').update({ order_index: index }).eq('id', id)
+    )
+  );
+}
+
 // ============================================
 // 3. ACADEMIC RESOURCES FUNCTIONS
 // ============================================
@@ -276,7 +293,7 @@ export async function fetchResourceCategories(): Promise<ResourceCategory[]> {
   const { data, error } = await supabase
     .from('resource_categories')
     .select('*, items:resource_items(*)')
-    .order('title', { ascending: true });
+    .order('order_index', { ascending: true });
 
   if (error) {
     console.error('Fetch Error (Resources):', error.message);
@@ -286,13 +303,24 @@ export async function fetchResourceCategories(): Promise<ResourceCategory[]> {
 }
 
 export async function createResourceCategory(
-  category: { title: string; description: string; icon: string; link: string; items?: ResourceItemInput[] }
+  category: { title: string; description: string; icon: string; link: string; image_url?: string | null; items?: ResourceItemInput[] }
 ): Promise<ResourceCategory> {
   const { items, ...categoryData } = category;
 
+  // ⬇️ แทรกส่วนนี้เข้ามาใหม่ ⬇️
+  const { data: maxData } = await supabase
+    .from('resource_categories')
+    .select('order_index')
+    .order('order_index', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const nextOrder = (maxData?.order_index ?? -1) + 1;
+  // ⬆️ แทรกส่วนนี้เข้ามาใหม่ ⬆️
+
   const { data, error } = await supabase
     .from('resource_categories')
-    .insert(categoryData)
+    .insert({ ...categoryData, order_index: nextOrder })   // ← แก้บรรทัดนี้ เพิ่ม order_index เข้าไปใน object
     .select()
     .single();
 
@@ -363,6 +391,14 @@ export async function deleteResourceCategory(id: string): Promise<void> {
     .eq('id', id);
 
   if (error) throw error;
+}
+
+export async function reorderResourceCategories(orderedIds: string[]): Promise<void> {
+  await Promise.all(
+    orderedIds.map((id, index) =>
+      supabase.from('resource_categories').update({ order_index: index }).eq('id', id)
+    )
+  );
 }
 
 // ============================================

@@ -340,3 +340,13 @@ export async function adminPromoteYear(sourceYear: string, targetYear: string, a
   }
   return { success: true, count: 0 };
 }
+
+// reorder
+
+export async function reorderActivitiesData(orderedIds: string[]) {
+  if (USE_SUPABASE) return await supabaseApi.reorderActivities(orderedIds);
+}
+
+export async function reorderResourceCategoriesData(orderedIds: string[]) {
+  if (USE_SUPABASE) return await supabaseApi.reorderResourceCategories(orderedIds);
+}

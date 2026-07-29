@@ -33,6 +33,21 @@ import { EditActivityDialog } from "../admin/EditActivityDialog";
 import { DeleteConfirmDialog } from "../admin/DeleteConfirmDialog";
 import { motion } from "motion/react";
 import { Link } from "react-router-dom";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import type { DragEndEvent } from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  rectSortingStrategy,
+} from "@dnd-kit/sortable";
+import { SortableActivityCard } from "./SortableActivityCard";
+import { reorderActivitiesData } from "../../lib/dataService";
 
 interface AcademicActivitiesSectionProps {
   isAdmin?: boolean;
@@ -104,6 +119,22 @@ export function AcademicActivitiesSection({
     await loadData();
   };
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+  );
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = activities.findIndex((a) => a.id === active.id);
+    const newIndex = activities.findIndex((a) => a.id === over.id);
+    const newOrder = arrayMove(activities, oldIndex, newIndex);
+
+    setActivities(newOrder); // อัปเดตหน้าจอทันที (optimistic)
+    await reorderActivitiesData(newOrder.map((a) => a.id)); // ค่อยเซฟลง DB
+  };
+
   return (
     <div className="pb-20 lg:pb-10">
       <div className="mb-6 sm:mb-8">
@@ -132,112 +163,29 @@ export function AcademicActivitiesSection({
           <div className="text-slate-600">Loading...</div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-          {activities.map((activity) => {
-            const Icon = iconMap[activity.icon] || Calendar;
-
-            return (
-              <motion.div key={activity.id} whileHover={{ y: -6 }}>
-                <Card className="hover:shadow-lg transition-shadow overflow-hidden">
-                  {/* รูปภาพ (แสดงเฉพาะถ้ามี image_url) */}
-                  {activity.image_url && (
-                    <div className="relative h-40 overflow-hidden">
-                      <img
-                        src={activity.image_url}
-                        alt={activity.title}
-                        className="w-full h-full object-cover"
-                        referrerPolicy="no-referrer"
-                      />
-                    </div>
-                  )}
-
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-pink-100 rounded-lg flex items-center justify-center mb-3 sm:mb-4">
-                        <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-[#E5007D]" />
-                      </div>
-                      <span
-                        className={`px-2.5 py-1 rounded-full text-xs ${
-                          activity.status === "Completed"
-                            ? "bg-green-50 text-green-700"
-                            : activity.status === "Upcoming"
-                              ? "bg-yellow-50 text-yellow-700"
-                              : "bg-pink-50 text-[#E5007D]"
-                        }`}
-                      >
-                        {activity.status}
-                      </span>
-                    </div>
-                    <CardTitle className="text-base sm:text-lg">
-                      {activity.title}
-                    </CardTitle>
-                    <CardDescription className="text-sm">
-                      {activity.description}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center gap-2 text-sm text-slate-600 mb-4">
-                      <Calendar className="w-4 h-4 shrink-0" />
-                      <div className="flex items-center gap-2 text-sm text-slate-600">
-                        <span>
-                          {new Date(activity.date).toLocaleDateString(
-                            "th-TH",
-                            {
-                              day: "numeric",
-                              month: "short",
-                              year: "numeric",
-                            },
-                          )}
-                        </span>
-
-                        <Clock className="h-4 w-4 ml-2" />
-                        <span>
-                          {new Date(activity.date).toLocaleTimeString(
-                            "th-TH",
-                            {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            },
-                          )}{" "}
-                          น.
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between gap-2">
-                      <Link
-                        to={`/activities/${activity.id}`}
-                        className="inline-flex items-center gap-2 text-[#E5007D] font-bold text-sm"
-                      >
-                        View Details <ArrowRight size={16} />
-                      </Link>
-
-                      {isAdmin && (
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEditActivity(activity)}
-                            className="border-[#E5007D] text-[#E5007D] hover:bg-pink-50"
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDeleteActivity(activity)}
-                            className="border-red-300 text-red-600 hover:bg-red-50"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            );
-          })}
-        </div>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={activities.map((a) => a.id)}
+            strategy={rectSortingStrategy}
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+              {activities.map((activity) => (
+                <SortableActivityCard
+                  key={activity.id}
+                  activity={activity}
+                  Icon={iconMap[activity.icon] || Calendar}
+                  isAdmin={isAdmin}
+                  onEdit={handleEditActivity}
+                  onDelete={handleDeleteActivity}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
       )}
 
       {/* Add, Edit, Delete Dialogs */}
