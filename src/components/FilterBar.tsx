@@ -64,23 +64,24 @@ const BOARD_EXAM_LABELS: Record<string, string> = {
 };
 
 // ─── PROPS ────────────────────────────────────────────────────────────────────
+// ─── PROPS ────────────────────────────────────────────────────────────────────
 export interface FilterBarProps {
   generationOptions?: string[];
   blockOptions?: string[];
   categoryOptions?: string[];
   boardExamOptions?: string[];
 
-  selectedYear: string[];
-  selectedGeneration: string[];
-  selectedBlock: string[];
-  selectedCategory: string[];
-  selectedBoardExam: string[];
+  selectedYear?: string[];
+  selectedGeneration?: string[];
+  selectedBlock?: string[];
+  selectedCategory?: string[];
+  selectedBoardExam?: string[];
 
-  onYearChange: (value: string[]) => void;
-  onGenerationChange: (value: string[]) => void;
-  onBlockChange: (value: string[]) => void;
-  onCategoryChange: (value: string[]) => void;
-  onBoardExamChange: (values: string[]) => void;
+  onYearChange?: (value: string[]) => void;
+  onGenerationChange?: (value: string[]) => void;
+  onBlockChange?: (value: string[]) => void;
+  onCategoryChange?: (value: string[]) => void;
+  onBoardExamChange?: (values: string[]) => void;
 
   isMobile?: boolean;
 }
@@ -419,11 +420,11 @@ export function FilterBar({
   blockOptions,
   categoryOptions = DEFAULT_CATEGORIES,
   boardExamOptions = DEFAULT_BOARD_EXAMS,
-  selectedYear,
-  selectedGeneration,
-  selectedBlock,
-  selectedCategory,
-  selectedBoardExam,
+  selectedYear = [],
+  selectedGeneration = [],
+  selectedBlock = [],
+  selectedCategory = [],
+  selectedBoardExam = [],
   onYearChange,
   onGenerationChange,
   onBlockChange,
@@ -433,21 +434,23 @@ export function FilterBar({
 }: FilterBarProps) {
   const [open, setOpen] = React.useState(!isMobile);
 
+  const showYear = !!onYearChange;
+  const showBlock = !!onBlockChange;
+  const showCategory = !!onCategoryChange;
+  const showBoardExam = !!onBoardExamChange;
+  const showGeneration = !!onGenerationChange;
+
   // กรอง block ตาม year ที่เลือก
   const safeBlockOptions = blockOptions ?? [];
-  const filteredBlockOptions = [
-    ...filterBlocksByYear(safeBlockOptions, selectedYear),
-    // "other",
-  ];
-  // const filteredBlockOptions = filterBlocksByYear(blockOptions, selectedYear);
+  const filteredBlockOptions = filterBlocksByYear(safeBlockOptions, selectedYear);
 
   // ถ้า year เปลี่ยน → clear block ที่ไม่ได้อยู่ใน filtered แล้ว
   React.useEffect(() => {
+    if (!showBlock || !showYear) return;
     if (selectedYear.length === 0) return;
-    const validBlocks = filteredBlockOptions;
-    const stillValid = selectedBlock.filter((b) => validBlocks.includes(b));
+    const stillValid = selectedBlock.filter((b) => filteredBlockOptions.includes(b));
     if (stillValid.length !== selectedBlock.length) {
-      onBlockChange(stillValid);
+      onBlockChange!(stillValid);
     }
   }, [selectedYear]);
 
@@ -459,11 +462,11 @@ export function FilterBar({
     selectedBoardExam.length;
 
   const clearAll = () => {
-    onYearChange([]);
-    onGenerationChange([]);
-    onBlockChange([]);
-    onCategoryChange([]);
-    onBoardExamChange([]);
+    onYearChange?.([]);
+    onGenerationChange?.([]);
+    onBlockChange?.([]);
+    onCategoryChange?.([]);
+    onBoardExamChange?.([]);
   };
 
   return (
@@ -540,57 +543,64 @@ export function FilterBar({
             overflowY: "scroll",
           }}
         >
-          {/* ── Year filter (บนสุด) ── */}
-          <CheckboxGroup
-            label="เลือกชั้นปี"
-            options={YEAR_OPTIONS}
-            selected={selectedYear}
-            onChange={onYearChange}
-            colorMap={YEAR_COLORS}
-            labelMap={YEAR_LABELS}
-          />
+          {showYear && (
+            <CheckboxGroup
+              label="เลือกชั้นปี"
+              options={YEAR_OPTIONS}
+              selected={selectedYear}
+              onChange={onYearChange!}
+              colorMap={YEAR_COLORS}
+              labelMap={YEAR_LABELS}
+            />
+          )}
 
-          {/* Block — แสดงเฉพาะวิชาในปีที่เลือก */}
-          <CheckboxGroup
-            label="เลือก Block"
-            options={filteredBlockOptions}
-            selected={selectedBlock}
-            onChange={onBlockChange}
-            labelMap={BLOCK_LABELS}
-            emptyMsg={
-              selectedYear.length > 0
-                ? "ไม่มีรายวิชาในชั้นปีนี้"
-                : "— (เลือกชั้นปีเพื่อกรองรายวิชา)"
-            }
-          />
+          {showBlock && (
+            <CheckboxGroup
+              label="เลือก Block"
+              options={filteredBlockOptions}
+              selected={selectedBlock}
+              onChange={onBlockChange!}
+              labelMap={BLOCK_LABELS}
+              emptyMsg={
+                selectedYear.length > 0
+                  ? "ไม่มีรายวิชาในชั้นปีนี้"
+                  : "— (เลือกชั้นปีเพื่อกรองรายวิชา)"
+              }
+            />
+          )}
 
-          <CheckboxGroup
-            label="เลือกประเภท"
-            options={[...(categoryOptions ?? DEFAULT_CATEGORIES), "other"]}
-            selected={selectedCategory}
-            onChange={onCategoryChange}
-            colorMap={TYPE_COLORS}
-            labelMap={CATEGORY_LABELS}
-          />
+          {showCategory && (
+            <CheckboxGroup
+              label="เลือกประเภท"
+              options={[...(categoryOptions ?? DEFAULT_CATEGORIES), "other"]}
+              selected={selectedCategory}
+              onChange={onCategoryChange!}
+              colorMap={TYPE_COLORS}
+              labelMap={CATEGORY_LABELS}
+            />
+          )}
 
-          {/* Board Exam — เฉพาะไฟล์ที่เกี่ยวกับข้อสอบ NLE/Compre/OSCE */}
-          <CheckboxGroup
-            label="เลือกข้อสอบ"
-            options={[...(boardExamOptions ?? DEFAULT_BOARD_EXAMS), "other"]}
-            selected={selectedBoardExam}
-            onChange={onBoardExamChange}
-            colorMap={BOARD_EXAM_COLORS}
-            labelMap={BOARD_EXAM_LABELS}
-            emptyMsg="— ไม่มีไฟล์ที่ระบุข้อสอบ"
-          />
+          {showBoardExam && (
+            <CheckboxGroup
+              label="เลือกข้อสอบ"
+              options={[...(boardExamOptions ?? DEFAULT_BOARD_EXAMS), "other"]}
+              selected={selectedBoardExam}
+              onChange={onBoardExamChange!}
+              colorMap={BOARD_EXAM_COLORS}
+              labelMap={BOARD_EXAM_LABELS}
+              emptyMsg="— ไม่มีไฟล์ที่ระบุข้อสอบ"
+            />
+          )}
 
-          <CheckboxGroup
-            label="เลือกรุ่น"
-            options={[...(generationOptions ?? DEFAULT_GENERATIONS), "other"]}
-            selected={selectedGeneration}
-            onChange={onGenerationChange}
-            labelMap={GENERATION_LABELS}
-          />
+          {showGeneration && (
+            <CheckboxGroup
+              label="เลือกรุ่น"
+              options={[...(generationOptions ?? DEFAULT_GENERATIONS), "other"]}
+              selected={selectedGeneration}
+              onChange={onGenerationChange!}
+              labelMap={GENERATION_LABELS}
+            />
+          )}
         </div>
       )}
 
@@ -602,11 +612,11 @@ export function FilterBar({
             blocks={selectedBlock}
             types={selectedCategory}
             boardExams={selectedBoardExam}
-            setYears={onYearChange}
-            setGens={onGenerationChange}
-            setBlocks={onBlockChange}
-            setTypes={onCategoryChange}
-            setBoardExams={onBoardExamChange}
+            setYears={onYearChange ?? (() => { })}
+            setGens={onGenerationChange ?? (() => { })}
+            setBlocks={onBlockChange ?? (() => { })}
+            setTypes={onCategoryChange ?? (() => { })}
+            setBoardExams={onBoardExamChange ?? (() => { })}
             clearAll={clearAll}
           />
         </div>

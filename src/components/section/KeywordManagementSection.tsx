@@ -34,6 +34,7 @@ import { QuickAddKeywordBar } from '../../components/keyword/Quickaddkeywordbar'
 import { KeywordCategoryCard } from '../../components/keyword/KeywordCategoryCard';
 import { getDriveSync } from '../../lib/dataService';
 import { Virtuoso } from "react-virtuoso"
+import { FilterBar, filterBlocksByYear } from "../FilterBar";
 
 interface FocusedKey {
   configId: string;
@@ -230,9 +231,26 @@ export function KeywordManagementSection({ defaultYear = '1' }: { defaultYear?: 
   const [quickAddNewYear, setQuickAddNewYear] = useState(defaultYear);
   const [isQuickAdding, setIsQuickAdding] = useState(false);
 
+  // ── Per-tab horizontal filter bar state ──────────────────────────────────
+  const [filterDocType, setFilterDocType] = useState<string[]>([]);
+  const [filterGeneration, setFilterGeneration] = useState<string[]>([]);
+  const [filterBlock, setFilterBlock] = useState<string[]>([]);
+  const [filterYear, setFilterYear] = useState<string[]>([]);
+  const [filterBoardExam, setFilterBoardExam] = useState<string[]>([]);
+
   useEffect(() => {
     loadData();
   }, []);
+
+  // Reset the filter bar whenever the active tab changes so leftover
+  // selections from one tab don't silently filter another tab's list.
+  useEffect(() => {
+    setFilterDocType([]);
+    setFilterGeneration([]);
+    setFilterBlock([]);
+    setFilterYear([]);
+    setFilterBoardExam([]);
+  }, [activeTab]);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -370,7 +388,7 @@ export function KeywordManagementSection({ defaultYear = '1' }: { defaultYear?: 
       keys: [''],
       year: activeTab === 'block_mapping' ? defaultYear : undefined,
     };
-    setConfigs((prev) => [...prev, newConfig]);
+    setConfigs((prev) => [newConfig, ...prev]);
   };
 
   const handleQuickAddKeyword = async () => {
@@ -415,7 +433,72 @@ export function KeywordManagementSection({ defaultYear = '1' }: { defaultYear?: 
     setQuickAddCategoryId('');
   };
 
-  const filteredConfigs = useMemo(() => configs.filter((c) => c.config_type === activeTab), [configs, activeTab]);
+  // ── Options for the per-tab filter bar, derived from existing configs ────
+  const docTypeFilterOptions = useMemo(
+    () => configs.filter((c) => c.config_type === 'doc_type').map((c) => c.label),
+    [configs],
+  );
+  const generationFilterOptions = useMemo(
+    () => configs.filter((c) => c.config_type === 'generation').map((c) => c.label),
+    [configs],
+  );
+  const blockFilterOptions = useMemo(
+    () => configs.filter((c) => c.config_type === 'block_mapping').map((c) => c.label),
+    [configs],
+  );
+  const boardExamFilterOptions = useMemo(
+    () => configs.filter((c) => c.config_type === 'board_exam').map((c) => c.label),
+    [configs],
+  );
+
+  // Keep the block filter selection valid whenever the year filter changes.
+  useEffect(() => {
+    if (activeTab !== 'block_mapping' || filterYear.length === 0) return;
+    const validBlocks = filterBlocksByYear(blockFilterOptions, filterYear);
+    setFilterBlock((prev) => {
+      const next = prev.filter((b) => validBlocks.includes(b));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [filterYear, activeTab, blockFilterOptions]);
+
+  const filteredConfigs = useMemo(() => {
+    const base = configs.filter((c) => c.config_type === activeTab);
+
+    switch (activeTab) {
+      case 'doc_type':
+        return filterDocType.length === 0
+          ? base
+          : base.filter((c) => filterDocType.includes(c.label));
+
+      case 'generation':
+        return filterGeneration.length === 0
+          ? base
+          : base.filter((c) => filterGeneration.includes(c.label));
+
+      case 'block_mapping': {
+        let result = base;
+        if (filterBlock.length > 0) {
+          result = result.filter((c) => filterBlock.includes(c.label));
+        }
+        if (filterYear.length > 0) {
+          result = result.filter((c) => {
+            const y = c.year === 'other' || !c.year ? 'other' : String(c.year);
+            return filterYear.includes(y);
+          });
+        }
+        return result;
+      }
+
+      case 'board_exam':
+        return filterBoardExam.length === 0
+          ? base
+          : base.filter((c) => filterBoardExam.includes(c.label));
+
+      default:
+        return base;
+    }
+  }, [configs, activeTab, filterDocType, filterGeneration, filterBlock, filterYear, filterBoardExam]);
+
   const overlaps = useMemo(() => findOverlaps(documents, configs, activeTab), [documents, configs, activeTab]);
 
   const TAB_LABELS: Record<KeywordConfig['config_type'], string> = {
@@ -489,6 +572,44 @@ export function KeywordManagementSection({ defaultYear = '1' }: { defaultYear?: 
           })}
         </div>
 
+        {/* Horizontal filter bar — shows only the filters relevant to the active tab */}
+        <div className="flex flex-row flex-nowrap items-center gap-3 overflow-x-auto py-3 sm:py-4 border-b border-slate-100">
+          {activeTab === 'doc_type' && (
+            <FilterBar
+              categoryOptions={docTypeFilterOptions}
+              selectedCategory={filterDocType}
+              onCategoryChange={setFilterDocType}
+              isMobile={false}
+            />
+          )}
+          {activeTab === 'generation' && (
+            <FilterBar
+              generationOptions={generationFilterOptions}
+              selectedGeneration={filterGeneration}
+              onGenerationChange={setFilterGeneration}
+              isMobile={false}
+            />
+          )}
+          {activeTab === 'block_mapping' && (
+            <FilterBar
+              blockOptions={blockFilterOptions}
+              selectedBlock={filterBlock}
+              onBlockChange={setFilterBlock}
+              selectedYear={filterYear}
+              onYearChange={setFilterYear}
+              isMobile={false}
+            />
+          )}
+          {activeTab === 'board_exam' && (
+            <FilterBar
+              boardExamOptions={boardExamFilterOptions}
+              selectedBoardExam={filterBoardExam}
+              onBoardExamChange={setFilterBoardExam}
+              isMobile={false}
+            />
+          )}
+        </div>
+
         <div className="pt-4 sm:pt-6 space-y-4 sm:space-y-6">
           {isLoading ? (
             <div className="flex items-center justify-center py-16 sm:py-24">
@@ -496,6 +617,21 @@ export function KeywordManagementSection({ defaultYear = '1' }: { defaultYear?: 
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-4 sm:gap-6">
+              {/* Add New Category now lives at the top of the list */}
+              <button
+                onClick={handleAddNewCategory}
+                className="w-full py-6 sm:py-8 rounded-xl border-2 border-dashed border-slate-200 hover:border-[#E5007D] hover:bg-pink-50/50 transition-colors group"
+              >
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-pink-100 rounded-lg flex items-center justify-center group-hover:bg-pink-200 transition-colors">
+                    <Plus className="w-5 h-5 sm:w-6 sm:h-6 text-[#E5007D]" />
+                  </div>
+                  <span className="text-sm sm:text-lg font-medium text-slate-700">
+                    Add New {NEW_LABEL[activeTab]}
+                  </span>
+                </div>
+              </button>
+
               <OverlapAuditPanel overlaps={overlaps} configType={activeTab} />
 
               {filteredConfigs.map((config) => (
@@ -517,20 +653,6 @@ export function KeywordManagementSection({ defaultYear = '1' }: { defaultYear?: 
                   driveSyncRecords={driveSyncRecords}
                 />
               ))}
-
-              <button
-                onClick={handleAddNewCategory}
-                className="w-full py-8 sm:py-10 rounded-xl border-2 border-dashed border-slate-200 hover:border-[#E5007D] hover:bg-pink-50/50 transition-colors group"
-              >
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-pink-100 rounded-lg flex items-center justify-center group-hover:bg-pink-200 transition-colors">
-                    <Plus className="w-5 h-5 sm:w-6 sm:h-6 text-[#E5007D]" />
-                  </div>
-                  <span className="text-sm sm:text-lg font-medium text-slate-700">
-                    Add New {NEW_LABEL[activeTab]}
-                  </span>
-                </div>
-              </button>
             </div>
           )}
         </div>
