@@ -53,7 +53,7 @@ export async function fetchPeerSupportData(): Promise<PeerSupportItem[]> {
   return allDocuments;
 }
 
-export async function fetchStudentDocuments(filters?: { years?: number[], blocks?: string[] }): Promise<StudentDocument[]> {
+export async function fetchStudentDocuments(filters?: { blocks?: string[] }): Promise<StudentDocument[]> {
   const PAGE_SIZE = 1000;
   let from = 0;
   let allDocuments: StudentDocument[] = [];
@@ -62,15 +62,10 @@ export async function fetchStudentDocuments(filters?: { years?: number[], blocks
     let query = supabase
       .from('student_documents')
       .select('*')
-      .order('upload_date', { ascending: false })
-
-    if (filters?.years && filters.years.length > 0) {
-      query = query.in('student_year', filters.years);
-    }
+      .order('upload_date', { ascending: false });
 
     if (filters?.blocks && filters.blocks.length > 0) {
-      // If we have both, we might want OR logic, but Supabase standard chained filters are AND. 
-      // Assuming we just filter by year for now, we'll rely on student_year primarily if passed.
+      query = query.in('block', filters.blocks);
     }
 
     const { data, error } = await query.range(from, from + PAGE_SIZE - 1);
@@ -85,10 +80,7 @@ export async function fetchStudentDocuments(filters?: { years?: number[], blocks
     }
 
     allDocuments.push(...data);
-
-    console.log(
-      `Fetched ${data.length} rows (total: ${allDocuments.length})`
-    );
+    console.log(`Fetched ${data.length} rows (total: ${allDocuments.length})`);
 
     if (data.length < PAGE_SIZE) {
       break;

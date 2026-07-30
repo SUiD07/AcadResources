@@ -20,7 +20,7 @@ export async function getPeerSupportData(): Promise<PeerSupportItem[]> {
   return [];
 }
 
-export async function getStudentDocuments(filters?: { years?: number[], blocks?: string[] }): Promise<StudentDocument[]> {
+export async function getStudentDocuments(filters?: { blocks?: string[] }): Promise<StudentDocument[]> {
   if (USE_SUPABASE) {
     return await supabaseApi.fetchStudentDocuments(filters);
   }

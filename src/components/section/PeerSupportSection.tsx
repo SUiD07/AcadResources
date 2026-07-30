@@ -286,8 +286,8 @@ export function PeerSupportSection({
       await createStudentDocument(recordToCreate);
     }
 
-    const yearNumbers = selectedYear.map(y => parseInt(y, 10)).filter(y => !isNaN(y));
-    const updated = await getStudentDocuments({ years: yearNumbers.length > 0 ? yearNumbers : undefined });
+    const blocksInYear = selectedYear.length > 0 ? getBlocksInYear(selectedYear, yearMap) : [];
+    const updated = await getStudentDocuments({ blocks: blocksInYear.length > 0 ? blocksInYear : undefined });
     setStudentDocs(updated);
   };
 
@@ -305,8 +305,8 @@ export function PeerSupportSection({
     };
 
     await updateStudentDocument(docId, updates);
-    const yearNumbers = selectedYear.map(y => parseInt(y, 10)).filter(y => !isNaN(y));
-    const updated = await getStudentDocuments({ years: yearNumbers.length > 0 ? yearNumbers : undefined });
+    const blocksInYear = selectedYear.length > 0 ? getBlocksInYear(selectedYear, yearMap) : [];
+    const updated = await getStudentDocuments({ blocks: blocksInYear.length > 0 ? blocksInYear : undefined });
     setStudentDocs(updated);
   };
 
@@ -314,8 +314,8 @@ export function PeerSupportSection({
     if (!deletingItem) return;
     const docId = parseInt(deletingItem.id.replace("doc-", ""), 10);
     await deleteStudentDocument(docId);
-    const yearNumbers = selectedYear.map(y => parseInt(y, 10)).filter(y => !isNaN(y));
-    const updated = await getStudentDocuments({ years: yearNumbers.length > 0 ? yearNumbers : undefined });
+    const blocksInYear = selectedYear.length > 0 ? getBlocksInYear(selectedYear, yearMap) : [];
+    const updated = await getStudentDocuments({ blocks: blocksInYear.length > 0 ? blocksInYear : undefined });
     setStudentDocs(updated);
   };
 
@@ -335,6 +335,7 @@ export function PeerSupportSection({
   const [isLoading, setIsLoading] = useState(true);
 
   // Load configs once on mount
+  // Load configs once on mount
   useEffect(() => {
     async function loadConfigs() {
       try {
@@ -348,42 +349,79 @@ export function PeerSupportSection({
     loadConfigs();
   }, []);
 
+  // yearMap must come before any effect that depends on it
+  const yearMap = useMemo(() => {
+    const map: Record<string, number | 'other'> = {};
+    configs
+      .filter(c => c.config_type === 'block_mapping')
+      .forEach(c => {
+        map[c.label] = c.year === 'other' || !c.year ? 'other' : Number(c.year);
+      });
+    return map;
+  }, [configs]);
 
-  const hasSyncedDrive = useRef(false); // ref, not state — no re-render lag
+  const hasSyncedDrive = useRef(false);
   const syncPromise = useRef<Promise<void> | null>(null);
 
-  // 1) Fetch immediately whenever the year filter changes — never waits on sync
- // ✅ STEP 1: Fetch ALL documents (no year filter at API)
-useEffect(() => {
-  async function loadDocs() {
-    try {
-      setIsLoading(true);
-      // REMOVE the years parameter — fetch everything
-      const docs = await getStudentDocuments();
-      setStudentDocs(docs);
-    } catch (error) {
-      console.error("Error loading documents:", error);
-    } finally {
-      setIsLoading(false);
+  function getBlocksInYear(selectedYear: string[], yearMap: Record<string, number | 'other'>): string[] {
+    const blocks = Object.entries(yearMap)
+      .filter(([_block, year]) => {
+        const yearStr = year === 'other' ? 'other' : String(year);
+        return selectedYear.includes(yearStr);
+      })
+      .map(([block]) => block);
+
+    if (selectedYear.includes('other')) {
+      blocks.push('Unclassified');
     }
+    return blocks;
   }
-  loadDocs();
-}, []); // Run once on mount only
 
-// ✅ STEP 2: Sync in background (also fetch all)
-useEffect(() => {
-  if (hasSyncedDrive.current) return;
-  hasSyncedDrive.current = true;
+  useEffect(() => {
+    async function loadDocs() {
+      try {
+        setIsLoading(true);
 
-  syncStudentDocumentsFromDrive()
-    .then(async () => {
-      const docs = await getStudentDocuments(); // No years filter
-      setStudentDocs(docs);
-    })
-    .catch((syncError) => {
-      console.error("Drive sync failed:", syncError);
-    });
-}, []);
+        if (selectedYear.length > 0) {
+          const blocksInYear = getBlocksInYear(selectedYear, yearMap);
+          const docs = await getStudentDocuments({
+            blocks: blocksInYear.length > 0 ? blocksInYear : undefined,
+          });
+          setStudentDocs(docs);
+        } else {
+          const docs = await getStudentDocuments();
+          setStudentDocs(docs);
+        }
+      } catch (error) {
+        console.error("Error loading documents:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadDocs();
+  }, [selectedYear, yearMap]);
+
+  useEffect(() => {
+    if (hasSyncedDrive.current) return;
+    hasSyncedDrive.current = true;
+
+    syncStudentDocumentsFromDrive()
+      .then(async () => {
+        if (selectedYear.length > 0) {
+          const blocksInYear = getBlocksInYear(selectedYear, yearMap);
+          const docs = await getStudentDocuments({
+            blocks: blocksInYear.length > 0 ? blocksInYear : undefined,
+          });
+          setStudentDocs(docs);
+        } else {
+          const docs = await getStudentDocuments();
+          setStudentDocs(docs);
+        }
+      })
+      .catch((syncError) => {
+        console.error("Drive sync failed:", syncError);
+      });
+  }, [selectedYear, yearMap]);
 
   const allItems = useMemo<PeerSupportItem[]>(
     () => {
@@ -450,15 +488,15 @@ useEffect(() => {
     };
   }, [allItems, knownDocTypes, knownGenerations]);
 
-  const yearMap = useMemo(() => {
-    const map: Record<string, number | 'other'> = {};
-    configs
-      .filter(c => c.config_type === 'block_mapping')
-      .forEach(c => {
-        map[c.label] = c.year === 'other' || !c.year ? 'other' : Number(c.year);
-      });
-    return map;
-  }, [configs]);
+  // const yearMap = useMemo(() => {
+  //   const map: Record<string, number | 'other'> = {};
+  //   configs
+  //     .filter(c => c.config_type === 'block_mapping')
+  //     .forEach(c => {
+  //       map[c.label] = c.year === 'other' || !c.year ? 'other' : Number(c.year);
+  //     });
+  //   return map;
+  // }, [configs]);
 
   useEffect(() => {
     if (selectedYear.length === 0) return;
