@@ -2330,6 +2330,16 @@
   padding: 0.25rem 0 !important;
 }
 
+.ProseMirror img {
+  max-width: 100%;
+  height: auto;
+}
+
+.image-resizer {
+  display: inline-block;
+  position: relative;
+}
+
 html {
   font-size: var(--font-size);
 }

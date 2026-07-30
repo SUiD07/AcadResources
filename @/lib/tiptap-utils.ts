@@ -13,6 +13,7 @@ import {
   type Editor,
   type NodeWithPos,
 } from "@tiptap/react"
+import { supabase } from "../../src/lib/supabase"
 
 export const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
 
@@ -362,7 +363,6 @@ export const handleImageUpload = async (
   onProgress?: (event: { progress: number }) => void,
   abortSignal?: AbortSignal
 ): Promise<string> => {
-  // Validate file
   if (!file) {
     throw new Error("No file provided")
   }
@@ -373,17 +373,27 @@ export const handleImageUpload = async (
     )
   }
 
-  // For demo/testing: Simulate upload progress. In production, replace the following code
-  // with your own upload implementation.
-  for (let progress = 0; progress <= 100; progress += 10) {
-    if (abortSignal?.aborted) {
-      throw new Error("Upload cancelled")
-    }
-    await new Promise((resolve) => setTimeout(resolve, 500))
-    onProgress?.({ progress })
+  if (abortSignal?.aborted) {
+    throw new Error("Upload cancelled")
   }
 
-  return "/images/tiptap-ui-placeholder-image.jpg"
+  onProgress?.({ progress: 0 })
+
+  const filePath = `content/${crypto.randomUUID()}-${file.name}`
+
+  const { error } = await supabase.storage
+    .from("editor-images")
+    .upload(filePath, file, { cacheControl: "3600", upsert: false })
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  onProgress?.({ progress: 100 })
+
+  const { data } = supabase.storage.from("editor-images").getPublicUrl(filePath)
+
+  return data.publicUrl
 }
 
 type ProtocolOptions = {
