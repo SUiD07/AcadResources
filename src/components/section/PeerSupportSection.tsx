@@ -214,7 +214,7 @@ export function PeerSupportSection({
       : null;
 
     const shouldOverride = Boolean(data.isOverridden ?? existingDoc);
-    const generation = Number.parseInt(data.generation.replace("MDCU ", ""), 10) || 0;
+    const generation = fromGenerationLabel(data.generation);
     const fallbackTitle = data.fileName || data.driveLink || "Untitled resource";
 
     const folderPath = existingDoc?.folder_path || data.folderPath || "";
@@ -248,7 +248,7 @@ export function PeerSupportSection({
         drive_id: driveId,
         is_overridden: shouldOverride,
       };
-      
+
       if (!shouldOverride) {
         const blockConfig = classifyDocument(classifiedDoc, configs, "block_mapping");
         const typeConfig = classifyDocument(classifiedDoc, configs, "doc_type");
@@ -297,7 +297,7 @@ export function PeerSupportSection({
       folder_path: data.folderPath,
       doc_type: data.category,
       board_exam: data.boardExam || null,
-      generation: parseInt(data.generation.replace("MDCU ", ""), 10) || 0,
+      generation: fromGenerationLabel(data.generation),
       is_overridden: data.isOverridden,
     };
 
@@ -389,9 +389,7 @@ export function PeerSupportSection({
           block_name: doc.title,
           thumbnail: doc.thumbnail_url || "",
           drive_link: doc.file_url,
-          generation: doc.generation && doc.generation !== 0
-            ? `MDCU ${doc.generation}`
-            : 'Auto-Detected',
+          generation: toGenerationLabel(doc.generation),
           block: finalBlock,
           category: finalCategory,
           board_exam: finalBoardExam,
@@ -410,14 +408,21 @@ export function PeerSupportSection({
     return [...new Set([...DOC_TYPE_ORDER, ...fromConfigs])];
   }, [configs]);
 
+  const knownGenerations = useMemo(() => {
+    return configs
+      .filter((c) => c.config_type === 'generation')
+      .map((c) => c.label);
+  }, [configs]);
+
   const filterOptions = useMemo(() => {
-    const genSet = new Set(allItems.map((d) => d.generation).filter((g) => g !== "Auto-Detected"));
+    const genSet = new Set([
+      ...knownGenerations,
+      ...allItems.map((d) => d.generation).filter((g) => g !== 'Auto-Detected'),
+    ]);
     const blockSet = new Set(allItems.map((d) => d.block));
     const typeSet = new Set(allItems.map((d) => d.category));
     const boardExamSet = new Set(
-      allItems
-        .map((d) => d.board_exam)
-        .filter((b): b is string => Boolean(b) && b !== "None")
+      allItems.map((d) => d.board_exam).filter((b): b is string => Boolean(b) && b !== 'None')
     );
     return {
       generations: [...genSet].sort((a, b) => b.localeCompare(a)),
@@ -425,7 +430,7 @@ export function PeerSupportSection({
       types: knownDocTypes.filter((t) => typeSet.has(t)),
       boardExams: [...boardExamSet].sort(),
     };
-  }, [allItems, knownDocTypes]);
+  }, [allItems, knownDocTypes, knownGenerations]);
 
   const yearMap = useMemo(() => {
     const map: Record<string, number | 'other'> = {};
@@ -453,8 +458,12 @@ export function PeerSupportSection({
           if (!selectedYear.includes(yearStr)) return false;
         }
 
-        const genVal = !item.generation || item.generation === "Auto-Detected" ? "other" : item.generation;
-        const genMatch = selectedGeneration.length === 0 || (genVal === "other" ? selectedGeneration.includes("other") || selectedGeneration.length === 0 : selectedGeneration.some((g) => genVal.includes(g.replace("MDCU ", ""))));
+        const genVal = !item.generation || item.generation === 'Auto-Detected' ? 'other' : item.generation;
+        const genMatch =
+          selectedGeneration.length === 0 ||
+          (genVal === 'other'
+            ? selectedGeneration.includes('other')
+            : selectedGeneration.includes(genVal));
 
         const blockVal = !item.block || item.block === "Unclassified" ? "other" : item.block;
         const blockMatch = selectedBlock.length === 0 || (blockVal === "other" ? selectedBlock.includes("other") || selectedBlock.length === 0 : selectedBlock.includes(blockVal));
@@ -475,6 +484,14 @@ export function PeerSupportSection({
       }),
     [allItems, selectedYear, selectedGeneration, selectedBlock, selectedCategory, selectedBoardExam, searchBoxes, searchOperators, yearMap],
   );
+
+  function toGenerationLabel(n: number | undefined | null): string {
+    return n && n !== 0 ? `MDCU ${n}` : 'Auto-Detected';
+  }
+  function fromGenerationLabel(label: string): number {
+    const match = label.match(/\d+/);
+    return match ? Number.parseInt(match[0], 10) : 0;
+  }
 
   const groupedBySubject = useMemo(() => {
     const map: Record<string, PeerSupportItem[]> = {};

@@ -112,6 +112,7 @@ export function QuickAddKeywordBar({
                 <SelectItem value="doc_type">Document Type</SelectItem>
                 <SelectItem value="block_mapping">Block Mapping</SelectItem>
                 <SelectItem value="board_exam">Board Exam</SelectItem>
+                <SelectItem value="generation">Generation</SelectItem>
               </SelectContent>
             </Select>
           </div>

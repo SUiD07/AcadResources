@@ -88,7 +88,7 @@ function PromoteYearDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="border-pink-200 text-[#E5007D] hover:bg-pink-50 text-sm h-9 px-4 hidden sm:flex">
+        <Button className="border-pink-200 text-[#E5007D] bg-white hover:bg-pink-50 text-sm h-9 px-4 flex">
           Promote Year
         </Button>
       </DialogTrigger>
@@ -99,23 +99,23 @@ function PromoteYearDialog() {
             Bulk update user preferences from a source year to a target year.
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
             <label className="text-right text-sm font-medium">Source Year</label>
-            <input 
-              className="col-span-3 flex h-10 w-full rounded-md border border-slate-300 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#E5007D] disabled:opacity-50" 
-              value={sourceYear} 
-              onChange={e => setSourceYear(e.target.value)} 
+            <input
+              className="col-span-3 flex h-10 w-full rounded-md border border-slate-300 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#E5007D] disabled:opacity-50"
+              value={sourceYear}
+              onChange={e => setSourceYear(e.target.value)}
               disabled={confirming || loading}
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <label className="text-right text-sm font-medium">Target Year</label>
-            <input 
-              className="col-span-3 flex h-10 w-full rounded-md border border-slate-300 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#E5007D] disabled:opacity-50" 
-              value={targetYear} 
-              onChange={e => setTargetYear(e.target.value)} 
+            <input
+              className="col-span-3 flex h-10 w-full rounded-md border border-slate-300 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#E5007D] disabled:opacity-50"
+              value={targetYear}
+              onChange={e => setTargetYear(e.target.value)}
               disabled={confirming || loading}
             />
           </div>
@@ -170,7 +170,13 @@ function OverlapAuditPanel({
         <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600 shrink-0" />
         <span className="text-xs sm:text-sm font-semibold text-amber-900 flex-1">
           {overlaps.length} file{overlaps.length > 1 ? 's' : ''} match multiple{' '}
-          {configType === 'doc_type' ? 'document type' : configType === 'block_mapping' ? 'block' : 'board exam'}{' '}
+          {configType === 'doc_type'
+            ? 'document type'
+            : configType === 'block_mapping'
+              ? 'block'
+              : configType === 'board_exam'
+                ? 'board exam'
+                : 'generation'}{' '}
           categories — specificity rule decides the winner
         </span>
         {expanded ? (
@@ -247,6 +253,11 @@ export function KeywordManagementSection({ defaultYear = '1' }: { defaultYear?: 
     }
   };
 
+  function fromGenerationLabel(label: string): number {
+    const match = label.match(/\d+/);
+    return match ? Number.parseInt(match[0], 10) : 0;
+  }
+
   const handleUpdateConfig = (id: string, updates: Partial<KeywordConfig>) => {
     setConfigs((prev) => prev.map((c) => (c.id === id ? { ...c, ...updates } : c)));
   };
@@ -288,6 +299,7 @@ export function KeywordManagementSection({ defaultYear = '1' }: { defaultYear?: 
         if (config.config_type === 'doc_type') return !!doc.doc_type;
         if (config.config_type === 'block_mapping') return !!doc.block;
         if (config.config_type === 'board_exam') return !!doc.board_exam;
+        if (config.config_type === 'generation') return !!doc.generation;
         return false;
       });
 
@@ -311,6 +323,8 @@ export function KeywordManagementSection({ defaultYear = '1' }: { defaultYear?: 
               : undefined;
         } else if (config.config_type === 'board_exam') {
           patch.board_exam = winner?.label ?? '';
+        } else if (config.config_type === 'generation') {
+          patch.generation = winner ? fromGenerationLabel(winner.label) : 0;
         }
 
         return updateStudentDocument(docId, patch);
@@ -408,12 +422,14 @@ export function KeywordManagementSection({ defaultYear = '1' }: { defaultYear?: 
     doc_type: 'Document Types',
     block_mapping: 'Block Mappings',
     board_exam: 'Board Exam',
+    generation: 'Generation',
   };
 
   const NEW_LABEL: Record<KeywordConfig['config_type'], string> = {
     doc_type: 'Document Type',
     block_mapping: 'Block Mapping',
     board_exam: 'Board Exam',
+    generation: 'Generation',
   };
 
   return (
@@ -456,7 +472,7 @@ export function KeywordManagementSection({ defaultYear = '1' }: { defaultYear?: 
       {/* Tabs */}
       <div className="flex flex-col">
         <div className="flex overflow-x-auto hide-scrollbar border-b border-slate-200 gap-1 sm:gap-2">
-          {(['doc_type', 'block_mapping', 'board_exam'] as const).map((tab) => {
+          {(['doc_type', 'block_mapping', 'board_exam', 'generation'] as const).map((tab) => {
             const isActive = activeTab === tab;
             return (
               <button

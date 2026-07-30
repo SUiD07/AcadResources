@@ -97,13 +97,14 @@ export interface BoardContent {
 
 export interface KeywordConfig {
   id: string;
-  config_type: 'doc_type' | 'block_mapping' | 'board_exam';
+  config_type: 'doc_type' | 'block_mapping' | 'board_exam' | 'generation';
   label: string;
   keys: string[];
   year?: string;
   created_at?: string;
   updated_at?: string;
 }
+
 export interface DriveSyncRecord {
   drive_id: string;
   title: string;

@@ -180,6 +180,8 @@ export function EditResourceDialog({ open, onOpenChange, onSubmit, initialData }
   const blockOptions = keywordConfigs.filter((config) => config.config_type === 'block_mapping').map((config) => config.label);
   const categoryOptions = keywordConfigs.filter((config) => config.config_type === 'doc_type').map((config) => config.label);
   const boardExamOptions = keywordConfigs.filter((config) => config.config_type === 'board_exam').map((config) => config.label);
+  const generationOptions = keywordConfigs.filter((config) => config.config_type === 'generation').map((config) => config.label);
+
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -239,19 +241,14 @@ export function EditResourceDialog({ open, onOpenChange, onSubmit, initialData }
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="MDCU 82">MDCU 82</SelectItem>
-                    <SelectItem value="MDCU 81">MDCU 81</SelectItem>
-                    <SelectItem value="MDCU 80">MDCU 80</SelectItem>
-                    <SelectItem value="MDCU 79">MDCU 79</SelectItem>
-                    <SelectItem value="MDCU 78">MDCU 78</SelectItem>
-                    <SelectItem value="MDCU 77">MDCU 77</SelectItem>
-                    <SelectItem value="MDCU 76">MDCU 76</SelectItem>
-                    <SelectItem value="MDCU 75">MDCU 75</SelectItem>
-                    <SelectItem value="MDCU 74">MDCU 74</SelectItem>
-                    <SelectItem value="MDCU 73">MDCU 73</SelectItem>
-                    <SelectItem value="MDCU 72">MDCU 72</SelectItem>
-                    <SelectItem value="MDCU 71">MDCU 71</SelectItem>
-                    <SelectItem value="MDCU 70">MDCU 70</SelectItem>
+                    {formData.generation && !generationOptions.includes(formData.generation) && (
+                      <SelectItem value={formData.generation}>{formData.generation}</SelectItem>
+                    )}
+                    {generationOptions.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

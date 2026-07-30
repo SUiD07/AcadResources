@@ -43,7 +43,7 @@ export function AddResourceDialog({ open, onOpenChange, onSubmit, categoryName }
   const [keywordConfigs, setKeywordConfigs] = useState<KeywordConfig[]>([]);
   const [formData, setFormData] = useState<ResourceFormData>({
     fileName: '',
-    generation: 'MDCU 81',
+    generation: '',
     block: 'Block 1',
     category: categoryName || 'AC',
     boardExam: '',
@@ -62,6 +62,9 @@ export function AddResourceDialog({ open, onOpenChange, onSubmit, categoryName }
           setKeywordConfigs(configs);
           setFormData((prev) => ({
             ...prev,
+            generation: configs.some((c) => c.config_type === 'generation' && c.label === prev.generation)
+              ? prev.generation
+              : configs.find((c) => c.config_type === 'generation')?.label || prev.generation,
             block: configs.some((c) => c.config_type === 'block_mapping' && c.label === prev.block)
               ? prev.block
               : configs.find((c) => c.config_type === 'block_mapping')?.label || prev.block,
@@ -129,6 +132,7 @@ export function AddResourceDialog({ open, onOpenChange, onSubmit, categoryName }
   const blockOptions = keywordConfigs.filter((config) => config.config_type === 'block_mapping').map((config) => config.label);
   const categoryOptions = keywordConfigs.filter((config) => config.config_type === 'doc_type').map((config) => config.label);
   const boardExamOptions = keywordConfigs.filter((config) => config.config_type === 'board_exam').map((config) => config.label);
+  const generationOptions = keywordConfigs.filter((config) => config.config_type === 'generation').map((config) => config.label);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -137,7 +141,7 @@ export function AddResourceDialog({ open, onOpenChange, onSubmit, categoryName }
       await onSubmit({ ...formData, thumbnail: thumbnailPreview });
       setFormData({
         fileName: '',
-        generation: 'MDCU 81',
+        generation: generationOptions[0] || '',
         block: blockOptions[0] || 'Block 1',
         category: categoryName || categoryOptions[0] || 'AC',
         boardExam: '',
@@ -201,19 +205,17 @@ export function AddResourceDialog({ open, onOpenChange, onSubmit, categoryName }
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="MDCU 82">MDCU 82</SelectItem>
-                    <SelectItem value="MDCU 81">MDCU 81</SelectItem>
-                    <SelectItem value="MDCU 80">MDCU 80</SelectItem>
-                    <SelectItem value="MDCU 79">MDCU 79</SelectItem>
-                    <SelectItem value="MDCU 78">MDCU 78</SelectItem>
-                    <SelectItem value="MDCU 77">MDCU 77</SelectItem>
-                    <SelectItem value="MDCU 76">MDCU 76</SelectItem>
-                    <SelectItem value="MDCU 75">MDCU 75</SelectItem>
-                    <SelectItem value="MDCU 74">MDCU 74</SelectItem>
-                    <SelectItem value="MDCU 73">MDCU 73</SelectItem>
-                    <SelectItem value="MDCU 72">MDCU 72</SelectItem>
-                    <SelectItem value="MDCU 71">MDCU 71</SelectItem>
-                    <SelectItem value="MDCU 70">MDCU 70</SelectItem>
+                    {generationOptions.length > 0 ? (
+                      generationOptions.map((option) => (
+                        <SelectItem key={option} value={option}>
+                          {option}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value={formData.generation || 'MDCU 81'}>
+                        {formData.generation || 'MDCU 81'}
+                      </SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
