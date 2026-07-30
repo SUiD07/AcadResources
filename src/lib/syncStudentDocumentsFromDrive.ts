@@ -91,6 +91,21 @@ export async function syncStudentDocumentsFromDrive(): Promise<void> {
   });
 
   if (merged.length > 0) {
-    await upsertStudentDocuments(merged);
+    const CHUNK_SIZE = 200;
+    const failedChunks: { range: string; error: string }[] = [];
+
+    for (let i = 0; i < merged.length; i += CHUNK_SIZE) {
+      const chunk = merged.slice(i, i + CHUNK_SIZE);
+      try {
+        await upsertStudentDocuments(chunk);
+      } catch (err: any) {
+        failedChunks.push({ range: `${i}-${i + chunk.length}`, error: err.message });
+        console.error(`Chunk ${i}-${i + chunk.length} failed:`, err.message, chunk.map(c => c.drive_id));
+      }
+    }
+
+    if (failedChunks.length > 0) {
+      console.error('Sync had failures:', failedChunks);
+    }
   }
 }

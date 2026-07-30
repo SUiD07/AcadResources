@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { FilterBar, filterBlocksByYear } from "../FilterBar";
 import { ContentCategory } from "../ContentCategory";
 import {
@@ -25,6 +25,7 @@ import { DeleteConfirmDialog } from "../admin/DeleteConfirmDialog";
 import { SearchBar, createEmptyBox, evaluateSearch } from "../SearchBar";
 import type { SearchBox, LogicOp } from "../SearchBar";
 import { Virtuoso } from "react-virtuoso";
+import { syncStudentDocumentsFromDrive } from '../../lib/syncStudentDocumentsFromDrive'
 
 // ─── TYPE ORDER ─────────────────────────────────────────────────────────────
 const DOC_TYPE_ORDER = [
@@ -60,6 +61,8 @@ const TYPE_COLORS: Record<string, string> = {
   "Checklist": "#D946EF",
   "Guideline": "#F59E0B"
 };
+
+
 
 function isUnclassifiedCategory(
   category: string | undefined,
@@ -345,27 +348,42 @@ export function PeerSupportSection({
     loadConfigs();
   }, []);
 
-  // Load documents whenever selectedYear changes
-  useEffect(() => {
-    async function loadDocs() {
-      try {
-        setIsLoading(true);
-        const yearNumbers = selectedYear
-          .map(y => parseInt(y, 10))
-          .filter(y => !isNaN(y));
 
-        const docs = await getStudentDocuments({
-          years: yearNumbers.length > 0 ? yearNumbers : undefined
-        });
-        setStudentDocs(docs);
-      } catch (error) {
-        console.error("Error loading documents:", error);
-      } finally {
-        setIsLoading(false);
-      }
+  const hasSyncedDrive = useRef(false); // ref, not state — no re-render lag
+  const syncPromise = useRef<Promise<void> | null>(null);
+
+  // 1) Fetch immediately whenever the year filter changes — never waits on sync
+ // ✅ STEP 1: Fetch ALL documents (no year filter at API)
+useEffect(() => {
+  async function loadDocs() {
+    try {
+      setIsLoading(true);
+      // REMOVE the years parameter — fetch everything
+      const docs = await getStudentDocuments();
+      setStudentDocs(docs);
+    } catch (error) {
+      console.error("Error loading documents:", error);
+    } finally {
+      setIsLoading(false);
     }
-    loadDocs();
-  }, [selectedYear]);
+  }
+  loadDocs();
+}, []); // Run once on mount only
+
+// ✅ STEP 2: Sync in background (also fetch all)
+useEffect(() => {
+  if (hasSyncedDrive.current) return;
+  hasSyncedDrive.current = true;
+
+  syncStudentDocumentsFromDrive()
+    .then(async () => {
+      const docs = await getStudentDocuments(); // No years filter
+      setStudentDocs(docs);
+    })
+    .catch((syncError) => {
+      console.error("Drive sync failed:", syncError);
+    });
+}, []);
 
   const allItems = useMemo<PeerSupportItem[]>(
     () => {
@@ -453,9 +471,9 @@ export function PeerSupportSection({
     () =>
       allItems.filter((item) => {
         if (selectedYear.length > 0) {
-          const year = yearMap[item.block];
-          const yearStr = year === undefined ? "other" : String(year);
-          if (!selectedYear.includes(yearStr)) return false;
+          const blockYear = yearMap[item.block];
+          const blockYearStr = blockYear === undefined ? "other" : String(blockYear);
+          if (!selectedYear.includes(blockYearStr)) return false;
         }
 
         const genVal = !item.generation || item.generation === 'Auto-Detected' ? 'other' : item.generation;
