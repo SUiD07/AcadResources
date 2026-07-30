@@ -182,7 +182,7 @@ export function LoginPage({ onLogin, initialAdminMode = false }: LoginPageProps)
                       <Input
                         id="email"
                         type="email"
-                        placeholder="admin@docchula.com"
+                        placeholder="example@docchula.com"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         className="pl-10 border-slate-300 focus:border-[#E5007D] focus:ring-[#E5007D]"

@@ -108,7 +108,7 @@ export function ResourceCategoryDetail({ isAdmin = false }: Props) {
       >
         <ArrowLeft className="w-4 h-4" /> กลับ
       </Link>
-      
+
       {category.image_url && (
         <div className="w-full h-56 rounded-2xl overflow-hidden mb-6">
           <img
@@ -123,8 +123,12 @@ export function ResourceCategoryDetail({ isAdmin = false }: Props) {
       <h1 className="text-slate-900 text-[24px] font-bold mb-1">
         {category.title}
       </h1>
-      <p className="text-slate-500 text-sm mb-8">{category.description}</p>
-
+      <p
+        className="text-slate-500 text-sm mb-8"
+        style={{ whiteSpace: "pre-line" }}
+      >
+        {category.description}
+      </p>
       {(category.items ?? []).map((item) => (
         <ItemBlock
           key={item.id}

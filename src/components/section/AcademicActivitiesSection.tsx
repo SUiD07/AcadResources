@@ -37,6 +37,7 @@ import {
   DndContext,
   closestCenter,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
@@ -48,6 +49,8 @@ import {
 } from "@dnd-kit/sortable";
 import { SortableActivityCard } from "./SortableActivityCard";
 import { reorderActivitiesData } from "../../lib/dataService";
+import { useAnnouncement } from "../../hooks/useAnnouncement";
+import { Editor } from "../board/Editor";
 
 interface AcademicActivitiesSectionProps {
   isAdmin?: boolean;
@@ -120,7 +123,10 @@ export function AcademicActivitiesSection({
   };
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 250, tolerance: 8 },
+    }),
   );
 
   const handleDragEnd = async (event: DragEndEvent) => {
@@ -131,10 +137,16 @@ export function AcademicActivitiesSection({
     const newIndex = activities.findIndex((a) => a.id === over.id);
     const newOrder = arrayMove(activities, oldIndex, newIndex);
 
-    setActivities(newOrder); // อัปเดตหน้าจอทันที (optimistic)
-    await reorderActivitiesData(newOrder.map((a) => a.id)); // ค่อยเซฟลง DB
+    setActivities(newOrder);
+    await reorderActivitiesData(newOrder.map((a) => a.id));
   };
 
+  const {
+    content: announcementContent,
+    loading: loadingAnnouncement,
+    saving: savingAnnouncement,
+    save: saveAnnouncement,
+  } = useAnnouncement("activities");
   return (
     <div className="pb-20 lg:pb-10">
       <div className="mb-6 sm:mb-8">
@@ -157,6 +169,23 @@ export function AcademicActivitiesSection({
           Events, workshops, and collaborative learning opportunities
         </p>
       </div>
+        {!loadingAnnouncement && (
+          <div
+            className={`mb-6 bg-pink-50 border border-pink-100 rounded-2xl p-4 sm:p-5 relative ${isAdmin ? "" : "compact-editor"}`}
+          >
+            {savingAnnouncement && (
+              <span className="absolute top-2 right-3 text-xs text-slate-400">
+                กำลังบันทึก...
+              </span>
+            )}
+            <Editor
+              boardId="activities-announcement"
+              initialContent={announcementContent}
+              onSave={saveAnnouncement}
+              isAdmin={isAdmin}
+            />
+          </div>
+        )}
 
       {isLoading ? (
         <div className="flex justify-center items-center py-12">

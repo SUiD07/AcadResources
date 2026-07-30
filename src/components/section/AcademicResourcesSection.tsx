@@ -30,6 +30,22 @@ import { EditResourceCategoryDialog } from "../admin/EditResourceCategoryDialog"
 import { DeleteConfirmDialog } from "../admin/DeleteConfirmDialog";
 import { Link } from "react-router-dom";
 import { motion } from "motion/react";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import type { DragEndEvent } from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  rectSortingStrategy,
+} from "@dnd-kit/sortable";
+import { SortableResourceCard } from "./SortableResourceCard";
+import { reorderResourceCategoriesData } from "../../lib/dataService";
 
 const iconMap: Record<string, any> = { BookOpen, FileText, Video, LinkIcon };
 
@@ -95,6 +111,24 @@ export function AcademicResourcesSection({
     await loadData();
   };
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 250, tolerance: 8 },
+    }),
+  );
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = resourceCategories.findIndex((c) => c.id === active.id);
+    const newIndex = resourceCategories.findIndex((c) => c.id === over.id);
+    const newOrder = arrayMove(resourceCategories, oldIndex, newIndex);
+
+    setResourceCategories(newOrder); // อัปเดตหน้าจอทันที
+    await reorderResourceCategoriesData(newOrder.map((c) => c.id)); // เซฟลง DB
+  };
   return (
     <div className="pb-20 lg:pb-8">
       {/* Header */}
@@ -124,87 +158,29 @@ export function AcademicResourcesSection({
           <div className="text-slate-600">Loading...</div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-          {resourceCategories.map((category) => {
-            const Icon = iconMap[category.icon] || BookOpen;
-            return (
-              <motion.div key={category.id} whileHover={{ y: -6 }}>
-                <Card className="hover:shadow-lg transition-shadow overflow-hidden">
-                  {/* รูปปก (แสดงเฉพาะถ้ามี image_url) */}
-                  {category.image_url && (
-                    <div className="relative h-40 overflow-hidden">
-                      <img
-                        src={category.image_url}
-                        alt={category.title}
-                        className="w-full h-full object-cover"
-                        referrerPolicy="no-referrer"
-                      />
-                    </div>
-                  )}
-
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between mb-3 sm:mb-4">
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-pink-100 rounded-lg flex items-center justify-center">
-                        <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-[#E5007D]" />
-                      </div>
-                      {isAdmin && (
-                        <div className="flex gap-1">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEditCategory(category)}
-                            className="border-[#E5007D] text-[#E5007D] hover:bg-pink-50 h-8 w-8 p-0"
-                          >
-                            <Pencil className="w-3 h-3" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDeleteCategory(category)}
-                            className="border-red-300 text-red-600 hover:bg-red-50 h-8 w-8 p-0"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                    <CardTitle className="text-base sm:text-lg">
-                      {category.title}
-                    </CardTitle>
-                    <CardDescription className="text-sm">
-                      {category.description}
-                    </CardDescription>
-                  </CardHeader>
-
-                  <CardContent>
-                    <div className="space-y-2 mb-4">
-                      {category.items.map((item) => (
-                        <div
-                          key={item.id}
-                          className="flex items-center justify-between py-2 px-3 bg-slate-50 rounded-lg"
-                        >
-                          <span className="text-xs sm:text-sm text-slate-700 truncate pr-2">
-                            {item.name}
-                          </span>
-                          <span className="text-xs text-slate-500 shrink-0">
-                            {item.type}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-
-                    <Link
-                      to={`/resources/${category.id}`}
-                      className="inline-flex items-center gap-2 text-[#E5007D] font-bold text-sm"
-                    >
-                      View Detail <ArrowRight size={16} />
-                    </Link>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            );
-          })}
-        </div>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={resourceCategories.map((c) => c.id)}
+            strategy={rectSortingStrategy}
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+              {resourceCategories.map((category) => (
+                <SortableResourceCard
+                  key={category.id}
+                  category={category}
+                  Icon={iconMap[category.icon] || BookOpen}
+                  isAdmin={isAdmin}
+                  onEdit={handleEditCategory}
+                  onDelete={handleDeleteCategory}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
       )}
 
       <AddResourceCategoryDialog

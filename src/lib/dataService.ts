@@ -350,3 +350,13 @@ export async function reorderActivitiesData(orderedIds: string[]) {
 export async function reorderResourceCategoriesData(orderedIds: string[]) {
   if (USE_SUPABASE) return await supabaseApi.reorderResourceCategories(orderedIds);
 }
+
+//Announcement
+export async function getAnnouncement(slug: string) {
+  if (USE_SUPABASE) return await supabaseApi.fetchAnnouncement(slug);
+  return null;
+}
+
+export async function saveAnnouncementData(slug: string, content: object) {
+  if (USE_SUPABASE) return await supabaseApi.saveAnnouncement(slug, content);
+}

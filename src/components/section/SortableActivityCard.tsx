@@ -52,18 +52,21 @@ export function SortableActivityCard({
   };
 
   return (
-    <div ref={setNodeRef} style={style}>
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...(isAdmin ? { ...attributes, ...listeners } : {})}
+      className={
+        isAdmin ? "cursor-grab active:cursor-grabbing touch-manipulation" : ""
+      }
+    >
       <Card className="hover:shadow-lg transition-shadow overflow-hidden relative isolate">
-        {" "}
         {isAdmin && (
-          <button
-            {...attributes}
-            {...listeners}
-            className="absolute top-2 left-2 z-30 bg-white shadow-md rounded-md p-1.5 cursor-grab active:cursor-grabbing border border-slate-300"
-          >
-            <GripVertical className="w-6 h-6 text-slate-600" />
-          </button>
+          <div className="absolute top-2 left-2 z-30 bg-white shadow-md rounded-md p-1.5 border border-slate-300 pointer-events-none">
+            <GripVertical className="w-4 h-4 text-slate-600" />
+          </div>
         )}
+
         {activity.image_url && (
           <div className="relative h-40 overflow-hidden">
             <img
@@ -74,6 +77,7 @@ export function SortableActivityCard({
             />
           </div>
         )}
+
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between mb-3 sm:mb-4">
             <div className="w-10 h-10 sm:w-12 sm:h-12 bg-pink-100 rounded-lg flex items-center justify-center">
@@ -94,10 +98,14 @@ export function SortableActivityCard({
           <CardTitle className="text-base sm:text-lg">
             {activity.title}
           </CardTitle>
-          <CardDescription className="text-sm">
+          <CardDescription
+            className="text-sm"
+            style={{ whiteSpace: "pre-line" }}
+          >
             {activity.description}
           </CardDescription>
         </CardHeader>
+
         <CardContent>
           <div className="flex items-center gap-2 text-sm text-slate-600 mb-4">
             <Calendar className="w-4 h-4 shrink-0" />
@@ -118,7 +126,10 @@ export function SortableActivityCard({
             </span>
           </div>
 
-          <div className="flex items-center justify-between gap-2">
+          <div
+            className="flex items-center justify-between gap-2"
+            onPointerDown={(e) => e.stopPropagation()}
+          >
             <Link
               to={`/activities/${activity.id}`}
               className="inline-flex items-center gap-2 text-[#E5007D] font-bold text-sm"

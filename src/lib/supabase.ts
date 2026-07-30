@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { SUPABASE_CONFIG } from './config';
 import type { PeerSupportItem, Activity, ResourceCategory, StudentDocument, DriveSyncRecord } from './types';
 import type { Generation, Board, BoardContent, KeywordConfig } from './types'
+import { AddAnnouncementDialog } from '../components/admin/AddAnnouncementDialog';
 
 // ============================================
 // SUPABASE CLIENT INITIALIZATION
@@ -828,4 +829,31 @@ export async function adminPromoteYear(sourceYear: string, targetYear: string, a
   } catch (err: any) {
     return { success: false, count: 0, error: err.message };
   }
+}
+
+
+// Announcement
+export async function fetchAnnouncement(slug: string): Promise<{ content: object } | null> {
+  const { data, error } = await supabase
+    .from('announcements')
+    .select('*')
+    .eq('slug', slug)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Fetch Error (Announcement):', error.message);
+    return null;
+  }
+  return data;
+}
+
+export async function saveAnnouncement(slug: string, content: object): Promise<void> {
+  const { error } = await supabase
+    .from('announcements')
+    .upsert(
+      { slug, content, updated_at: new Date().toISOString() },
+      { onConflict: 'slug' }
+    );
+
+  if (error) throw error;
 }
