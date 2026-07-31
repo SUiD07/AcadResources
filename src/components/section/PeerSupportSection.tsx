@@ -568,8 +568,13 @@ export function PeerSupportSection({
   return (
     <div className="pb-20 lg:pb-8 w-full max-w-full overflow-x-hidden">
       <div className="mb-6 sm:mb-8">
+        <p className="text-xs text-slate-400 font-normal">
+          พบการ filter ผิดแจ้ง LINE: <span className="font-medium text-slate-500">0905588858</span> (ภูมิ MDCU80)
+        </p>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
-          <h1 className="text-slate-900 font-bold text-[22px] sm:text-[24px]">Peer Support Resources</h1>
+          <h1 className="text-slate-900 font-bold text-[22px] sm:text-[24px]">
+            Peer Support Resources
+          </h1>
           {isAdmin && (
             <Button size="sm" onClick={() => setAddDialogOpen(true)} className="bg-[#E5007D] hover:bg-[#c00069] text-white w-full sm:w-auto">
               <Plus className="w-4 h-4 mr-2" /> Add New Resource
