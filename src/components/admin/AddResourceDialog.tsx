@@ -196,49 +196,51 @@ export function AddResourceDialog({ open, onOpenChange, onSubmit, categoryName }
             {/* Generation and Block - Row */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="generation">Generation *</Label>
+                <Label htmlFor="generation">Generation</Label>
                 <Select
-                  value={formData.generation}
-                  onValueChange={(value: any) => setFormData({ ...formData, generation: value })}
+                  value={formData.generation || '__none__'}
+                  onValueChange={(value: any) =>
+                    setFormData({ ...formData, generation: value === '__none__' ? '' : value })
+                  }
                 >
                   <SelectTrigger id="generation">
-                    <SelectValue />
+                    <SelectValue placeholder="Select generation" />
                   </SelectTrigger>
                   <SelectContent>
-                    {generationOptions.length > 0 ? (
-                      generationOptions.map((option) => (
-                        <SelectItem key={option} value={option}>
-                          {option}
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <SelectItem value={formData.generation || 'MDCU 81'}>
-                        {formData.generation || 'MDCU 81'}
-                      </SelectItem>
+                    <SelectItem value="__none__">None</SelectItem>
+                    {formData.generation && !generationOptions.includes(formData.generation) && (
+                      <SelectItem value={formData.generation}>{formData.generation}</SelectItem>
                     )}
+                    {generationOptions.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="block">Block *</Label>
+                <Label htmlFor="block">Block</Label>
                 <Select
-                  value={formData.block}
-                  onValueChange={(value: any) => setFormData({ ...formData, block: value })}
+                  value={formData.block || '__none__'}
+                  onValueChange={(value: any) =>
+                    setFormData({ ...formData, block: value === '__none__' ? '' : value })
+                  }
                 >
                   <SelectTrigger id="block">
-                    <SelectValue />
+                    <SelectValue placeholder="Select block" />
                   </SelectTrigger>
                   <SelectContent>
-                    {blockOptions.length > 0 ? (
-                      blockOptions.map((option) => (
-                        <SelectItem key={option} value={option}>
-                          {option}
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <SelectItem value="Block 1">Block 1</SelectItem>
+                    <SelectItem value="__none__">None</SelectItem>
+                    {formData.block && !blockOptions.includes(formData.block) && (
+                      <SelectItem value={formData.block}>{formData.block}</SelectItem>
                     )}
+                    {blockOptions.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -247,15 +249,21 @@ export function AddResourceDialog({ open, onOpenChange, onSubmit, categoryName }
             {/* Category */}
 
             <div className="space-y-2">
-              <Label htmlFor="category">Category *</Label>
+              <Label htmlFor="category">Category</Label>
               <Select
-                value={formData.category}
-                onValueChange={(value: any) => setFormData({ ...formData, category: value })}
+                value={formData.category || '__none__'}
+                onValueChange={(value: any) =>
+                  setFormData({ ...formData, category: value === '__none__' ? '' : value })
+                }
               >
                 <SelectTrigger id="category">
-                  <SelectValue />
+                  <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="__none__">None</SelectItem>
+                  {formData.category && !categoryOptions.includes(formData.category) && (
+                    <SelectItem value={formData.category}>{formData.category}</SelectItem>
+                  )}
                   {categoryOptions.map((option) => (
                     <SelectItem key={option} value={option}>
                       {option}

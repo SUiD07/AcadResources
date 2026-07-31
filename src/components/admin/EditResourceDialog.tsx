@@ -232,15 +232,18 @@ export function EditResourceDialog({ open, onOpenChange, onSubmit, initialData }
             {/* Generation and Block - Row */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="generation">Generation *</Label>
+                <Label htmlFor="generation">Generation</Label>
                 <Select
-                  value={formData.generation}
-                  onValueChange={(value: any) => setFormData({ ...formData, generation: value })}
+                  value={formData.generation || '__none__'}
+                  onValueChange={(value: any) =>
+                    setFormData({ ...formData, generation: value === '__none__' ? '' : value })
+                  }
                 >
                   <SelectTrigger id="generation">
-                    <SelectValue />
+                    <SelectValue placeholder="Select generation" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="__none__">None</SelectItem>
                     {formData.generation && !generationOptions.includes(formData.generation) && (
                       <SelectItem value={formData.generation}>{formData.generation}</SelectItem>
                     )}
@@ -253,15 +256,18 @@ export function EditResourceDialog({ open, onOpenChange, onSubmit, initialData }
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-block">Block *</Label>
+                <Label htmlFor="edit-block">Block</Label>
                 <Select
-                  value={formData.block}
-                  onValueChange={(value: any) => setFormData({ ...formData, block: value })}
+                  value={formData.block || '__none__'}
+                  onValueChange={(value: any) =>
+                    setFormData({ ...formData, block: value === '__none__' ? '' : value })
+                  }
                 >
                   <SelectTrigger id="edit-block">
-                    <SelectValue />
+                    <SelectValue placeholder="Select block" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="__none__">None</SelectItem>
                     {formData.block && !blockOptions.includes(formData.block) && (
                       <SelectItem value={formData.block}>{formData.block}</SelectItem>
                     )}
@@ -277,15 +283,18 @@ export function EditResourceDialog({ open, onOpenChange, onSubmit, initialData }
 
             {/* Category */}
             <div className="space-y-2">
-              <Label htmlFor="edit-category">Category *</Label>
+              <Label htmlFor="edit-category">Category</Label>
               <Select
-                value={formData.category}
-                onValueChange={(value: any) => setFormData({ ...formData, category: value })}
+                value={formData.category || '__none__'}
+                onValueChange={(value: any) =>
+                  setFormData({ ...formData, category: value === '__none__' ? '' : value })
+                }
               >
                 <SelectTrigger id="edit-category">
-                  <SelectValue />
+                  <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="__none__">None</SelectItem>
                   {formData.category && !categoryOptions.includes(formData.category) && (
                     <SelectItem value={formData.category}>{formData.category}</SelectItem>
                   )}
