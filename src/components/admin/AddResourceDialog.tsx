@@ -40,6 +40,7 @@ export interface ResourceCategoryFormData {
 export function AddResourceDialog({ open, onOpenChange, onSubmit, categoryName }: AddResourceDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [thumbnailPreview, setThumbnailPreview] = useState<string>('');
+  const [showBoardExam, setShowBoardExam] = useState(false);
   const [keywordConfigs, setKeywordConfigs] = useState<KeywordConfig[]>([]);
   const [formData, setFormData] = useState<ResourceFormData>({
     fileName: '',
@@ -150,6 +151,7 @@ export function AddResourceDialog({ open, onOpenChange, onSubmit, categoryName }
         isOverridden: false,
       });
       setThumbnailPreview('');
+      setShowBoardExam(false);
       onOpenChange(false);
     } catch (error) {
       console.error('Error submitting form:', error);
@@ -273,28 +275,47 @@ export function AddResourceDialog({ open, onOpenChange, onSubmit, categoryName }
               </Select>
             </div>
 
-            {/* Board Exam */}
-            <div className="space-y-2">
-              <Label htmlFor="boardExam">Board Exam</Label>
-              <Select
-                value={formData.boardExam || '__none__'}
-                onValueChange={(value: any) =>
-                  setFormData({ ...formData, boardExam: value === '__none__' ? '' : value })
-                }
-              >
-                <SelectTrigger id="boardExam">
-                  <SelectValue placeholder="Select board exam" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">None</SelectItem>
-                  {boardExamOptions.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {/* Board Exam Toggle */}
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="isBoardExam"
+                checked={showBoardExam}
+                onChange={(e) => {
+                  setShowBoardExam(e.target.checked);
+                  if (!e.target.checked) {
+                    setFormData({ ...formData, boardExam: '' });
+                  }
+                }}
+                className="h-4 w-4 rounded border-slate-300 text-[#E5007D] focus:ring-[#E5007D]"
+              />
+              <Label htmlFor="isBoardExam">Is this a Board Exam resource?</Label>
             </div>
+
+            {/* Board Exam */}
+            {showBoardExam && (
+              <div className="space-y-2">
+                <Label htmlFor="boardExam">Board Exam</Label>
+                <Select
+                  value={formData.boardExam || '__none__'}
+                  onValueChange={(value: any) =>
+                    setFormData({ ...formData, boardExam: value === '__none__' ? '' : value })
+                  }
+                >
+                  <SelectTrigger id="boardExam">
+                    <SelectValue placeholder="Select board exam" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">None</SelectItem>
+                    {boardExamOptions.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             {/* Override Toggle */}
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">

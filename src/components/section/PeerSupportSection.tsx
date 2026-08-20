@@ -287,7 +287,7 @@ export function PeerSupportSection({
     }
 
     const blocksInYear = selectedYear.length > 0 ? getBlocksInYear(selectedYear, yearMap) : [];
-    const updated = await getStudentDocuments({ blocks: blocksInYear.length > 0 ? blocksInYear : undefined });
+    const updated = await getStudentDocuments(blocksInYear.length > 0 ? { blocks: blocksInYear } : undefined);
     setStudentDocs(updated);
   };
 
@@ -306,7 +306,7 @@ export function PeerSupportSection({
 
     await updateStudentDocument(docId, updates);
     const blocksInYear = selectedYear.length > 0 ? getBlocksInYear(selectedYear, yearMap) : [];
-    const updated = await getStudentDocuments({ blocks: blocksInYear.length > 0 ? blocksInYear : undefined });
+    const updated = await getStudentDocuments(blocksInYear.length > 0 ? { blocks: blocksInYear } : undefined);
     setStudentDocs(updated);
   };
 
@@ -315,7 +315,7 @@ export function PeerSupportSection({
     const docId = parseInt(deletingItem.id.replace("doc-", ""), 10);
     await deleteStudentDocument(docId);
     const blocksInYear = selectedYear.length > 0 ? getBlocksInYear(selectedYear, yearMap) : [];
-    const updated = await getStudentDocuments({ blocks: blocksInYear.length > 0 ? blocksInYear : undefined });
+    const updated = await getStudentDocuments(blocksInYear.length > 0 ? { blocks: blocksInYear } : undefined);
     setStudentDocs(updated);
   };
 
@@ -334,7 +334,6 @@ export function PeerSupportSection({
   const [peerItems, setPeerItems] = useState<PeerSupportItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load configs once on mount
   // Load configs once on mount
   useEffect(() => {
     async function loadConfigs() {
@@ -381,17 +380,9 @@ export function PeerSupportSection({
     async function loadDocs() {
       try {
         setIsLoading(true);
-
-        if (selectedYear.length > 0) {
-          const blocksInYear = getBlocksInYear(selectedYear, yearMap);
-          const docs = await getStudentDocuments({
-            blocks: blocksInYear.length > 0 ? blocksInYear : undefined,
-          });
-          setStudentDocs(docs);
-        } else {
-          const docs = await getStudentDocuments();
-          setStudentDocs(docs);
-        }
+        const blocksInYear = selectedYear.length > 0 ? getBlocksInYear(selectedYear, yearMap) : [];
+        const docs = await getStudentDocuments(blocksInYear.length > 0 ? { blocks: blocksInYear } : undefined);
+        setStudentDocs(docs);
       } catch (error) {
         console.error("Error loading documents:", error);
       } finally {
@@ -407,16 +398,9 @@ export function PeerSupportSection({
 
     syncStudentDocumentsFromDrive()
       .then(async () => {
-        if (selectedYear.length > 0) {
-          const blocksInYear = getBlocksInYear(selectedYear, yearMap);
-          const docs = await getStudentDocuments({
-            blocks: blocksInYear.length > 0 ? blocksInYear : undefined,
-          });
-          setStudentDocs(docs);
-        } else {
-          const docs = await getStudentDocuments();
-          setStudentDocs(docs);
-        }
+        const blocksInYear = selectedYear.length > 0 ? getBlocksInYear(selectedYear, yearMap) : [];
+        const docs = await getStudentDocuments(blocksInYear.length > 0 ? { blocks: blocksInYear } : undefined);
+        setStudentDocs(docs);
       })
       .catch((syncError) => {
         console.error("Drive sync failed:", syncError);
@@ -487,16 +471,6 @@ export function PeerSupportSection({
       boardExams: [...boardExamSet].sort(),
     };
   }, [allItems, knownDocTypes, knownGenerations]);
-
-  // const yearMap = useMemo(() => {
-  //   const map: Record<string, number | 'other'> = {};
-  //   configs
-  //     .filter(c => c.config_type === 'block_mapping')
-  //     .forEach(c => {
-  //       map[c.label] = c.year === 'other' || !c.year ? 'other' : Number(c.year);
-  //     });
-  //   return map;
-  // }, [configs]);
 
   useEffect(() => {
     if (selectedYear.length === 0) return;

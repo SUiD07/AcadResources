@@ -20,6 +20,7 @@ interface EditResourceDialogProps {
 export function EditResourceDialog({ open, onOpenChange, onSubmit, initialData }: EditResourceDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [thumbnailPreview, setThumbnailPreview] = useState<string>('');
+  const [showBoardExam, setShowBoardExam] = useState(false);
   const [keywordConfigs, setKeywordConfigs] = useState<KeywordConfig[]>([]);
   const [formData, setFormData] = useState<ResourceFormData & { id: string }>({
     id: '',
@@ -57,6 +58,7 @@ export function EditResourceDialog({ open, onOpenChange, onSubmit, initialData }
     if (open && initialData) {
       setFormData(initialData);
       setThumbnailPreview(initialData.thumbnail || '');
+      setShowBoardExam(!!initialData.boardExam && initialData.boardExam !== 'None');
     }
   }, [open, initialData]);
 
@@ -307,31 +309,50 @@ export function EditResourceDialog({ open, onOpenChange, onSubmit, initialData }
               </Select>
             </div>
 
-            {/* Board Exam */}
-            <div className="space-y-2">
-              <Label htmlFor="edit-boardExam">Board Exam</Label>
-              <Select
-                value={formData.boardExam || '__none__'}
-                onValueChange={(value: any) =>
-                  setFormData({ ...formData, boardExam: value === '__none__' ? '' : value })
-                }
-              >
-                <SelectTrigger id="edit-boardExam">
-                  <SelectValue placeholder="Select board exam" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">None</SelectItem>
-                  {formData.boardExam && !boardExamOptions.includes(formData.boardExam) && (
-                    <SelectItem value={formData.boardExam}>{formData.boardExam}</SelectItem>
-                  )}
-                  {boardExamOptions.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {/* Board Exam Toggle */}
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="edit-isBoardExam"
+                checked={showBoardExam}
+                onChange={(e) => {
+                  setShowBoardExam(e.target.checked);
+                  if (!e.target.checked) {
+                    setFormData({ ...formData, boardExam: '' });
+                  }
+                }}
+                className="h-4 w-4 rounded border-slate-300 text-[#E5007D] focus:ring-[#E5007D]"
+              />
+              <Label htmlFor="edit-isBoardExam">Is this a Board Exam resource?</Label>
             </div>
+
+            {/* Board Exam */}
+            {showBoardExam && (
+              <div className="space-y-2">
+                <Label htmlFor="edit-boardExam">Board Exam</Label>
+                <Select
+                  value={formData.boardExam || '__none__'}
+                  onValueChange={(value: any) =>
+                    setFormData({ ...formData, boardExam: value === '__none__' ? '' : value })
+                  }
+                >
+                  <SelectTrigger id="edit-boardExam">
+                    <SelectValue placeholder="Select board exam" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">None</SelectItem>
+                    {formData.boardExam && !boardExamOptions.includes(formData.boardExam) && (
+                      <SelectItem value={formData.boardExam}>{formData.boardExam}</SelectItem>
+                    )}
+                    {boardExamOptions.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             {/* Override Toggle */}
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
