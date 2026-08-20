@@ -546,7 +546,7 @@ export function PeerSupportSection({
           พบการ filter ผิดแจ้ง LINE: <span className="font-medium text-slate-500">0905588858</span> (ภูมิ MDCU80)
         </p>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
-          <h1 className="text-slate-900 font-bold text-[22px] sm:text-[24px]">
+          <h1 className="text-slate-900 font-bold text-[24px]">
             Peer Support Resources
           </h1>
           {isAdmin && (

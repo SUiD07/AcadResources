@@ -18,8 +18,9 @@ import {
   SelectValue,
 } from "../ui/select";
 import { Textarea } from "../ui/textarea";
-import { Loader2, Plus, X } from "lucide-react";
-import { ResourceImageUpload } from "./ResourceImageUpload";
+import { Loader2, Plus, Upload, X } from "lucide-react";
+import { ImageWithFallback } from "../figma/ImageWithFallback";
+import { supabase } from "../../lib/supabase";
 
 interface AddResourceCategoryDialogProps {
   open: boolean;
@@ -42,6 +43,8 @@ export function AddResourceCategoryDialog({
   onSubmit,
 }: AddResourceCategoryDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [thumbnailPreview, setThumbnailPreview] = useState<string>("");
+  const [isUploadingThumbnail, setIsUploadingThumbnail] = useState(false);
   const [formData, setFormData] = useState<ResourceCategoryFormData>({
     title: "",
     description: "",
@@ -55,7 +58,7 @@ export function AddResourceCategoryDialog({
     e.preventDefault();
     setIsLoading(true);
     try {
-      await onSubmit(formData);
+      await onSubmit({ ...formData, image_url: thumbnailPreview || null });
       // Reset form
       setFormData({
         title: "",
@@ -65,11 +68,37 @@ export function AddResourceCategoryDialog({
         image_url: null,
         items: [{ id: crypto.randomUUID(), name: "", type: "PDF" }],
       });
+      setThumbnailPreview("");
       onOpenChange(false);
     } catch (error) {
       console.error("Error submitting form:", error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingThumbnail(true);
+    try {
+      const filePath = `resources/${crypto.randomUUID()}-${file.name}`;
+      const { error } = await supabase.storage
+        .from("resource-images")
+        .upload(filePath, file, { upsert: false });
+
+      if (error) throw error;
+
+      const { data } = supabase.storage
+        .from("resource-images")
+        .getPublicUrl(filePath);
+      setThumbnailPreview(data.publicUrl);
+    } catch (error) {
+      console.error("Error uploading thumbnail:", error);
+    } finally {
+      setIsUploadingThumbnail(false);
+      e.target.value = "";
     }
   };
 
@@ -144,11 +173,48 @@ export function AddResourceCategoryDialog({
             </div>
 
             <div className="space-y-2">
-              <Label>รูปปกหมวดหมู่</Label>
-              <ResourceImageUpload
-                value={formData.image_url}
-                onChange={(url) => setFormData({ ...formData, image_url: url })}
-              />
+              <Label htmlFor="category-thumbnail">Thumbnail Image (optional)</Label>
+              <div className="flex items-start gap-4">
+                {thumbnailPreview ? (
+                  <div className="relative">
+                    <ImageWithFallback
+                      src={thumbnailPreview}
+                      alt="Preview"
+                      className="w-32 h-32 rounded-lg object-cover border-2 border-slate-200"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="destructive"
+                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
+                      onClick={() => setThumbnailPreview("")}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="w-32 h-32 rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center bg-slate-50">
+                    {isUploadingThumbnail ? (
+                      <Loader2 className="w-8 h-8 text-slate-400 animate-spin" />
+                    ) : (
+                      <Upload className="w-8 h-8 text-slate-400" />
+                    )}
+                  </div>
+                )}
+                <div className="flex-1">
+                  <Input
+                    id="category-thumbnail"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    disabled={isUploadingThumbnail}
+                    className="cursor-pointer"
+                  />
+                  <p className="text-xs text-slate-500 mt-2">
+                    Upload a cover image for this category (optional)
+                  </p>
+                </div>
+              </div>
             </div>
 
             {/* Icon and Link - Row */}
@@ -188,7 +254,7 @@ export function AddResourceCategoryDialog({
             {/* Items */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label>Resource Items</Label>
+                <Label>Resource Items *</Label>
                 <Button
                   type="button"
                   size="sm"

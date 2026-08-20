@@ -18,11 +18,13 @@ import {
   SelectValue,
 } from "../ui/select";
 import { Textarea } from "../ui/textarea";
-import { Loader2 } from "lucide-react";
+import { Loader2, Upload, X } from "lucide-react";
 import type { ActivityFormData } from "./AddActivityDialog";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { ActivityImageUpload } from "./ActivityImageUpload";
+import { ImageWithFallback } from "../figma/ImageWithFallback";
+// import { ActivityImageUpload } from "./ActivityImageUpload";
+import { supabase } from "../../lib/supabase";
 
 interface EditActivityDialogProps {
   open: boolean;
@@ -38,6 +40,8 @@ export function EditActivityDialog({
   initialData,
 }: EditActivityDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [thumbnailPreview, setThumbnailPreview] = useState<string>("");
+  const [isUploadingThumbnail, setIsUploadingThumbnail] = useState(false);
   const [formData, setFormData] = useState<ActivityFormData & { id: string }>({
     id: "",
     title: "",
@@ -52,6 +56,7 @@ export function EditActivityDialog({
   useEffect(() => {
     if (initialData) {
       setFormData(initialData);
+      setThumbnailPreview(initialData.image_url || "");
     }
   }, [initialData]);
 
@@ -59,12 +64,37 @@ export function EditActivityDialog({
     e.preventDefault();
     setIsLoading(true);
     try {
-      await onSubmit(formData);
+      await onSubmit({ ...formData, image_url: thumbnailPreview || null });
       onOpenChange(false);
     } catch (error) {
       console.error("Error submitting form:", error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingThumbnail(true);
+    try {
+      const filePath = `activities/${crypto.randomUUID()}-${file.name}`;
+      const { error } = await supabase.storage
+        .from("activity-images")
+        .upload(filePath, file, { upsert: false });
+
+      if (error) throw error;
+
+      const { data } = supabase.storage
+        .from("activity-images")
+        .getPublicUrl(filePath);
+      setThumbnailPreview(data.publicUrl);
+    } catch (error) {
+      console.error("Error uploading thumbnail:", error);
+    } finally {
+      setIsUploadingThumbnail(false);
+      e.target.value = "";
     }
   };
 
@@ -122,7 +152,7 @@ export function EditActivityDialog({
               /> */}
               <DatePicker
                 selected={formData.date}
-                onChange={(date:any) =>
+                onChange={(date: any) =>
                   setFormData({
                     ...formData,
                     date,
@@ -136,11 +166,48 @@ export function EditActivityDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label>รูปภาพกิจกรรม</Label>
-              <ActivityImageUpload
-                value={formData.image_url}
-                onChange={(url) => setFormData({ ...formData, image_url: url })}
-              />
+              <Label htmlFor="edit-activity-thumbnail">Thumbnail Image (optional)</Label>
+              <div className="flex items-start gap-4">
+                {thumbnailPreview ? (
+                  <div className="relative">
+                    <ImageWithFallback
+                      src={thumbnailPreview}
+                      alt="Preview"
+                      className="w-32 h-32 rounded-lg object-cover border-2 border-slate-200"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="destructive"
+                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
+                      onClick={() => setThumbnailPreview("")}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="w-32 h-32 rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center bg-slate-50">
+                    {isUploadingThumbnail ? (
+                      <Loader2 className="w-8 h-8 text-slate-400 animate-spin" />
+                    ) : (
+                      <Upload className="w-8 h-8 text-slate-400" />
+                    )}
+                  </div>
+                )}
+                <div className="flex-1">
+                  <Input
+                    id="edit-activity-thumbnail"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    disabled={isUploadingThumbnail}
+                    className="cursor-pointer"
+                  />
+                  <p className="text-xs text-slate-500 mt-2">
+                    Upload a cover image for this activity (optional)
+                  </p>
+                </div>
+              </div>
             </div>
 
             {/* Status and Icon - Row */}

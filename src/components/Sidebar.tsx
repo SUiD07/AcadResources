@@ -39,8 +39,9 @@ export function Sidebar({ onLogout, isAdmin }: SidebarProps) {
             <GraduationCap className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-slate-900 font-bold">Med Resources</h1>
-            <p className="text-xs text-slate-500">Academic Hub</p>
+            <h1 className="text-slate-900 font-bold">Academic Resources</h1>
+            <p className="text-xs text-slate-500">
+              Learning & Support Hub</p>
           </div>
         </div>
 

@@ -30,7 +30,7 @@ export function MobileNav({ isOpen, onToggle, onLogout, isAdmin }: MobileNavProp
             <div className="w-8 h-8 bg-[#E5007D] rounded-lg flex items-center justify-center">
               <GraduationCap className="w-5 h-5 text-white" />
             </div>
-            <h1 className="text-slate-900 text-sm">Med Resources</h1>
+            <h1 className="text-slate-900 text-sm">Academic Resources</h1>
           </div>
           <Button variant="ghost" size="sm" onClick={onToggle} className="h-10 w-10 p-0">
             {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
