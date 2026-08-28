@@ -76,7 +76,7 @@ export function LoginPage({ onLogin, initialAdminMode = false }: LoginPageProps)
     e.preventDefault();
     // Admin login only (email + password)
     if (email === "admin@docchula.com") {
-      if (password === "admin") {
+      if (password === "adminacad2569") {
         onLogin(true, email);
       } else {
         setError("Invalid admin credentials.");
