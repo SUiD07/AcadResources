@@ -100,7 +100,8 @@ export interface KeywordConfig {
   config_type: 'doc_type' | 'block_mapping' | 'board_exam' | 'generation';
   label: string;
   keys: string[];
-  year?: string;
+  year?: string | 'other';
+  sort_order?: number;  // ← Add this line
   created_at?: string;
   updated_at?: string;
 }

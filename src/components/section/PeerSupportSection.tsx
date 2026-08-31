@@ -454,6 +454,21 @@ export function PeerSupportSection({
       .map((c) => c.label);
   }, [configs]);
 
+  const blockOrderMap = useMemo(() => {
+    const orderedBlocks = configs
+      .filter((c) => c.config_type === 'block_mapping')
+      .sort((a, b) => {
+        const aOrder = typeof a.sort_order === 'number' ? a.sort_order : Number.MAX_SAFE_INTEGER;
+        const bOrder = typeof b.sort_order === 'number' ? b.sort_order : Number.MAX_SAFE_INTEGER;
+        return aOrder - bOrder;
+      });
+
+    return orderedBlocks.reduce<Record<string, number>>((map, config, index) => {
+      map[config.label] = index;
+      return map;
+    }, {});
+  }, [configs]);
+
   const filterOptions = useMemo(() => {
     const genSet = new Set([
       ...knownGenerations,
@@ -464,13 +479,18 @@ export function PeerSupportSection({
     const boardExamSet = new Set(
       allItems.map((d) => d.board_exam).filter((b): b is string => Boolean(b) && b !== 'None')
     );
+    const blockOrder = (block: string) => {
+      const index = blockOrderMap[block];
+      return typeof index === 'number' ? index : Number.MAX_SAFE_INTEGER;
+    };
+
     return {
       generations: [...genSet].sort((a, b) => b.localeCompare(a)),
-      blocks: [...blockSet].sort(),
+      blocks: [...blockSet].sort((a, b) => blockOrder(a) - blockOrder(b) || a.localeCompare(b)),
       types: knownDocTypes.filter((t) => typeSet.has(t)),
       boardExams: [...boardExamSet].sort(),
     };
-  }, [allItems, knownDocTypes, knownGenerations]);
+  }, [allItems, knownDocTypes, knownGenerations, blockOrderMap]);
 
   useEffect(() => {
     if (selectedYear.length === 0) return;
@@ -530,14 +550,20 @@ export function PeerSupportSection({
       if (!map[key]) map[key] = [];
       map[key].push(item);
     });
+
     return Object.entries(map)
       .sort(([a], [b]) => {
         if (a === "ไม่ระบุวิชา") return 1;
         if (b === "ไม่ระบุวิชา") return -1;
+
+        const aOrder = blockOrderMap[a] ?? Number.MAX_SAFE_INTEGER;
+        const bOrder = blockOrderMap[b] ?? Number.MAX_SAFE_INTEGER;
+        if (aOrder !== bOrder) return aOrder - bOrder;
+
         return a.localeCompare(b);
       })
       .map(([subject, items]) => ({ subject, items }));
-  }, [filteredItems]);
+  }, [filteredItems, blockOrderMap]);
 
   return (
     <div className="pb-20 lg:pb-8 w-full max-w-full overflow-x-hidden">

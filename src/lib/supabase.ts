@@ -551,6 +551,7 @@ export async function fetchKeywordConfigs(): Promise<KeywordConfig[]> {
   const { data, error } = await supabase
     .from('keyword_configs')
     .select('*')
+    .order('sort_order', { ascending: true, nullsFirst: false })
     .order('created_at', { ascending: true });
 
   if (error) {

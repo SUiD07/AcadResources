@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent } from '../ui/card';
 import { Button } from '../ui/button';
-import { Loader2, Plus, Settings, AlertTriangle, ChevronDown, ChevronUp, Check, X } from 'lucide-react';
+import { Loader2, Plus, Settings, AlertTriangle, ChevronDown, ChevronUp, Check, X, GripVertical } from 'lucide-react';
 import {
   getKeywordConfigs,
   editKeywordConfig,
@@ -39,6 +39,19 @@ import { FilterBar, filterBlocksByYear } from "../FilterBar";
 interface FocusedKey {
   configId: string;
   keyIndex: number;
+}
+
+function sortKeywordConfigs(configs: KeywordConfig[]) {
+  return [...configs].sort((a, b) => {
+    const aOrder = typeof a.sort_order === 'number' ? a.sort_order : Number.MAX_SAFE_INTEGER;
+    const bOrder = typeof b.sort_order === 'number' ? b.sort_order : Number.MAX_SAFE_INTEGER;
+
+    if (aOrder !== bOrder) return aOrder - bOrder;
+
+    const aCreated = a.created_at ?? '';
+    const bCreated = b.created_at ?? '';
+    return aCreated.localeCompare(bCreated);
+  });
 }
 
 function PromoteYearDialog() {
@@ -189,7 +202,7 @@ function OverlapAuditPanel({
 
       {expanded && (
         <Virtuoso
-          style={{ height: 288, width: "100%" }} // 288px ≈ your old max-h-72 (72 * 4px)
+          style={{ height: 288, width: "100%" }}
           data={overlaps}
           itemContent={(index, { doc, winner, winnerScore, loserScores }) => (
             <li key={doc.id} className="px-4 sm:px-5 py-3 text-xs min-w-0 bg-white/60 border-t border-amber-200">
@@ -223,6 +236,7 @@ export function KeywordManagementSection({ defaultYear = '1' }: { defaultYear?: 
   const [activeTab, setActiveTab] = useState<KeywordConfig['config_type']>('doc_type');
   const [focusedKey, setFocusedKey] = useState<FocusedKey | null>(null);
   const [driveSyncRecords, setDriveSyncRecords] = useState<DriveSyncRecord[]>([]);
+  const [draggedItem, setDraggedItem] = useState<string | null>(null);
 
   const [quickAddKeyword, setQuickAddKeyword] = useState('');
   const [quickAddType, setQuickAddType] = useState<KeywordConfig['config_type']>('doc_type');
@@ -231,7 +245,6 @@ export function KeywordManagementSection({ defaultYear = '1' }: { defaultYear?: 
   const [quickAddNewYear, setQuickAddNewYear] = useState(defaultYear);
   const [isQuickAdding, setIsQuickAdding] = useState(false);
 
-  // ── Per-tab horizontal filter bar state ──────────────────────────────────
   const [filterDocType, setFilterDocType] = useState<string[]>([]);
   const [filterGeneration, setFilterGeneration] = useState<string[]>([]);
   const [filterBlock, setFilterBlock] = useState<string[]>([]);
@@ -242,8 +255,6 @@ export function KeywordManagementSection({ defaultYear = '1' }: { defaultYear?: 
     loadData();
   }, []);
 
-  // Reset the filter bar whenever the active tab changes so leftover
-  // selections from one tab don't silently filter another tab's list.
   useEffect(() => {
     setFilterDocType([]);
     setFilterGeneration([]);
@@ -260,10 +271,11 @@ export function KeywordManagementSection({ defaultYear = '1' }: { defaultYear?: 
         getStudentDocuments(),
         getDriveSync(),
       ]);
-      setConfigs(configsData);
+      const orderedConfigs = sortKeywordConfigs(configsData);
+      setConfigs(orderedConfigs);
       setDriveSyncRecords(driveSyncData);
       setDocuments(docsData);
-      initializeCategorizer(configsData);
+      initializeCategorizer(orderedConfigs);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -433,25 +445,89 @@ export function KeywordManagementSection({ defaultYear = '1' }: { defaultYear?: 
     setQuickAddCategoryId('');
   };
 
-  // ── Options for the per-tab filter bar, derived from existing configs ────
+  // ── Drag and drop handlers ────────────────────────────────────────────────
+  const handleDragStart = (e: React.DragEvent, configId: string) => {
+    setDraggedItem(configId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetConfigId: string) => {
+    e.preventDefault();
+    if (!draggedItem || draggedItem === targetConfigId) {
+      setDraggedItem(null);
+      return;
+    }
+
+    const baseOrder = sortKeywordConfigs(configs).filter((c) => c.config_type === 'block_mapping');
+    const draggedIndex = baseOrder.findIndex((c) => c.id === draggedItem);
+    const targetIndex = baseOrder.findIndex((c) => c.id === targetConfigId);
+
+    if (draggedIndex === -1 || targetIndex === -1) {
+      setDraggedItem(null);
+      return;
+    }
+
+    const reordered = [...baseOrder];
+    const [movedConfig] = reordered.splice(draggedIndex, 1);
+    reordered.splice(targetIndex, 0, movedConfig);
+
+    setIsSaving(true);
+    try {
+      const updates = reordered.map((config, index) => ({
+        ...config,
+        sort_order: index,
+      }));
+
+      await Promise.all(
+        updates.map((updatedConfig) =>
+          editKeywordConfig(updatedConfig.id, {
+            ...updatedConfig,
+            sort_order: updatedConfig.sort_order,
+          })
+        )
+      );
+
+      const nextConfigs = sortKeywordConfigs([
+        ...configs.filter((config) => config.config_type !== 'block_mapping'),
+        ...updates,
+      ]);
+
+      setConfigs(nextConfigs);
+      initializeCategorizer(nextConfigs);
+      toast.success('Block order updated');
+    } catch (error) {
+      console.error('Error updating block order:', error);
+      toast.error('Failed to update block order');
+    } finally {
+      setIsSaving(false);
+      setDraggedItem(null);
+    }
+  };
+
+  const orderedConfigs = useMemo(() => sortKeywordConfigs(configs), [configs]);
+
   const docTypeFilterOptions = useMemo(
-    () => configs.filter((c) => c.config_type === 'doc_type').map((c) => c.label),
-    [configs],
+    () => orderedConfigs.filter((c) => c.config_type === 'doc_type').map((c) => c.label),
+    [orderedConfigs],
   );
   const generationFilterOptions = useMemo(
-    () => configs.filter((c) => c.config_type === 'generation').map((c) => c.label),
-    [configs],
+    () => orderedConfigs.filter((c) => c.config_type === 'generation').map((c) => c.label),
+    [orderedConfigs],
   );
   const blockFilterOptions = useMemo(
-    () => configs.filter((c) => c.config_type === 'block_mapping').map((c) => c.label),
-    [configs],
+    () => orderedConfigs.filter((c) => c.config_type === 'block_mapping').map((c) => c.label),
+    [orderedConfigs],
   );
   const boardExamFilterOptions = useMemo(
-    () => configs.filter((c) => c.config_type === 'board_exam').map((c) => c.label),
-    [configs],
+    () => orderedConfigs.filter((c) => c.config_type === 'board_exam').map((c) => c.label),
+    [orderedConfigs],
   );
 
-  // Keep the block filter selection valid whenever the year filter changes.
   useEffect(() => {
     if (activeTab !== 'block_mapping' || filterYear.length === 0) return;
     const validBlocks = filterBlocksByYear(blockFilterOptions, filterYear);
@@ -462,7 +538,7 @@ export function KeywordManagementSection({ defaultYear = '1' }: { defaultYear?: 
   }, [filterYear, activeTab, blockFilterOptions]);
 
   const filteredConfigs = useMemo(() => {
-    const base = configs.filter((c) => c.config_type === activeTab);
+    const base = orderedConfigs.filter((c) => c.config_type === activeTab);
 
     switch (activeTab) {
       case 'doc_type':
@@ -497,7 +573,7 @@ export function KeywordManagementSection({ defaultYear = '1' }: { defaultYear?: 
       default:
         return base;
     }
-  }, [configs, activeTab, filterDocType, filterGeneration, filterBlock, filterYear, filterBoardExam]);
+  }, [orderedConfigs, activeTab, filterDocType, filterGeneration, filterBlock, filterYear, filterBoardExam]);
 
   const overlaps = useMemo(() => findOverlaps(documents, configs, activeTab), [documents, configs, activeTab]);
 
@@ -572,7 +648,7 @@ export function KeywordManagementSection({ defaultYear = '1' }: { defaultYear?: 
           })}
         </div>
 
-        {/* Horizontal filter bar — shows only the filters relevant to the active tab */}
+        {/* Horizontal filter bar */}
         <div className="flex flex-row flex-nowrap items-center gap-3 overflow-x-auto py-3 sm:py-4 border-b border-slate-100">
           {activeTab === 'doc_type' && (
             <FilterBar
@@ -617,7 +693,7 @@ export function KeywordManagementSection({ defaultYear = '1' }: { defaultYear?: 
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-4 sm:gap-6">
-              {/* Add New Category now lives at the top of the list */}
+              {/* Add New Category at the top */}
               <button
                 onClick={handleAddNewCategory}
                 className="w-full py-6 sm:py-8 rounded-xl border-2 border-dashed border-slate-200 hover:border-[#E5007D] hover:bg-pink-50/50 transition-colors group"
@@ -634,24 +710,46 @@ export function KeywordManagementSection({ defaultYear = '1' }: { defaultYear?: 
 
               <OverlapAuditPanel overlaps={overlaps} configType={activeTab} />
 
+              {/* Draggable configs - only for block_mapping */}
+              {activeTab === 'block_mapping' && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4 text-xs sm:text-sm text-blue-800">
+                  <p className="font-medium">💡 Drag blocks to reorder them in Peer Support section</p>
+                </div>
+              )}
+
               {filteredConfigs.map((config) => (
-                <KeywordCategoryCard
+                <div
                   key={config.id}
-                  config={config}
-                  documents={documents}
-                  activeTab={activeTab}
-                  isSaving={isSaving}
-                  focusedKey={focusedKey}
-                  onUpdateConfig={handleUpdateConfig}
-                  onAddKey={handleAddKey}
-                  onUpdateKey={handleUpdateKey}
-                  onRemoveKey={handleRemoveKey}
-                  onFocusKey={(configId, keyIndex) => setFocusedKey({ configId, keyIndex })}
-                  onBlurKey={() => setFocusedKey(null)}
-                  onSave={handleSave}
-                  onDelete={handleDeleteConfig}
-                  driveSyncRecords={driveSyncRecords}
-                />
+                  draggable={activeTab === 'block_mapping'}
+                  onDragStart={(e) => handleDragStart(e, config.id)}
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, config.id)}
+                  className={`relative ${activeTab === 'block_mapping' ? 'cursor-move' : ''} ${draggedItem === config.id ? 'opacity-50' : ''}`}
+                >
+                  {activeTab === 'block_mapping' && (
+                    <div className="absolute left-3 top-3 sm:left-4 sm:top-4 text-slate-400 pointer-events-none">
+                      <GripVertical className="w-5 h-5" />
+                    </div>
+                  )}
+                  <div className={activeTab === 'block_mapping' ? 'pl-10 sm:pl-12' : ''}>
+                    <KeywordCategoryCard
+                      config={config}
+                      documents={documents}
+                      activeTab={activeTab}
+                      isSaving={isSaving}
+                      focusedKey={focusedKey}
+                      onUpdateConfig={handleUpdateConfig}
+                      onAddKey={handleAddKey}
+                      onUpdateKey={handleUpdateKey}
+                      onRemoveKey={handleRemoveKey}
+                      onFocusKey={(configId, keyIndex) => setFocusedKey({ configId, keyIndex })}
+                      onBlurKey={() => setFocusedKey(null)}
+                      onSave={handleSave}
+                      onDelete={handleDeleteConfig}
+                      driveSyncRecords={driveSyncRecords}
+                    />
+                  </div>
+                </div>
               ))}
             </div>
           )}
