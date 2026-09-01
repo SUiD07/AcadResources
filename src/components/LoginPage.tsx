@@ -268,7 +268,7 @@ export function LoginPage({ onLogin, initialAdminMode = false }: LoginPageProps)
                           />
                         </svg>
                         <span>Login with Google</span>
-                        <span className="text-xs text-slate-500">
+                        <span className="text-xs text-slate-500 ml-2">
                           (docchula only)
                         </span>
                       </span>
