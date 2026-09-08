@@ -2,7 +2,7 @@ import { GOOGLE_DRIVE_CONFIG } from './config';
 
 const CLIENT_ID = GOOGLE_DRIVE_CONFIG.clientId;
 const FOLDER_ID = GOOGLE_DRIVE_CONFIG.folderId;
-const SCOPES = 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/userinfo.email';
+const SCOPES = 'https://www.googleapis.com/auth/userinfo.email openid profile';
 const TOKEN_STORAGE_KEY = 'acadresources_gdrive_token';
 
 export interface DriveFile {

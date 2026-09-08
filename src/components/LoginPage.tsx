@@ -50,16 +50,8 @@ export function LoginPage({ onLogin, initialAdminMode = false }: LoginPageProps)
               return;
             }
 
-            // 2. Verify folder access
-            const hasAccess = await googleDrive.checkDriveAccess();
-
-            if (hasAccess) {
-              // Automatically grant admin if email is admin@docchula.com
-              const isActuallyAdmin = isAdminLogin || userInfo.email === 'admin@docchula.com';
-              onLogin(isActuallyAdmin, userInfo.email);
-            } else {
-              setError('Access Denied: Your @docchula.com account does not have permission to access the required Drive folder.');
-            }
+            const isActuallyAdmin = isAdminLogin || userInfo.email === 'admin@docchula.com';
+            onLogin(isActuallyAdmin, userInfo.email);
           } catch (err: any) {
             setError(err.message || 'Failed to verify access.');
           } finally {
