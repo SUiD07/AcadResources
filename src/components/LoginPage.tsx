@@ -229,7 +229,7 @@ export function LoginPage({ onLogin, initialAdminMode = false }: LoginPageProps)
                   <Button
                     type="button"
                     variant="outline"
-                    className="w-full border-slate-300 hover:bg-slate-50 h-auto min-h-10 py-2.5"
+                    className="w-full border-slate-300 hover:bg-slate-50"
                     size="lg"
                     onClick={handleGoogleLogin}
                     disabled={isVerifying}
@@ -260,7 +260,7 @@ export function LoginPage({ onLogin, initialAdminMode = false }: LoginPageProps)
                           />
                         </svg>
                         <span>Login with Google</span>
-                        <span className="text-xs text-slate-500">
+                        <span className="text-xs text-slate-500 ml-2">
                           (docchula only)
                         </span>
                       </span>
