@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { FilterBar, filterBlocksByYear } from "../FilterBar";
 import { ContentCategory } from "../ContentCategory";
 import {
@@ -333,6 +333,9 @@ export function PeerSupportSection({
   const [configs, setConfigs] = useState<KeywordConfig[]>([]);
   const [peerItems, setPeerItems] = useState<PeerSupportItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSyncingDrive, setIsSyncingDrive] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  const [syncFailed, setSyncFailed] = useState(false);
 
   // Load configs once on mount
   useEffect(() => {
@@ -358,9 +361,6 @@ export function PeerSupportSection({
       });
     return map;
   }, [configs]);
-
-  const hasSyncedDrive = useRef(false);
-  const syncPromise = useRef<Promise<void> | null>(null);
 
   function getBlocksInYear(selectedYear: string[], yearMap: Record<string, number | 'other'>): string[] {
     const blocks = Object.entries(yearMap)
@@ -392,20 +392,27 @@ export function PeerSupportSection({
     loadDocs();
   }, [selectedYear, yearMap]);
 
-  useEffect(() => {
-    if (hasSyncedDrive.current) return;
-    hasSyncedDrive.current = true;
+  const handleDriveSync = async () => {
+    if (isSyncingDrive) return;
 
-    syncStudentDocumentsFromDrive()
-      .then(async () => {
-        const blocksInYear = selectedYear.length > 0 ? getBlocksInYear(selectedYear, yearMap) : [];
-        const docs = await getStudentDocuments(blocksInYear.length > 0 ? { blocks: blocksInYear } : undefined);
-        setStudentDocs(docs);
-      })
-      .catch((syncError) => {
-        console.error("Drive sync failed:", syncError);
-      });
-  }, [selectedYear, yearMap]);
+    setIsSyncingDrive(true);
+    setSyncMessage(null);
+    setSyncFailed(false);
+
+    try {
+      await syncStudentDocumentsFromDrive();
+      const blocksInYear = selectedYear.length > 0 ? getBlocksInYear(selectedYear, yearMap) : [];
+      const docs = await getStudentDocuments(blocksInYear.length > 0 ? { blocks: blocksInYear } : undefined);
+      setStudentDocs(docs);
+      setSyncMessage('Drive sync completed.');
+    } catch (syncError) {
+      console.error("Drive sync failed:", syncError);
+      setSyncFailed(true);
+      setSyncMessage(syncError instanceof Error ? `Drive sync failed: ${syncError.message}` : 'Drive sync failed.');
+    } finally {
+      setIsSyncingDrive(false);
+    }
+  };
 
   const allItems = useMemo<PeerSupportItem[]>(
     () => {
@@ -576,11 +583,28 @@ export function PeerSupportSection({
             Peer Support Resources
           </h1>
           {isAdmin && (
-            <Button size="sm" onClick={() => setAddDialogOpen(true)} className="bg-[#E5007D] hover:bg-[#c00069] text-white w-full sm:w-auto">
-              <Plus className="w-4 h-4 mr-2" /> Add New Resource
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleDriveSync}
+                disabled={isSyncingDrive}
+                className="w-full sm:w-auto"
+              >
+                <RefreshCcw className={`w-4 h-4 mr-2${isSyncingDrive ? ' animate-spin' : ''}`} />
+                {isSyncingDrive ? 'Syncing Drive...' : 'Sync Drive'}
+              </Button>
+              <Button size="sm" onClick={() => setAddDialogOpen(true)} className="bg-[#E5007D] hover:bg-[#c00069] text-white w-full sm:w-auto">
+                <Plus className="w-4 h-4 mr-2" /> Add New Resource
+              </Button>
+            </div>
           )}
         </div>
+        {isAdmin && syncMessage && (
+          <p role={syncFailed ? "alert" : "status"} className={`text-sm ${syncFailed ? 'text-red-600' : 'text-emerald-700'}`}>
+            {syncMessage}
+          </p>
+        )}
         <p className="text-slate-600 text-sm sm:text-base">Browse and access peer-created academic materials</p>
       </div>
 

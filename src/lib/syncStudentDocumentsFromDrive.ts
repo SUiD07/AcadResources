@@ -106,6 +106,7 @@ export async function syncStudentDocumentsFromDrive(): Promise<void> {
 
     if (failedChunks.length > 0) {
       console.error('Sync had failures:', failedChunks);
+      throw new Error(`Student document sync failed for ${failedChunks.length} batch(es).`);
     }
   }
 }

@@ -50,6 +50,7 @@ export function LoginPage({ onLogin, initialAdminMode = false }: LoginPageProps)
               return;
             }
 
+            googleDrive.rememberGoogleAccount(userInfo.email);
             const isActuallyAdmin = isAdminLogin || userInfo.email === 'admin@docchula.com';
             onLogin(isActuallyAdmin, userInfo.email);
           } catch (err: any) {

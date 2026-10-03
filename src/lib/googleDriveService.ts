@@ -4,6 +4,7 @@ const CLIENT_ID = GOOGLE_DRIVE_CONFIG.clientId;
 const FOLDER_ID = GOOGLE_DRIVE_CONFIG.folderId;
 const SCOPES = 'https://www.googleapis.com/auth/userinfo.email openid profile';
 const TOKEN_STORAGE_KEY = 'acadresources_gdrive_token';
+const ACCOUNT_HINT_STORAGE_KEY = 'acadresources_google_account_hint';
 
 export interface DriveFile {
   id: string;
@@ -40,6 +41,8 @@ export function initTokenClient(onTokenReceived: (token: string) => void) {
   tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
     client_id: CLIENT_ID,
     scope: SCOPES,
+    prompt: '',
+    hd: 'docchula.com',
     callback: (response: any) => {
       if (response.error !== undefined) {
         throw response;
@@ -74,10 +77,16 @@ export function requestToken() {
   console.log("CLIENT_ID", CLIENT_ID);
   console.log("tokenClient", tokenClient);
   if (tokenClient) {
-    // Hint to Google to show docchula.com accounts primarily
-    tokenClient.requestAccessToken({ prompt: 'consent', hd: 'docchula.com' });
+    const accountHint = localStorage.getItem(ACCOUNT_HINT_STORAGE_KEY);
+    tokenClient.requestAccessToken(accountHint ? { login_hint: accountHint } : {});
   } else {
     console.error('Token client not initialized');
+  }
+}
+
+export function rememberGoogleAccount(email: string): void {
+  if (email.toLowerCase().endsWith('@docchula.com')) {
+    localStorage.setItem(ACCOUNT_HINT_STORAGE_KEY, email);
   }
 }
 
