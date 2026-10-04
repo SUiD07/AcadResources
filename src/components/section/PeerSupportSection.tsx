@@ -91,6 +91,35 @@ interface SubjectCardProps {
   onDelete?: (item: PeerSupportItem) => void;
 }
 
+function formatGenerationRanges(gens: string[]): string[] {
+  const nums = gens
+    .map((g) => g.match(/\d+/))
+    .filter((m): m is RegExpMatchArray => m !== null)
+    .map((m) => Number.parseInt(m[0], 10))
+    .sort((a, b) => a - b);
+
+  if (nums.length === 0) return [];
+
+  const ranges: { start: number; end: number }[] = [];
+  let start = nums[0];
+  let end = nums[0];
+
+  for (let i = 1; i < nums.length; i++) {
+    if (nums[i] === end + 1) {
+      end = nums[i];
+    } else {
+      ranges.push({ start, end });
+      start = nums[i];
+      end = nums[i];
+    }
+  }
+  ranges.push({ start, end });
+
+  return ranges
+    .sort((a, b) => b.start - a.start) // รุ่นใหม่สุดอยู่หน้าสุด
+    .map((r) => (r.start === r.end ? `MDCU ${r.start}` : `MDCU ${r.start}-${r.end}`));
+}
+
 function SubjectCard({
   subject,
   items,
@@ -113,13 +142,22 @@ function SubjectCard({
       : []),
   ];
 
-  const gens = [...new Set(items.map((i) => i.generation))]
-    .filter((g) => g !== "Auto-Detected")
-    .sort((a, b) => b.localeCompare(a));
+  const rawGens = [...new Set(items.map((i) => i.generation))].filter(
+    (g) => g !== "Auto-Detected",
+  );
+  const gens = formatGenerationRanges(rawGens);
 
   const hasUnknownGen = items.some(
     (i) => !i.generation || i.generation === "Auto-Detected",
   );
+
+  const boardExamsPresent = [
+    ...new Set(
+      items
+        .map((i) => i.board_exam)
+        .filter((b): b is string => Boolean(b) && b !== "None"),
+    ),
+  ];
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden mb-3 w-full">
@@ -152,8 +190,23 @@ function SubjectCard({
                 )
               </span>
             ))}
+            {boardExamsPresent.map((b) => (
+              <span
+                key={b}
+                className="text-xs px-2 py-0.5 rounded-full font-semibold whitespace-nowrap"
+                style={{ background: "#FFFBEB", color: "#B45309" }}
+              >
+                {b} (
+                {items.filter((i) => i.board_exam === b).length}
+                )
+              </span>
+            ))}
             {gens.map((g) => (
-              <span key={g} className="text-xs px-2 py-0.5 rounded-full whitespace-nowrap" style={{ background: "#F1F5F9", color: "#64748B" }}>
+              <span
+                key={g}
+                className="text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap"
+                style={{ background: "#EEF2FF", color: "#4F46E5" }}
+              >
                 {g}
               </span>
             ))}

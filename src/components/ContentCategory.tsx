@@ -201,6 +201,14 @@ function FileCard({
             >
               {item.generation}
             </span>
+            {item.board_exam && item.board_exam !== "None" && (
+              <span
+                className="text-xs px-2 py-0.5 rounded-full font-medium"
+                style={{ background: "#FFFBEB", color: "#B45309" }}
+              >
+                {item.board_exam}
+              </span>
+            )}
           </div>
         </div>
 
@@ -285,6 +293,14 @@ function FileCard({
           >
             {item.generation}
           </span>
+          {item.board_exam && item.board_exam !== "None" && (
+            <span
+              className="text-xs px-2 py-0.5 rounded-full font-medium"
+              style={{ background: "#FFFBEB", color: "#B45309" }}
+            >
+              {item.board_exam}
+            </span>
+          )}
         </div>
 
         <div className="flex gap-2 pt-2 border-t border-slate-50 mt-1">
