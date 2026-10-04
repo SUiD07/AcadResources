@@ -55,38 +55,46 @@ export async function fetchPeerSupportData(): Promise<PeerSupportItem[]> {
 
 export async function fetchStudentDocuments(filters?: { blocks?: string[] }): Promise<StudentDocument[]> {
   const PAGE_SIZE = 1000;
-  let from = 0;
-  let allDocuments: StudentDocument[] = [];
 
-  while (true) {
-    let query = supabase
-      .from('student_documents')
-      .select('*')
-      .order('upload_date', { ascending: false });
-
+  const buildQuery = () => {
+    let query = supabase.from('student_documents').select('*').order('upload_date', { ascending: false });
     if (filters?.blocks && filters.blocks.length > 0) {
       query = query.in('block', filters.blocks);
     }
+    return query;
+  };
 
-    const { data, error } = await query.range(from, from + PAGE_SIZE - 1);
+  let countQuery = supabase.from('student_documents').select('*', { count: 'exact', head: true });
+  if (filters?.blocks && filters.blocks.length > 0) {
+    countQuery = countQuery.in('block', filters.blocks);
+  }
 
+  const { count, error: countError } = await countQuery;
+
+  if (countError) {
+    console.error('Count Error (Student Documents):', countError.message);
+    return [];
+  }
+
+  if (!count || count === 0) {
+    return [];
+  }
+
+  const totalPages = Math.ceil(count / PAGE_SIZE);
+
+  const pagePromises = Array.from({ length: totalPages }, (_, i) =>
+    buildQuery().range(i * PAGE_SIZE, i * PAGE_SIZE + PAGE_SIZE - 1)
+  );
+
+  const results = await Promise.all(pagePromises);
+
+  const allDocuments: StudentDocument[] = [];
+  for (const { data, error } of results) {
     if (error) {
       console.error('Fetch Error (Student Documents):', error.message);
-      return [];
+      continue;
     }
-
-    if (!data || data.length === 0) {
-      break;
-    }
-
-    allDocuments.push(...data);
-    console.log(`Fetched ${data.length} rows (total: ${allDocuments.length})`);
-
-    if (data.length < PAGE_SIZE) {
-      break;
-    }
-
-    from += PAGE_SIZE;
+    if (data) allDocuments.push(...data);
   }
 
   return allDocuments;

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { FilterBar, filterBlocksByYear } from "../FilterBar";
 import { ContentCategory } from "../ContentCategory";
 import {
@@ -336,6 +336,9 @@ export function PeerSupportSection({
   const [isSyncingDrive, setIsSyncingDrive] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [syncFailed, setSyncFailed] = useState(false);
+  const [loadingYears, setLoadingYears] = useState<string[]>([]);
+  const [loadedYears, setLoadedYears] = useState<string[]>([]);
+  const fetchedYears = useRef<Set<string>>(new Set());
 
   // Load configs once on mount
   useEffect(() => {
@@ -377,19 +380,45 @@ export function PeerSupportSection({
   }
 
   useEffect(() => {
-    async function loadDocs() {
+    if (Object.keys(yearMap).length === 0) return;
+
+    const yearsToCheck =
+      selectedYear.length > 0
+        ? selectedYear
+        : Array.from(new Set(Object.values(yearMap).map(String)));
+
+    const missingYears = yearsToCheck.filter((y) => !fetchedYears.current.has(y));
+
+    if (missingYears.length === 0) {
+      setIsLoading(false);
+      return;
+    }
+
+    async function loadMissingYears() {
+      const isVeryFirstLoad = fetchedYears.current.size === 0;
+      if (isVeryFirstLoad) setIsLoading(true);
+      setLoadingYears(missingYears);
+
       try {
-        setIsLoading(true);
-        const blocksInYear = selectedYear.length > 0 ? getBlocksInYear(selectedYear, yearMap) : [];
-        const docs = await getStudentDocuments(blocksInYear.length > 0 ? { blocks: blocksInYear } : undefined);
-        setStudentDocs(docs);
+        const blocks = getBlocksInYear(missingYears, yearMap);
+        const newDocs = await getStudentDocuments(blocks.length > 0 ? { blocks } : undefined);
+
+        setStudentDocs((prev) => {
+          const existingIds = new Set(prev.map((d) => d.id));
+          return [...prev, ...newDocs.filter((d) => !existingIds.has(d.id))];
+        });
+
+        missingYears.forEach((y) => fetchedYears.current.add(y));
+        setLoadedYears((prev) => Array.from(new Set([...prev, ...missingYears])));   // ⬅️ เพิ่มบรรทัดนี้
       } catch (error) {
         console.error("Error loading documents:", error);
       } finally {
         setIsLoading(false);
+        setLoadingYears([]);
       }
     }
-    loadDocs();
+
+    loadMissingYears();
   }, [selectedYear, yearMap]);
 
   const handleDriveSync = async () => {
@@ -645,7 +674,21 @@ export function PeerSupportSection({
               <div className="text-slate-600">Loading...</div>
             </div>
           )}
-
+          {!isLoading && loadingYears.length > 0 && (
+            <div className="flex flex-col gap-1 py-3">
+              <div className="flex items-center">
+                <RefreshCcw className="w-5 h-5 text-[#E5007D] animate-spin mr-2" />
+                <div className="text-slate-600">
+                  Loading {loadingYears.map((y) => (y === "other" ? "other" : `ปี ${y}`)).join(", ")}...
+                </div>
+              </div>
+              {loadedYears.length > 0 && (
+                <div className="text-xs text-slate-400 ml-7">
+                  โหลดไปแล้ว: {loadedYears.map((y) => (y === "other" ? "other" : `ปี ${y}`)).join(", ")}
+                </div>
+              )}
+            </div>
+          )}
           {/* ── Count row + view toggle ── */}
           {!isLoading && (
             <div className="flex items-center justify-between gap-2 mb-3">
