@@ -1,4 +1,5 @@
 import { useState, createContext, useContext } from "react";
+import type { CSSProperties } from "react";
 import {
   ExternalLink,
   Folder,
@@ -11,6 +12,7 @@ import {
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
+import type { ClassificationSummary } from "../lib/KeywordMatching";
 
 // ─── TYPE COLORS ─────────────────────────────────────────────────────────────
 const TYPE_COLORS: Record<string, string> = {
@@ -44,6 +46,7 @@ interface ContentItem {
   category: string;
   folder_path?: string;
   board_exam?: string;
+  classificationSummary?: ClassificationSummary;
 }
 
 interface ContentCategoryProps {
@@ -62,6 +65,28 @@ function getDriveThumbnail(driveLink: string): string {
   const fileId = match?.[0];
   if (!fileId) return "";
   return `https://drive.google.com/thumbnail?id=${fileId}&sz=w600`;
+}
+
+// ─── LAYOUT HELPER ────────────────────────────────────────────────────────────
+/**
+ * Shared layout for a group of FileCards.
+ * `min(100%, Npx)` stops cards from overflowing (and overlapping) on narrow screens.
+ */
+function itemsLayoutStyle(
+  viewMode: "grid" | "list",
+  minWidth = 280
+): CSSProperties {
+  return viewMode === "grid"
+    ? {
+        display: "grid",
+        gridTemplateColumns: `repeat(auto-fill, minmax(min(100%, ${minWidth}px), 1fr))`,
+        gap: "12px",
+      }
+    : {
+        display: "flex",
+        flexDirection: "column",
+        gap: "8px",
+      };
 }
 
 // ─── FOLDER TREE HELPERS ──────────────────────────────────────────────────────
@@ -142,6 +167,64 @@ function collapseChains(node: FolderNode): FolderNode {
   return node;
 }
 
+// ─── CLASSIFICATION DEBUG NOTE (admin only) ───────────────────────────────────
+const STATUS_STYLE: Record<
+  ClassificationSummary["overallStatus"],
+  { icon: string; label: string; wrapClass: string }
+> = {
+  unclassified: { icon: "❗", label: "ยังไม่ถูกจัดหมวด", wrapClass: "bg-red-50 border-red-200 text-red-700" },
+  overlap: { icon: "⚠", label: "มี keyword ชนกัน", wrapClass: "bg-amber-50 border-amber-200 text-amber-700" },
+  override: { icon: "✎", label: "ถูก override", wrapClass: "bg-indigo-50 border-indigo-200 text-indigo-700" },
+  auto: { icon: "✓", label: "Auto-classified ครบ ไม่มี override", wrapClass: "bg-emerald-50 border-emerald-200 text-emerald-700" },
+};
+
+const FIELD_TEXT_COLOR: Record<ClassificationSummary["overallStatus"], string> = {
+  unclassified: "text-red-600",
+  overlap: "text-amber-600",
+  override: "text-indigo-600",
+  auto: "text-slate-500",
+};
+
+/**
+ * Rendered as its own full-width block at the bottom of a card (never as a
+ * flex sibling of the card's content row), so it can't squeeze or overlap
+ * the thumbnail / title / buttons.
+ */
+function ClassificationDebugNote({ summary }: { summary: ClassificationSummary }) {
+  const style = STATUS_STYLE[summary.overallStatus];
+
+  const rows = [
+    { label: "block", field: summary.block },
+    { label: "type", field: summary.docType },
+    { label: "board", field: summary.boardExam },
+  ];
+
+  return (
+    <div className="w-full min-w-0 border-t border-dashed border-slate-200 pt-3 flex flex-col gap-2">
+      <div
+        className={`text-xs font-semibold px-2 py-1 rounded-md border inline-flex items-start gap-1.5 w-fit max-w-full ${style.wrapClass}`}
+      >
+        <span aria-hidden="true" className="shrink-0">
+          {style.icon}
+        </span>
+        <span className="break-words min-w-0">{style.label}</span>
+      </div>
+
+      <div className="flex flex-col gap-1 text-xs leading-relaxed">
+        {rows.map(({ label, field }) => (
+          <div
+            key={label}
+            className={`grid grid-cols-[3rem_minmax(0,1fr)] gap-x-2 ${FIELD_TEXT_COLOR[field.status]}`}
+          >
+            <span className="font-medium">{label}</span>
+            <span className="break-words">{field.text}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── FILE CARD ────────────────────────────────────────────────────────────────
 function FileCard({
   item,
@@ -159,100 +242,117 @@ function FileCard({
   onDelete?: (item: ContentItem) => void;
 }) {
   const viewMode = useContext(ViewModeContext);
+  const showDebug = isAdmin && !!item.classificationSummary;
 
   // ── List view ──
   if (viewMode === "list") {
     return (
-      <div className="bg-white rounded-lg border border-slate-200 flex items-center gap-3 px-4 py-3 hover:shadow-sm transition-shadow">
-        <div
-          className="shrink-0 rounded-md overflow-hidden bg-slate-100 border border-slate-100"
-          style={{ width: 72, height: 40 }}
-        >
-          <ImageWithFallback
-            src={item.thumbnail || getDriveThumbnail(item.drive_link)}
-            alt={item.block_name}
-            className="w-full h-full object-cover"
-            loading="lazy"
-          />
-        </div>
+      <div className="bg-white rounded-lg border border-slate-200 px-4 py-3 hover:shadow-sm transition-shadow flex flex-col gap-3">
+        {/* Main row: info on the left, actions on the right (stacks on mobile) */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div
+              className="shrink-0 rounded-md overflow-hidden bg-slate-100 border border-slate-100"
+              style={{ width: 72, height: 40 }}
+            >
+              <ImageWithFallback
+                src={item.thumbnail || getDriveThumbnail(item.drive_link)}
+                alt={item.block_name}
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
+            </div>
 
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* {item.block_code && (
+            <div className="flex-1 min-w-0">
+              {/* <div className="flex items-center gap-2 flex-wrap">*/}
+                  {/* {item.block_code && (
               <span className="text-xs text-slate-400">{item.block_code}</span>
             )} */}
-            <span
-              className="text-[5px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-lg"
-              style={{ color: accentColor, background: `${accentColor}18`, paddingLeft: "10px", paddingRight: "10px" }}
-            >
-              {categoryName}
-            </span>
-          </div>
-          <p className="text-sm font-semibold text-slate-900 truncate mt-0.5">
-            {item.block_name}
-          </p>
-          <div className="flex gap-1.5 mt-1">
-            <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
-              {item.block}
-            </span>
-            <span
-              className="text-xs px-2 py-0.5 rounded-full font-medium"
-              style={{ background: "#FDF2F8", color: "#BE185D" }}
-            >
-              {item.generation}
-            </span>
-            {item.board_exam && item.board_exam !== "None" && (
               <span
-                className="text-xs px-2 py-0.5 rounded-full font-medium"
-                style={{ background: "#FFFBEB", color: "#B45309" }}
+                className="inline-block text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-lg"
+                style={{ color: accentColor, background: `${accentColor}18` }}
               >
-                {item.board_exam}
+                {categoryName}
               </span>
+              <p className="text-sm font-semibold text-slate-900 truncate mt-1">
+                {item.block_name}
+              </p>
+              <div className="flex flex-wrap gap-1.5 mt-1.5">
+                <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
+                  {item.block}
+                </span>
+                <span
+                  className="text-xs px-2 py-0.5 rounded-full font-medium"
+                  style={{ background: "#FDF2F8", color: "#BE185D" }}
+                >
+                  {item.generation}
+                </span>
+                {item.board_exam && item.board_exam !== "None" && (
+                  <span
+                    className="text-xs px-2 py-0.5 rounded-full font-medium"
+                    style={{ background: "#FFFBEB", color: "#B45309" }}
+                  >
+                    {item.board_exam}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 sm:shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              asChild
+              className="flex-1 sm:flex-none"
+            >
+              <a
+                href={item.drive_link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-1.5"
+              >
+                <FolderOpen className="w-3.5 h-3.5" />
+                Open
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </Button>
+            {isAdmin && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  aria-label="Edit"
+                  onClick={() => onEdit?.(item)}
+                  className="border-[#E5007D] text-[#E5007D] hover:bg-pink-50"
+                >
+                  <Pencil className="w-3 h-3" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  aria-label="Delete"
+                  onClick={() => onDelete?.(item)}
+                  className="border-red-300 text-red-600 hover:bg-red-50"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </Button>
+              </>
             )}
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          <Button variant="outline" size="sm" asChild>
-            <a
-              href={item.drive_link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5"
-            >
-              <FolderOpen className="w-3.5 h-3.5" />
-              Open
-              <ExternalLink className="w-3 h-3" />
-            </a>
-          </Button>
-          {isAdmin && (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onEdit?.(item)}
-                className="border-[#E5007D] text-[#E5007D] hover:bg-pink-50"
-              >
-                <Pencil className="w-3 h-3" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onDelete?.(item)}
-                className="border-red-300 text-red-600 hover:bg-red-50"
-              >
-                <Trash2 className="w-3 h-3" />
-              </Button>
-            </>
-          )}
-        </div>
+        {/* Admin debug note sits on its own row, below the main content */}
+        {showDebug && (
+          <ClassificationDebugNote summary={item.classificationSummary!} />
+        )}
       </div>
     );
   }
 
   // ── Grid view (default) ──
   return (
-    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col">
+    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col min-w-0">
       <div
         className="w-full bg-slate-50 border-b border-slate-100 overflow-hidden relative"
         style={{ aspectRatio: "16/9" }}
@@ -266,9 +366,9 @@ function FileCard({
         />
       </div>
 
-      <div className="p-4 flex flex-col gap-2 flex-1">
+      <div className="p-4 flex flex-col gap-2 flex-1 min-w-0">
         <span
-          className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded rounded-lg bg-slate-100 text-slate-500 w-fit"
+          className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-lg w-fit"
           style={{ color: accentColor, background: `${accentColor}18` }}
         >
           {categoryName}
@@ -303,8 +403,13 @@ function FileCard({
           )}
         </div>
 
-        <div className="flex gap-2 pt-2 border-t border-slate-50 mt-1">
-          <Button variant="outline" size="sm" className="flex-1" asChild>
+        <div className="flex gap-2 pt-3 border-t border-slate-100 mt-1">
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1 min-w-0"
+            asChild
+          >
             <a
               href={item.drive_link}
               target="_blank"
@@ -317,10 +422,11 @@ function FileCard({
             </a>
           </Button>
           {isAdmin && (
-            <div className="flex gap-1">
+            <div className="flex gap-1 shrink-0">
               <Button
                 variant="outline"
                 size="sm"
+                aria-label="Edit"
                 onClick={() => onEdit?.(item)}
                 className="border-[#E5007D] text-[#E5007D] hover:bg-pink-50"
               >
@@ -329,6 +435,7 @@ function FileCard({
               <Button
                 variant="outline"
                 size="sm"
+                aria-label="Delete"
                 onClick={() => onDelete?.(item)}
                 className="border-red-300 text-red-600 hover:bg-red-50"
               >
@@ -337,6 +444,11 @@ function FileCard({
             </div>
           )}
         </div>
+
+        {/* Admin debug note lives inside the padded body so it never touches the card edges */}
+        {showDebug && (
+          <ClassificationDebugNote summary={item.classificationSummary!} />
+        )}
       </div>
     </div>
   );
@@ -377,6 +489,7 @@ function FolderGroup({
 
   const flatItems = [...node.items, ...flatFromChildren];
 
+  // Nested levels have less horizontal room, so allow narrower cards
   const cardMinWidth = Math.max(260 - depth * 40, 160);
 
   return (
@@ -445,21 +558,7 @@ function FolderGroup({
           )}
 
           {flatItems.length > 0 && (
-            <div
-              style={
-                viewMode === "grid"
-                  ? {
-                      display: "grid",
-                      gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-                      gap: "12px",
-                    }
-                  : {
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "8px",
-                    }
-              }
-            >
+            <div style={itemsLayoutStyle(viewMode, cardMinWidth)}>
               {flatItems.map((item) => (
                 <FileCard
                   key={item.id}
@@ -539,6 +638,41 @@ export function ContentCategory({
       )
     : [];
   const unWrappedFolderFiles = singleFolder?.items ?? [];
+
+  const renderFolderGroups = (nodes: FolderNode[]) =>
+    nodes.length > 0 && (
+      <div className="flex flex-col gap-2">
+        {nodes.map((node) => (
+          <FolderGroup
+            key={node.fullPath}
+            node={node}
+            categoryName={categoryName}
+            accentColor={accentColor}
+            isAdmin={isAdmin}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            depth={0}
+          />
+        ))}
+      </div>
+    );
+
+  const renderFileCards = (files: ContentItem[]) =>
+    files.length > 0 && (
+      <div style={itemsLayoutStyle(viewMode, 280)}>
+        {files.map((item) => (
+          <FileCard
+            key={item.id}
+            item={item}
+            categoryName={categoryName}
+            accentColor={accentColor}
+            isAdmin={isAdmin}
+            onEdit={onEdit}
+            onDelete={onDelete}
+          />
+        ))}
+      </div>
+    );
 
   return (
     <ViewModeContext.Provider value={viewMode}>
@@ -629,112 +763,19 @@ export function ContentCategory({
               background: "white",
             }}
           >
-            {/* Single folder unwrap case */}
-            {singleFolder && (
+            {singleFolder ? (
               <>
                 {/* Unwrapped folder's subfolders */}
-                {unWrappedFolderChildren.length > 0 && (
-                  <div className="flex flex-col gap-2">
-                    {unWrappedFolderChildren.map((child) => (
-                      <FolderGroup
-                        key={child.fullPath}
-                        node={child}
-                        categoryName={categoryName}
-                        accentColor={accentColor}
-                        isAdmin={isAdmin}
-                        onEdit={onEdit}
-                        onDelete={onDelete}
-                        depth={0}
-                      />
-                    ))}
-                  </div>
-                )}
-
+                {renderFolderGroups(unWrappedFolderChildren)}
                 {/* Unwrapped folder's direct files + flat items */}
-                {(unWrappedFolderFiles.length > 0 || flatCount > 0) && (
-                  <div
-                    style={
-                      viewMode === "grid"
-                        ? {
-                            display: "grid",
-                            gridTemplateColumns:
-                              "repeat(auto-fill, minmax(280px, 1fr))",
-                            gap: "12px",
-                          }
-                        : {
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: "8px",
-                          }
-                    }
-                  >
-                    {[...unWrappedFolderFiles, ...flatItems].map((item) => (
-                      <FileCard
-                        key={item.id}
-                        item={item}
-                        categoryName={categoryName}
-                        accentColor={accentColor}
-                        isAdmin={isAdmin}
-                        onEdit={onEdit}
-                        onDelete={onDelete}
-                      />
-                    ))}
-                  </div>
-                )}
+                {renderFileCards([...unWrappedFolderFiles, ...flatItems])}
               </>
-            )}
-
-            {/* Multiple folders case (original logic) */}
-            {!singleFolder && (
+            ) : (
               <>
                 {/* Real folders (2+ files) — recursive */}
-                {realFolders.length > 0 && (
-                  <div className="flex flex-col gap-2">
-                    {realFolders.map((node) => (
-                      <FolderGroup
-                        key={node.fullPath}
-                        node={node}
-                        categoryName={categoryName}
-                        accentColor={accentColor}
-                        isAdmin={isAdmin}
-                        onEdit={onEdit}
-                        onDelete={onDelete}
-                      />
-                    ))}
-                  </div>
-                )}
-
+                {renderFolderGroups(realFolders)}
                 {/* Flat files */}
-                {flatItems.length > 0 && (
-                  <div
-                    style={
-                      viewMode === "grid"
-                        ? {
-                            display: "grid",
-                            gridTemplateColumns:
-                              "repeat(auto-fill, minmax(280px, 1fr))",
-                            gap: "12px",
-                          }
-                        : {
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: "8px",
-                          }
-                    }
-                  >
-                    {flatItems.map((item) => (
-                      <FileCard
-                        key={item.id}
-                        item={item}
-                        categoryName={categoryName}
-                        accentColor={accentColor}
-                        isAdmin={isAdmin}
-                        onEdit={onEdit}
-                        onDelete={onDelete}
-                      />
-                    ))}
-                  </div>
-                )}
+                {renderFileCards(flatItems)}
               </>
             )}
           </div>

@@ -21,7 +21,7 @@ import type { KeywordConfig, StudentDocument } from '../lib/types';
 // classifyDocument picks the config with the highest score; ties keep the
 // first-in-array winner (i.e. DB order as a stable tiebreaker).
 
-function keyMatchScore(doc: StudentDocument, key: string): number {
+export function keyMatchScore(doc: StudentDocument, key: string): number {
   const k = key.trim().toLowerCase();
   if (!k) return -1;
 
@@ -192,4 +192,111 @@ export function findOverlaps(
   }
 
   return result;
+}
+
+// ─── Classification trace + summary (ใช้โชว์บนการ์ดในหน้า Peer Support) ──────
+
+export interface ClassificationTraceEntry {
+  config: KeywordConfig;
+  score: number;
+  matchedKeys: { key: string; score: number; inTitle: boolean; inFolder: boolean; inFileUrl: boolean }[];
+}
+
+export function getClassificationTrace(
+  doc: StudentDocument,
+  configs: KeywordConfig[],
+  configType: KeywordConfig['config_type'],
+): ClassificationTraceEntry[] {
+  const relevant = configs.filter((c) => c.config_type === configType);
+
+  return relevant
+    .map((config) => {
+      const matchedKeys = config.keys
+        .map((key) => {
+          const k = key.trim().toLowerCase();
+          const inTitle = doc.title.toLowerCase().includes(k);
+          const inFolder = doc.folder_path.toLowerCase().includes(k);
+          const inFileUrl = (doc.file_url || '').toLowerCase().includes(k);
+          const score = keyMatchScore(doc, key);
+          return { key, score, inTitle, inFolder, inFileUrl };
+        })
+        .filter((k) => k.score >= 0)
+        .sort((a, b) => b.score - a.score);
+
+      const score = matchedKeys.length > 0 ? matchedKeys[0].score : -1;
+      return { config, score, matchedKeys };
+    })
+    .filter((e) => e.score >= 0)
+    .sort((a, b) => b.score - a.score);
+}
+
+export type ClassificationFieldStatus = 'auto' | 'override' | 'overlap' | 'unclassified';
+
+export interface ClassificationFieldNote {
+  status: ClassificationFieldStatus;
+  text: string;
+}
+
+export interface ClassificationSummary {
+  overallStatus: ClassificationFieldStatus;
+  block: ClassificationFieldNote;
+  docType: ClassificationFieldNote;
+  boardExam: ClassificationFieldNote;
+}
+
+function noteForField(
+  doc: StudentDocument,
+  configs: KeywordConfig[],
+  configType: KeywordConfig['config_type'],
+  overriddenValue: string | undefined,
+  isOverridden: boolean | undefined,
+): ClassificationFieldNote {
+  const trace = getClassificationTrace(doc, configs, configType);
+  const winner = trace[0];
+
+  if (isOverridden && overriddenValue) {
+    const autoPart = winner
+      ? ` (auto จะได้ "${winner.config.label}" จาก match "${winner.matchedKeys[0]?.key}" คะแนน ${winner.score})`
+      : ` (auto จะได้ "Unclassified")`;
+    return { status: 'override', text: `override โดยแอดมิน → "${overriddenValue}"${autoPart}` };
+  }
+
+  if (!winner) {
+    return { status: 'unclassified', text: `ไม่มี keyword ไหน match เลย → "Unclassified"` };
+  }
+
+  const topKey = winner.matchedKeys[0];
+  const where = [topKey.inTitle && 'ชื่อไฟล์', topKey.inFolder && 'folder path', topKey.inFileUrl && 'drive link']
+    .filter(Boolean)
+    .join(', ');
+
+  if (trace.length > 1) {
+    const loser = trace[1];
+    return {
+      status: 'overlap',
+      text: `🏆 "${winner.config.label}" ชนะ (คะแนน ${winner.score}) — แพ้ "${loser.config.label}" (คะแนน ${loser.score})`,
+    };
+  }
+
+  return { status: 'auto', text: `match "${topKey.key}" ใน${where} (คะแนน ${winner.score})` };
+}
+
+/** สรุปที่มาของการจัดหมวด 1 ไฟล์ ครบทั้ง 3 ประเภท + สถานะรวม สำหรับโชว์บนการ์ด (admin only) */
+export function buildClassificationSummary(doc: StudentDocument, configs: KeywordConfig[]): ClassificationSummary {
+  const block = noteForField(doc, configs, 'block_mapping', doc.block, doc.is_overridden);
+  const docType = noteForField(doc, configs, 'doc_type', doc.doc_type, doc.is_overridden);
+
+  let boardExam = noteForField(doc, configs, 'board_exam', doc.board_exam, doc.is_overridden);
+  // ไม่ใช่ทุกไฟล์จะเป็นข้อสอบ board — "ไม่ match" ของ field นี้ถือเป็นปกติ ไม่นับเป็นปัญหาที่ต้องรีบแก้
+  if (boardExam.status === 'unclassified') {
+    boardExam = { status: 'auto', text: 'ไม่มี keyword board exam match → "None"' };
+  }
+
+  const statuses = [block.status, docType.status, boardExam.status];
+  let overallStatus: ClassificationFieldStatus = 'auto';
+  if (statuses.includes('unclassified')) overallStatus = 'unclassified';
+  else if (statuses.includes('overlap')) overallStatus = 'overlap';
+  else if (statuses.includes('override')) overallStatus = 'override';
+
+  return { overallStatus, block, docType, boardExam };
 }

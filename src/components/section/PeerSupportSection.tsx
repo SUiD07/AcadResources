@@ -26,6 +26,7 @@ import { SearchBar, createEmptyBox, evaluateSearch } from "../SearchBar";
 import type { SearchBox, LogicOp } from "../SearchBar";
 import { Virtuoso } from "react-virtuoso";
 import { syncStudentDocumentsFromDrive } from '../../lib/syncStudentDocumentsFromDrive'
+import { buildClassificationSummary } from "../../lib/KeywordMatching";
 
 // ─── TYPE ORDER ─────────────────────────────────────────────────────────────
 const DOC_TYPE_ORDER = [
@@ -513,6 +514,8 @@ export function PeerSupportSection({
           ? doc.board_exam
           : (boardConfig ? boardConfig.label : 'None');
 
+        const classificationSummary = isAdmin ? buildClassificationSummary(doc, configs) : undefined;
+
         return {
           id: `doc-${doc.id}`,
           block_name: doc.title,
@@ -523,10 +526,11 @@ export function PeerSupportSection({
           category: finalCategory,
           board_exam: finalBoardExam,
           folder_path: doc.folder_path,
+          classificationSummary,
         };
       });
     },
-    [studentDocs, configs],
+    [studentDocs, configs, isAdmin],
   );
 
   const knownDocTypes = useMemo(() => {
