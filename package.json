@@ -92,6 +92,7 @@
     "@types/lodash.throttle": "^4.1.9",
     "@types/node": "^20.10.0",
     "@types/react": "^19.2.8",
+    "@types/react-datepicker": "^7.0.0",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react-swc": "^3.10.2",
     "autoprefixer": "^10.4.22",

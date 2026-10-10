@@ -1,5 +1,5 @@
-import { useState, createContext, useContext } from "react";
-import type { CSSProperties } from "react";
+import { useState, useRef, createContext, useContext } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import {
   ExternalLink,
   Folder,
@@ -9,10 +9,29 @@ import {
   ChevronDown,
   ChevronUp,
   ChevronRight,
+  GripVertical,
+  Eye,
+  EyeOff,
 } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  arrayMove,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Button } from "./ui/button";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import type { ClassificationSummary } from "../lib/KeywordMatching";
+import { useFolderSettings } from "./FolderSettingsContext";
 
 // ─── TYPE COLORS ─────────────────────────────────────────────────────────────
 const TYPE_COLORS: Record<string, string> = {
@@ -121,7 +140,7 @@ function buildFolderTree(items: ContentItem[]): FolderNode {
     let node = root;
     let builtPath = "";
     for (const seg of segments) {
-      builtPath = builtPath ? `${builtPath}/${seg}` : seg;
+      builtPath = builtPath ? `${builtPath} > ${seg}` : seg;
       if (!node.children.has(seg)) {
         node.children.set(seg, makeFolderNode(seg, builtPath));
       }
@@ -454,6 +473,119 @@ function FileCard({
   );
 }
 
+// ─── DRAG & DROP (admin only) ─────────────────────────────────────────────────
+/** Wraps one folder so an admin can drag it by its grip handle. */
+function SortableFolderItem({
+  id,
+  children,
+}: {
+  id: string;
+  children: (dragHandle: ReactNode) => ReactNode;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id });
+
+  const handle = (
+    <button
+      type="button"
+      aria-label="Drag to reorder folder"
+      {...attributes}
+      {...listeners}
+      onClick={(e) => e.stopPropagation()}
+      className="shrink-0 p-1.5 -ml-1 text-slate-400 hover:text-slate-600 cursor-grab active:cursor-grabbing touch-none"
+    >
+      <GripVertical className="w-4 h-4" />
+    </button>
+  );
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.6 : 1,
+        position: "relative",
+        zIndex: isDragging ? 10 : undefined,
+      }}
+    >
+      {children(handle)}
+    </div>
+  );
+}
+
+/** A list of sibling folders. Admins can drag them to reorder; the order is saved instantly. */
+function FolderList({
+  nodes,
+  categoryName,
+  accentColor,
+  isAdmin,
+  onEdit,
+  onDelete,
+  depth,
+}: {
+  nodes: FolderNode[];
+  categoryName: string;
+  accentColor: string;
+  isAdmin: boolean;
+  onEdit?: (item: ContentItem) => void;
+  onDelete?: (item: ContentItem) => void;
+  depth: number;
+}) {
+  const fs = useFolderSettings();
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 8 } })
+  );
+
+  if (nodes.length === 0) return null;
+  const paths = nodes.map((n) => n.fullPath);
+
+  const renderFolder = (node: FolderNode, dragHandle?: ReactNode) => (
+    <FolderGroup
+      key={node.fullPath}
+      node={node}
+      categoryName={categoryName}
+      accentColor={accentColor}
+      isAdmin={isAdmin}
+      onEdit={onEdit}
+      onDelete={onDelete}
+      depth={depth}
+      dragHandle={dragHandle}
+    />
+  );
+
+  if (!isAdmin) {
+    return (
+      <div className="flex flex-col gap-2">{nodes.map((node) => renderFolder(node))}</div>
+    );
+  }
+
+  return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={({ active, over }) => {
+        if (!over || active.id === over.id) return;
+        const from = paths.indexOf(String(active.id));
+        const to = paths.indexOf(String(over.id));
+        if (from < 0 || to < 0) return;
+        fs.reorder(arrayMove(paths, from, to));
+      }}
+    >
+      <SortableContext items={paths} strategy={verticalListSortingStrategy}>
+        <div className="flex flex-col gap-2">
+          {nodes.map((node) => (
+            <SortableFolderItem key={node.fullPath} id={node.fullPath}>
+              {(handle) => renderFolder(node, handle)}
+            </SortableFolderItem>
+          ))}
+        </div>
+      </SortableContext>
+    </DndContext>
+  );
+}
+
 // ─── FOLDER GROUP (recursive) ─────────────────────────────────────────────────
 function FolderGroup({
   node,
@@ -463,6 +595,7 @@ function FolderGroup({
   onEdit,
   onDelete,
   depth = 0,
+  dragHandle,
 }: {
   node: FolderNode;
   categoryName: string;
@@ -471,14 +604,36 @@ function FolderGroup({
   onEdit?: (item: ContentItem) => void;
   onDelete?: (item: ContentItem) => void;
   depth?: number;
+  /** Drag grip, only passed for admins (see SortableFolderItem). */
+  dragHandle?: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const committedRef = useRef(false);
+  const fs = useFolderSettings();
+  const shownName = fs.displayName(node.fullPath, node.name);
+  const folderHidden = fs.isFolderHidden(node.fullPath);
   const viewMode = useContext(ViewModeContext);
   const total = countDescendants(node);
 
-  const sortedChildren = [...node.children.values()].sort((a, b) =>
-    a.name.localeCompare(b.name)
-  );
+  const startRename = () => {
+    committedRef.current = false;
+    setDraft(shownName);
+    setEditing(true);
+  };
+  const commitRename = () => {
+    if (committedRef.current) return;
+    committedRef.current = true;
+    fs.rename(node.fullPath, draft, node.name);
+    setEditing(false);
+  };
+  const cancelRename = () => {
+    committedRef.current = true;
+    setEditing(false);
+  };
+
+  const sortedChildren = fs.sortFolders<FolderNode>([...node.children.values()]);
 
   const realFolderChildren = sortedChildren.filter(
     (c) => countDescendants(c) > 1
@@ -501,6 +656,7 @@ function FolderGroup({
         className="flex items-center justify-between cursor-pointer select-none px-4 py-3 hover:bg-slate-50 transition-colors"
       >
         <div className="flex items-center gap-3 min-w-0">
+          {dragHandle}
           <span
             className="shrink-0 flex items-center justify-center rounded-lg"
             style={{
@@ -517,12 +673,60 @@ function FolderGroup({
             )}
           </span>
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-slate-900 truncate">
-              {node.name}
+            {editing ? (
+              <input
+                autoFocus
+                value={draft}
+                placeholder={node.name}
+                onClick={(e) => e.stopPropagation()}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  e.stopPropagation();
+                  if (e.key === "Enter") commitRename();
+                  else if (e.key === "Escape") cancelRename();
+                }}
+                onBlur={commitRename}
+                className="text-sm font-semibold text-slate-900 border border-slate-300 rounded px-2 py-0.5 w-full"
+              />
+            ) : (
+              <p
+                className={`text-sm font-semibold truncate ${
+                  folderHidden ? "text-slate-400 italic" : "text-slate-900"
+                }`}
+              >
+                {shownName}
+              </p>
+            )}
+            <p className="text-xs text-slate-500">
+              {total} files
+              {shownName !== node.name ? ` · Drive name: ${node.name}` : ""}
+              {folderHidden ? " · hidden from students" : ""}
             </p>
-            <p className="text-xs text-slate-500">{total} files</p>
           </div>
         </div>
+        {isAdmin && (
+          <div
+            className="flex items-center gap-0.5 ml-2 shrink-0"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              aria-label="Rename folder"
+              onClick={startRename}
+              className="p-1.5 rounded hover:bg-slate-100 text-slate-500"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              aria-label={folderHidden ? "Show folder to students" : "Hide folder from students"}
+              onClick={() => fs.setHidden(node.fullPath, !folderHidden)}
+              className="p-1.5 rounded hover:bg-slate-100 text-slate-500"
+            >
+              {folderHidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+            </button>
+          </div>
+        )}
         <span className="text-slate-400 ml-2 shrink-0">
           {open ? (
             <ChevronDown className="w-4 h-4" />
@@ -541,20 +745,15 @@ function FolderGroup({
           }
         >
           {realFolderChildren.length > 0 && (
-            <div className="flex flex-col gap-2">
-              {realFolderChildren.map((child) => (
-                <FolderGroup
-                  key={child.fullPath}
-                  node={child}
-                  categoryName={categoryName}
-                  accentColor={accentColor}
-                  isAdmin={isAdmin}
-                  onEdit={onEdit}
-                  onDelete={onDelete}
-                  depth={depth + 1}
-                />
-              ))}
-            </div>
+            <FolderList
+              nodes={realFolderChildren}
+              categoryName={categoryName}
+              accentColor={accentColor}
+              isAdmin={isAdmin}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              depth={depth + 1}
+            />
           )}
 
           {flatItems.length > 0 && (
@@ -597,12 +796,14 @@ export function ContentCategory({
   onDelete,
 }: ContentCategoryProps) {
   const [expanded, setExpanded] = useState(defaultExpanded);
+  const fs = useFolderSettings();
 
-  const uniqueItems = items.filter(
-    (item, idx, arr) => arr.findIndex((i) => i.id === item.id) === idx
-  );
+  // Students never see files inside a hidden folder; admins see everything.
+  const uniqueItems = items
+    .filter((item, idx, arr) => arr.findIndex((i) => i.id === item.id) === idx)
+    .filter((item) => !fs.isHiddenForViewer(item.folder_path));
 
-  if (items.length === 0) return null;
+  if (uniqueItems.length === 0) return null;
 
   const accentColor = TYPE_COLORS[categoryName] ?? "#6B7280";
   const isPrecourse = categoryName === "Precourse";
@@ -613,9 +814,7 @@ export function ContentCategory({
 
   // Top-level: children with 2+ descendants become FolderGroups;
   // children with 1 descendant + root direct items render flat.
-  const sortedTopChildren = [...tree.children.values()].sort((a, b) =>
-    a.name.localeCompare(b.name)
-  );
+  const sortedTopChildren = fs.sortFolders<FolderNode>([...tree.children.values()]);
   const realFolders = sortedTopChildren.filter(
     (c) => countDescendants(c) > 1
   );
@@ -633,28 +832,21 @@ export function ContentCategory({
   // If there's exactly 1 real folder at the top level, unwrap it
   const singleFolder = realFolders.length === 1 ? realFolders[0] : null;
   const unWrappedFolderChildren = singleFolder?.children
-    ? [...singleFolder.children.values()].sort((a, b) =>
-        a.name.localeCompare(b.name)
-      )
+    ? fs.sortFolders<FolderNode>([...singleFolder.children.values()])
     : [];
   const unWrappedFolderFiles = singleFolder?.items ?? [];
 
   const renderFolderGroups = (nodes: FolderNode[]) =>
     nodes.length > 0 && (
-      <div className="flex flex-col gap-2">
-        {nodes.map((node) => (
-          <FolderGroup
-            key={node.fullPath}
-            node={node}
-            categoryName={categoryName}
-            accentColor={accentColor}
-            isAdmin={isAdmin}
-            onEdit={onEdit}
-            onDelete={onDelete}
-            depth={0}
-          />
-        ))}
-      </div>
+      <FolderList
+        nodes={nodes}
+        categoryName={categoryName}
+        accentColor={accentColor}
+        isAdmin={isAdmin}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        depth={0}
+      />
     );
 
   const renderFileCards = (files: ContentItem[]) =>
@@ -781,6 +973,7 @@ export function ContentCategory({
           </div>
         )}
       </div>
+
     </ViewModeContext.Provider>
   );
 }

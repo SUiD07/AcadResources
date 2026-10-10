@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { FilterBar, filterBlocksByYear } from "../FilterBar";
 import { ContentCategory } from "../ContentCategory";
+import { FolderSettingsProvider } from "../FolderSettingsContext";
 import {
   createStudentDocument,
   getStudentDocuments,
@@ -659,6 +660,7 @@ export function PeerSupportSection({
   }, [filteredItems, blockOrderMap]);
 
   return (
+    <FolderSettingsProvider isAdmin={isAdmin}>
     <div className="pb-20 lg:pb-8 w-full max-w-full overflow-x-hidden">
       <div className="mb-6 sm:mb-8">
         <p className="text-xs text-slate-400 font-normal">
@@ -821,5 +823,6 @@ export function PeerSupportSection({
       <EditResourceDialog open={editDialogOpen} onOpenChange={setEditDialogOpen} onSubmit={handleEdit} initialData={editingItem ?? undefined} />
       <DeleteConfirmDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen} onConfirm={handleDelete} itemName={deletingItem?.name ?? ""} />
     </div>
+    </FolderSettingsProvider>
   );
 }

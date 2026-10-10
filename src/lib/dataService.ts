@@ -360,3 +360,21 @@ export async function getAnnouncement(slug: string) {
 export async function saveAnnouncementData(slug: string, content: object) {
   if (USE_SUPABASE) return await supabaseApi.saveAnnouncement(slug, content);
 }
+
+// ============================================
+// FOLDER SETTINGS
+// ============================================
+export async function getFolderSettings(): Promise<import('./types').FolderSetting[]> {
+  if (USE_SUPABASE) return await supabaseApi.fetchFolderSettings();
+  return [];
+}
+
+export async function saveFolderSettings(
+  rows: Array<Partial<import('./types').FolderSetting> & { folder_path: string }>
+): Promise<void> {
+  if (USE_SUPABASE) return await supabaseApi.upsertFolderSettings(rows);
+}
+
+export async function removeFolderSetting(folderPath: string): Promise<void> {
+  if (USE_SUPABASE) return await supabaseApi.deleteFolderSetting(folderPath);
+}

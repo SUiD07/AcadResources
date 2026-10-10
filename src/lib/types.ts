@@ -125,3 +125,11 @@ export interface UserPreference {
   created_at?: string;
   updated_at?: string;
 }
+// Admin display settings for a folder, keyed by its full ' > ' path.
+export interface FolderSetting {
+  folder_path: string;
+  custom_name: string | null;
+  sort_order: number | null;
+  hidden: boolean;
+  updated_at?: string;
+}

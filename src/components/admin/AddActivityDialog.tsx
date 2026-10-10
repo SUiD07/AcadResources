@@ -157,19 +157,16 @@ export function AddActivityDialog({
               /> */}
               {/* มันมีบัคแต่มันwork somehow ?-? ว่างๆเดี๋ยวมาแก้ต่อ ต้งอแก้ type ด้วยแต่่ทำไมมันใช้งานได้ฏ้ไม่รู้ */}
               <DatePicker
-                selected={formData.date}
-                onChange={(date:any) =>
-                  setFormData({
-                    ...formData,
-                    date,
-                  })
+                selected={formData.date ? new Date(formData.date) : null}
+                onChange={(date: Date | null) =>
+                  setFormData({ ...formData, date: date ? date.toISOString() : "" })
                 }
                 showTimeSelect
                 dateFormat="dd/MM/yyyy HH:mm"
                 placeholderText="Select date and time"
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 // withPortal
-                 popperPlacement="bottom-start"
+                popperPlacement="bottom-start"
               />
             </div>
             <div className="space-y-2">

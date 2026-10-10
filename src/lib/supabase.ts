@@ -858,3 +858,31 @@ export async function saveAnnouncement(slug: string, content: object): Promise<v
 
   if (error) throw error;
 }
+
+// ============================================
+// FOLDER SETTINGS (rename / reorder / hide)
+// ============================================
+export async function fetchFolderSettings(): Promise<import('./types').FolderSetting[]> {
+  const { data, error } = await supabase.from('folder_settings').select('*');
+  if (error) {
+    console.error('Fetch folder_settings error:', error.message);
+    return [];
+  }
+  return (data ?? []) as import('./types').FolderSetting[];
+}
+
+export async function upsertFolderSettings(
+  rows: Array<Partial<import('./types').FolderSetting> & { folder_path: string }>
+): Promise<void> {
+  if (rows.length === 0) return;
+  const stamped = rows.map((r) => ({ ...r, updated_at: new Date().toISOString() }));
+  const { error } = await supabase
+    .from('folder_settings')
+    .upsert(stamped, { onConflict: 'folder_path' });
+  if (error) throw error;
+}
+
+export async function deleteFolderSetting(folderPath: string): Promise<void> {
+  const { error } = await supabase.from('folder_settings').delete().eq('folder_path', folderPath);
+  if (error) throw error;
+}
