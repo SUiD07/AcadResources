@@ -97,15 +97,15 @@ function itemsLayoutStyle(
 ): CSSProperties {
   return viewMode === "grid"
     ? {
-        display: "grid",
-        gridTemplateColumns: `repeat(auto-fill, minmax(min(100%, ${minWidth}px), 1fr))`,
-        gap: "12px",
-      }
+      display: "grid",
+      gridTemplateColumns: `repeat(auto-fill, minmax(min(100%, ${minWidth}px), 1fr))`,
+      gap: "12px",
+    }
     : {
-        display: "flex",
-        flexDirection: "column",
-        gap: "8px",
-      };
+      display: "flex",
+      flexDirection: "column",
+      gap: "8px",
+    };
 }
 
 // ─── FOLDER TREE HELPERS ──────────────────────────────────────────────────────
@@ -284,7 +284,7 @@ function FileCard({
 
             <div className="flex-1 min-w-0">
               {/* <div className="flex items-center gap-2 flex-wrap">*/}
-                  {/* {item.block_code && (
+              {/* {item.block_code && (
               <span className="text-xs text-slate-400">{item.block_code}</span>
             )} */}
               <span
@@ -653,9 +653,10 @@ function FolderGroup({
         role="button"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center justify-between cursor-pointer select-none px-4 py-3 hover:bg-slate-50 transition-colors"
+        className="flex items-center cursor-pointer select-none py-3 pr-3 hover:bg-slate-50 transition-colors"
       >
-        <div className="flex items-center gap-3 min-w-0">
+        {/* Left: grows to fill the row, pushing everything else to the right */}
+        <div className="flex items-center gap-3 flex-1 min-w-0">
           {dragHandle}
           <span
             className="shrink-0 flex items-center justify-center rounded-lg"
@@ -666,11 +667,7 @@ function FolderGroup({
               color: accentColor,
             }}
           >
-            {open ? (
-              <FolderOpen className="w-4 h-4" />
-            ) : (
-              <Folder className="w-4 h-4" />
-            )}
+            {open ? <FolderOpen className="w-4 h-4" /> : <Folder className="w-4 h-4" />}
           </span>
           <div className="min-w-0">
             {editing ? (
@@ -690,9 +687,8 @@ function FolderGroup({
               />
             ) : (
               <p
-                className={`text-sm font-semibold truncate ${
-                  folderHidden ? "text-slate-400 italic" : "text-slate-900"
-                }`}
+                className={`text-sm font-semibold truncate ${folderHidden ? "text-slate-400 italic" : "text-slate-900"
+                  }`}
               >
                 {shownName}
               </p>
@@ -704,16 +700,18 @@ function FolderGroup({
             </p>
           </div>
         </div>
+
+        {/* Right: Pencil + Eye/EyeOff + chevron */}
         {isAdmin && (
           <div
-            className="flex items-center gap-0.5 ml-2 shrink-0"
+            className="flex items-center gap-1 ml-2 shrink-0"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               type="button"
               aria-label="Rename folder"
               onClick={startRename}
-              className="p-1.5 rounded hover:bg-slate-100 text-slate-500"
+              className="p-1.5 rounded text-[#E5007D] hover:bg-pink-50"
             >
               <Pencil className="w-3.5 h-3.5" />
             </button>
@@ -727,12 +725,8 @@ function FolderGroup({
             </button>
           </div>
         )}
-        <span className="text-slate-400 ml-2 shrink-0">
-          {open ? (
-            <ChevronDown className="w-4 h-4" />
-          ) : (
-            <ChevronRight className="w-4 h-4" />
-          )}
+        <span className="text-slate-400 ml-1 shrink-0">
+          {open ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
         </span>
       </div>
 
@@ -886,8 +880,8 @@ export function ContentCategory({
             borderColor: isPrecourse
               ? "#BAE6FD"
               : expanded
-              ? "#E2E8F0"
-              : "transparent",
+                ? "#E2E8F0"
+                : "transparent",
           }}
         >
           <div className="flex items-center gap-3">
@@ -911,24 +905,20 @@ export function ContentCategory({
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
                 {singleFolder
-                  ? `${unWrappedFolderChildren.length} folder${
-                      unWrappedFolderChildren.length !== 1 ? "s" : ""
-                    }${
-                      unWrappedFolderFiles.length + flatCount > 0
-                        ? ` · ${unWrappedFolderFiles.length + flatCount} file${
-                            unWrappedFolderFiles.length + flatCount !== 1
-                              ? "s"
-                              : ""
-                          }`
-                        : ""
+                  ? `${unWrappedFolderChildren.length} folder${unWrappedFolderChildren.length !== 1 ? "s" : ""
+                  }${unWrappedFolderFiles.length + flatCount > 0
+                    ? ` · ${unWrappedFolderFiles.length + flatCount} file${unWrappedFolderFiles.length + flatCount !== 1
+                      ? "s"
+                      : ""
                     }`
+                    : ""
+                  }`
                   : folderCount > 0
-                  ? `${folderCount} folder${folderCount !== 1 ? "s" : ""}${
-                      flatCount > 0
-                        ? ` · ${flatCount} file${flatCount !== 1 ? "s" : ""}`
-                        : ""
+                    ? `${folderCount} folder${folderCount !== 1 ? "s" : ""}${flatCount > 0
+                      ? ` · ${flatCount} file${flatCount !== 1 ? "s" : ""}`
+                      : ""
                     }`
-                  : `${items.length} resource${items.length !== 1 ? "s" : ""}`}
+                    : `${items.length} resource${items.length !== 1 ? "s" : ""}`}
               </p>
             </div>
           </div>
