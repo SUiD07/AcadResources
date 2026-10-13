@@ -33,6 +33,13 @@ interface EditActivityDialogProps {
   initialData?: ActivityFormData & { id: string };
 }
 
+// Older activities may store free-text dates (e.g. "Dec 5, 2025 - 2:00 PM") that don't parse.
+function toValidDate(value: string): Date | null {
+  if (!value) return null;
+  const date = new Date(value);
+  return isNaN(date.getTime()) ? null : date;
+}
+
 export function EditActivityDialog({
   open,
   onOpenChange,
@@ -151,12 +158,9 @@ export function EditActivityDialog({
                 required
               /> */}
               <DatePicker
-                selected={formData.date}
-                onChange={(date: any) =>
-                  setFormData({
-                    ...formData,
-                    date,
-                  })
+                selected={toValidDate(formData.date)}
+                onChange={(date: Date | null) =>
+                  setFormData({ ...formData, date: date ? date.toISOString() : "" })
                 }
                 showTimeSelect
                 dateFormat="dd/MM/yyyy HH:mm"
