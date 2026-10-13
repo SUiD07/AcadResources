@@ -8,7 +8,7 @@ import { Switch } from '../ui/switch';
 import { CustomEditor } from './CustomEditor';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
-import type { Announcement } from '../section/BoardSection';
+import type { Announcement } from '../section/eBoardSection';
 
 interface EditAnnouncementDialogProps {
   open: boolean;

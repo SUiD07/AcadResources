@@ -10,7 +10,7 @@ import {
 import { Button } from '../ui/button';
 import { toast } from 'sonner';
 import { Loader2, AlertTriangle } from 'lucide-react';
-import type { Announcement } from '../section/BoardSection';
+import type { Announcement } from '../section/eBoardSection';
 
 interface DeleteAnnouncementDialogProps {
   open: boolean;

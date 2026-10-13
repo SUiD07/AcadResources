@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { SUPABASE_CONFIG } from './config';
 import type { PeerSupportItem, Activity, ResourceCategory, StudentDocument, DriveSyncRecord } from './types';
 import type { Generation, Board, BoardContent, KeywordConfig } from './types'
-import { AddAnnouncementDialog } from '../components/admin/AddAnnouncementDialog';
+// import { AddAnnouncementDialog } from '../components/admin/AddAnnouncementDialog';
 
 // ============================================
 // SUPABASE CLIENT INITIALIZATION
