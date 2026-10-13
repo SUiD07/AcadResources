@@ -41,8 +41,8 @@ export function ActivityImageUpload({ value, onChange }: Props) {
   return (
     <div className="space-y-2">
       {value ? (
-        <div className="relative w-full h-40 rounded-lg overflow-hidden border border-slate-200">
-          <img src={value} alt="preview" className="w-full h-full object-cover" />
+        <div className="relative w-full rounded-lg overflow-hidden border border-slate-200">
+          <img src={value} alt="preview" className="block w-full h-auto max-h-80 object-contain bg-slate-50" />
           <button
             type="button"
             onClick={() => onChange(null)}

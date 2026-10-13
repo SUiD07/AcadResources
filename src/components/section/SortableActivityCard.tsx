@@ -68,11 +68,11 @@ export function SortableActivityCard({
         )}
 
         {activity.image_url && (
-          <div className="relative h-40 overflow-hidden">
+          <div className="relative overflow-hidden">
             <img
               src={activity.image_url}
               alt={activity.title}
-              className="w-full h-full object-cover"
+              className="block w-full h-auto"
               referrerPolicy="no-referrer"
             />
           </div>

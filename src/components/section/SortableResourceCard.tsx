@@ -61,11 +61,11 @@ export function SortableResourceCard({
         )}
 
         {category.image_url && (
-          <div className="relative h-40 overflow-hidden">
+          <div className="relative overflow-hidden">
             <img
               src={category.image_url}
               alt={category.title}
-              className="w-full h-full object-cover"
+              className="block w-full h-auto"
               referrerPolicy="no-referrer"
             />
           </div>

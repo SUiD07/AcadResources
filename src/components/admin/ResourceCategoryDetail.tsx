@@ -110,11 +110,11 @@ export function ResourceCategoryDetail({ isAdmin = false }: Props) {
       </Link>
 
       {category.image_url && (
-        <div className="w-full h-56 rounded-2xl overflow-hidden mb-6">
+        <div className="w-full rounded-2xl overflow-hidden mb-6">
           <img
             src={category.image_url}
             alt={category.title}
-            className="w-full h-full object-cover"
+            className="block w-full h-auto"
             referrerPolicy="no-referrer"
           />
         </div>
