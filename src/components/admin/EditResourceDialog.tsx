@@ -396,7 +396,7 @@ export function EditResourceDialog({ open, onOpenChange, onSubmit, initialData }
                     <ImageWithFallback
                       src={thumbnailPreview}
                       alt="Preview"
-                      className="w-32 h-32 rounded-lg object-cover border-2 border-slate-200"
+                      className="block w-auto h-auto max-w-32 max-h-48 rounded-lg border-2 border-slate-200"
                     />
                     <Button
                       type="button"
