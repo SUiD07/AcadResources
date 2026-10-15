@@ -170,7 +170,7 @@ function SubjectCard({
         className="flex items-start sm:items-center justify-between gap-2 cursor-pointer select-none px-4 sm:px-6 py-4 hover:bg-slate-50 transition-colors"
       >
         <div className="min-w-0 flex-1">
-          <h3 className="font-bold text-slate-900 text-base break-words">{subject}</h3>
+          <h3 className="font-bold text-slate-900 text-base wrap-break-word">{subject}</h3>
           <div className="flex flex-wrap gap-1.5 mt-2">
             {typesPresent.map((t) => (
               <span

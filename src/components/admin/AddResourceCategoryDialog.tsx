@@ -131,7 +131,7 @@ export function AddResourceCategoryDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col overflow-hidden">
+      <DialogContent className="sm:max-w-150 max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle>Add Resource Category</DialogTitle>
           <DialogDescription>

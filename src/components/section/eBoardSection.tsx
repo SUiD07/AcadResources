@@ -450,14 +450,14 @@ function BoardInner({
                 </div>
                 <div className="flex flex-col items-end gap-3">
                   <div className="flex gap-3">
-                    <div className="bg-white/20 backdrop-blur rounded-xl px-4 py-3 text-center text-white min-w-[70px]">
+                    <div className="bg-white/20 backdrop-blur rounded-xl px-4 py-3 text-center text-white min-w-17.5">
                       <FileText className="w-4 h-4 mx-auto mb-1" />
                       <div className="text-xl font-bold">
                         {filteredAnnouncements.length}
                       </div>
                       <div className="text-xs text-white/80">Posts</div>
                     </div>
-                    <div className="bg-white/20 backdrop-blur rounded-xl px-4 py-3 text-center text-white min-w-[70px]">
+                    <div className="bg-white/20 backdrop-blur rounded-xl px-4 py-3 text-center text-white min-w-17.5">
                       <Pin className="w-4 h-4 mx-auto mb-1" />
                       <div className="text-xl font-bold">
                         {pinnedAnnouncements.length}

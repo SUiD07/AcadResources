@@ -167,7 +167,7 @@ function AddFolderAutocomplete({
         onChange={setInputValue}
         onCommit={handleCommit}
         onBlur={handleBlur}
-        className="min-w-[160px]"
+        className="min-w-40"
         autoFocus
       />
       <button
@@ -283,7 +283,7 @@ export function KeywordCategoryCard({
               return (
                 <div
                   key={idx}
-                  className={`flex items-center gap-2 pl-3 pr-1 py-1 group max-w-[240px] rounded-full border ${
+                  className={`flex items-center gap-2 pl-3 pr-1 py-1 group max-w-60 rounded-full border ${
                     isFolder ? 'bg-pink-50 border-pink-200' : 'bg-slate-50 border-slate-200'
                   }`}
                   title={isFolder ? key : undefined}
@@ -301,7 +301,7 @@ export function KeywordCategoryCard({
                     </span>
                   ) : (
                     <input
-                      className="bg-transparent text-sm text-slate-700 focus:outline-none w-[140px]"
+                      className="bg-transparent text-sm text-slate-700 focus:outline-none w-35"
                       value={key}
                       onChange={(e) => onUpdateKey(config.id, idx, e.target.value)}
                       onFocus={() => onFocusKey(config.id, idx)}
