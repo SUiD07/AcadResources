@@ -179,7 +179,7 @@ export function CustomEditor({ content, onChange, placeholder = 'Start writing..
       </div>
 
       {/* Editor Content */}
-      <div className="p-4 min-h-[300px]">
+      <div className="p-4 min-h-75">
         <div
           ref={editorRef}
           contentEditable
@@ -187,7 +187,7 @@ export function CustomEditor({ content, onChange, placeholder = 'Start writing..
           onInput={handleInput}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
-          className="outline-none prose prose-sm max-w-none min-h-[280px]"
+          className="outline-none prose prose-sm max-w-none min-h-70"
           dangerouslySetInnerHTML={{ __html: content }}
           data-placeholder={placeholder}
           style={{
@@ -198,7 +198,7 @@ export function CustomEditor({ content, onChange, placeholder = 'Start writing..
         />
         {content === '' && !isFocused && (
           <div
-            className="absolute pointer-events-none text-slate-400 mt-[-280px] ml-4"
+            className="absolute pointer-events-none text-slate-400 -mt-70 ml-4"
             style={{ userSelect: 'none' }}
           >
             {placeholder}

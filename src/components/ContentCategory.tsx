@@ -226,7 +226,7 @@ function ClassificationDebugNote({ summary }: { summary: ClassificationSummary }
         <span aria-hidden="true" className="shrink-0">
           {style.icon}
         </span>
-        <span className="break-words min-w-0">{style.label}</span>
+        <span className="wrap-break-word min-w-0">{style.label}</span>
       </div>
 
       <div className="flex flex-col gap-1 text-xs leading-relaxed">
@@ -236,7 +236,7 @@ function ClassificationDebugNote({ summary }: { summary: ClassificationSummary }
             className={`grid grid-cols-[3rem_minmax(0,1fr)] gap-x-2 ${FIELD_TEXT_COLOR[field.status]}`}
           >
             <span className="font-medium">{label}</span>
-            <span className="break-words">{field.text}</span>
+            <span className="wrap-break-word">{field.text}</span>
           </div>
         ))}
       </div>

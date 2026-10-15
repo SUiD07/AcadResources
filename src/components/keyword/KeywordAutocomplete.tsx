@@ -290,7 +290,7 @@ export function KeywordAutocomplete({
     <div style={{ position: 'relative', display: 'inline-block' }}>
       <input
         ref={inputRef}
-        className={`bg-transparent text-sm focus:outline-none min-w-[120px] text-slate-600 ${className}`}
+        className={`bg-transparent text-sm focus:outline-none min-w-30 text-slate-600 ${className}`}
         value={value}
         onChange={handleInputChange}
         onFocus={handleInputFocus}

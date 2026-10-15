@@ -116,7 +116,7 @@
 
 //   return (
 //     <Dialog open={open} onOpenChange={onOpenChange}>
-//       <DialogContent className="sm:max-w-[800px] max-h-[85vh] h-[85vh] flex flex-col p-0 overflow-hidden !grid-cols-1 !block">
+//       <DialogContent className="sm:max-w-200 max-h-[85vh] h-[85vh] flex flex-col p-0 overflow-hidden !grid-cols-1 !block">
 //         <div className="flex flex-col h-full">
 //           <DialogHeader className="p-6 pb-4 shrink-0">
 //             <DialogTitle>Manage Categorization Keywords</DialogTitle>
@@ -216,7 +216,7 @@
 //                         {config.keys.map((key, idx) => (
 //                           <div key={idx} className="flex items-center gap-1 bg-slate-100 border border-slate-200 rounded-md px-2 py-1">
 //                             <input 
-//                               className="bg-transparent text-sm focus:outline-none min-w-[80px]"
+//                               className="bg-transparent text-sm focus:outline-none min-w-20"
 //                               value={key}
 //                               onChange={(e) => handleUpdateKey(config.id, idx, e.target.value)}
 //                             />

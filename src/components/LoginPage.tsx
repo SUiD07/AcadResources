@@ -160,7 +160,7 @@ export function LoginPage({ onLogin, initialAdminMode = false }: LoginPageProps)
                 <Alert variant="destructive" className="bg-red-50 text-red-900 border-red-200">
                   <AlertCircle className="h-4 w-4 shrink-0" />
                   <AlertTitle>Error</AlertTitle>
-                  <AlertDescription className="break-words">{error}</AlertDescription>
+                  <AlertDescription className="wrap-break-word">{error}</AlertDescription>
                 </Alert>
               )}
 
@@ -290,7 +290,7 @@ export function LoginPage({ onLogin, initialAdminMode = false }: LoginPageProps)
               Faculty of Medicine, Chulalongkorn University
             </p>
             <div className="text-center">
-              <p className="text-xs text-slate-500 break-words px-2">
+              <p className="text-xs text-slate-500 wrap-break-word px-2">
                 Having trouble logging in?{' '}
                 <a
                   href="mailto:it@docchula.com"
