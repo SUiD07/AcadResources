@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://acad-resource.docchula.com/sitemap.xml
