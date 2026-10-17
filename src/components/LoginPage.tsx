@@ -100,7 +100,7 @@ export function LoginPage({ onLogin, initialAdminMode = false }: LoginPageProps)
               </div>
               <div>
                 <h1 className="text-slate-900 tracking-tight text-2xl xl:text-3xl">
-                  Academic Resources Portal
+                  MDCU Academic Resources Portal
                 </h1>
                 <p className="text-slate-600 text-sm mt-1">
                   Faculty of Medicine, Chulalongkorn University
@@ -136,7 +136,7 @@ export function LoginPage({ onLogin, initialAdminMode = false }: LoginPageProps)
               </div>
             </div>
             <h1 className="text-slate-900 mb-2 text-xl sm:text-2xl px-2">
-              Academic Resources Portal
+              MDCU Academic Resources Portal
             </h1>
             <p className="text-slate-600 text-sm px-2">
               Faculty of Medicine, Chulalongkorn University

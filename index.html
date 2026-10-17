@@ -1,16 +1,78 @@
-
   <!DOCTYPE html>
-  <html lang="en">
+  <html lang="th">
     <head>
       <meta charset="UTF-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      <title>MDCU Academic Resources</title>
+      <title>MDCU Academic Resources | คลังเอกสารวิชาการ นิสิตแพทย์จุฬาฯ</title>
+      <meta
+        name="description"
+        content="MDCU Academic Resources – คลังเอกสารวิชาการสำหรับนิสิตแพทย์ คณะแพทยศาสตร์ จุฬาลงกรณ์มหาวิทยาลัย รวมสรุป ชีทติว กิจกรรมวิชาการ และแหล่งเรียนรู้ โดยฝ่ายวิชาการ สโมสรนิสิตคณะแพทยศาสตร์ จุฬาฯ"
+      />
+      <link rel="canonical" href="https://acad-resource.docchula.com/" />
+      <link rel="icon" type="image/png" href="/logo-512.png" />
+      <link rel="apple-touch-icon" href="/logo-512.png" />
+      <meta name="theme-color" content="#E5007D" />
+
+      <!-- Link previews (LINE, Facebook, Discord, etc.) -->
+      <meta property="og:type" content="website" />
+      <meta property="og:site_name" content="MDCU Academic Resources" />
+      <meta property="og:title" content="MDCU Academic Resources | คลังทรัพยากรวิชาการ นิสิตแพทย์จุฬาฯ" />
+      <meta property="og:description" content="รวมสรุป ชีทติว และกิจกรรมวิชาการสำหรับนิสิตแพทย์ จุฬาฯ โดยฝ่ายวิชาการ สโมสรนิสิตคณะแพทยศาสตร์" />
+      <meta property="og:url" content="https://acad-resource.docchula.com/" />
+      <meta property="og:image" content="https://acad-resource.docchula.com/logo-512.png" />
+      <meta property="og:locale" content="th_TH" />
+      <meta name="twitter:card" content="summary" />
+
+      <!-- Structured data: site name and publisher shown in Google results -->
+      <script type="application/ld+json">
+        {
+          "@context": "https://schema.org",
+          "@graph": [
+            {
+              "@type": "WebSite",
+              "@id": "https://acad-resource.docchula.com/#website",
+              "url": "https://acad-resource.docchula.com/",
+              "name": "MDCU Academic Resources",
+              "alternateName": ["คลังทรัพยากรวิชาการ นิสิตแพทย์จุฬาฯ", "MDCU Academic Resources Portal"],
+              "inLanguage": "th",
+              "publisher": { "@id": "https://acad-resource.docchula.com/#organization" }
+            },
+            {
+              "@type": "Organization",
+              "@id": "https://acad-resource.docchula.com/#organization",
+              "name": "Academic Affairs SMCU",
+              "alternateName": "ฝ่ายวิชาการ สโมสรนิสิตคณะแพทยศาสตร์ จุฬาลงกรณ์มหาวิทยาลัย",
+              "description": "Academic Affairs, The Student Union of Faculty of Medicine, Chulalongkorn University",
+              "url": "https://acad-resource.docchula.com/",
+              "logo": "https://acad-resource.docchula.com/logo-512.png",
+              "email": "it@docchula.com",
+              "parentOrganization": {
+                "@type": "CollegeOrUniversity",
+                "name": "Faculty of Medicine, Chulalongkorn University",
+                "url": "https://www.md.chula.ac.th/"
+              }
+            }
+          ]
+        }
+      </script>
+
       <script src="https://accounts.google.com/gsi/client" async defer></script>
     </head>
 
     <body>
-      <div id="root"></div>
+      <!-- Splash shown until React mounts (createRoot replaces it). It also gives
+           search engines real text without having to run the app's JavaScript. -->
+      <div id="root">
+        <main style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px;text-align:center;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:#f8fafc;color:#0f172a">
+          <img src="/logo-512.png" alt="Academic Affairs SMCU" width="96" height="96" />
+          <h1 style="margin:0;font-size:24px;font-weight:600">MDCU Academic Resources</h1>
+          <p style="margin:0;max-width:480px;font-size:14px;line-height:1.6;color:#475569">
+            คลังทรัพยากรวิชาการสำหรับนิสิตแพทย์ คณะแพทยศาสตร์ จุฬาลงกรณ์มหาวิทยาลัย
+            รวมสรุป ชีทติว และกิจกรรมวิชาการ โดยฝ่ายวิชาการ สโมสรนิสิตคณะแพทยศาสตร์ จุฬาฯ
+          </p>
+          <noscript><p style="margin:0;font-size:13px;color:#e5007d">กรุณาเปิด JavaScript เพื่อใช้งานเว็บไซต์นี้</p></noscript>
+        </main>
+      </div>
       <script type="module" src="/src/main.tsx"></script>
     </body>
   </html>
-  
