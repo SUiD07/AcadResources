@@ -378,3 +378,32 @@ export async function saveFolderSettings(
 export async function removeFolderSetting(folderPath: string): Promise<void> {
   if (USE_SUPABASE) return await supabaseApi.deleteFolderSetting(folderPath);
 }
+
+
+// ============================================
+// BULK RECLASSIFY
+// ============================================
+export async function countFolderDocs(
+  folder: string,
+  filter: supabaseApi.ReclassifyFilter,
+): Promise<number> {
+  if (USE_SUPABASE) return await supabaseApi.countFolderDocs(folder, filter);
+  return 0;
+}
+
+export async function listFolderDocs(
+  folder: string,
+  filter: supabaseApi.ReclassifyFilter,
+  afterId: number,
+  limit: number,
+): Promise<Array<{ id: number; title: string }>> {
+  if (USE_SUPABASE) return await supabaseApi.listFolderDocs(folder, filter, afterId, limit);
+  return [];
+}
+
+export async function updateDocsClassification(
+  ids: number[],
+  patch: supabaseApi.ReclassifyPatch,
+): Promise<void> {
+  if (USE_SUPABASE) return await supabaseApi.updateDocsClassification(ids, patch);
+}

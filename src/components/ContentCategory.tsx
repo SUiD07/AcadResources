@@ -12,6 +12,7 @@ import {
   GripVertical,
   Eye,
   EyeOff,
+  Tag,
 } from "lucide-react";
 import {
   DndContext,
@@ -31,7 +32,9 @@ import { CSS } from "@dnd-kit/utilities";
 import { Button } from "./ui/button";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import type { ClassificationSummary } from "../lib/KeywordMatching";
-import { useFolderSettings } from "./FolderSettingsContext";
+import { useFolderSettings } from "./folder/FolderDisplayContext";
+import { useFolderReclassify } from "./folder/FolderReclassifyContext";
+import { FolderReclassifyRow } from "./folder/FolderReclassifyRow";
 
 // ─── TYPE COLORS ─────────────────────────────────────────────────────────────
 const TYPE_COLORS: Record<string, string> = {
@@ -97,15 +100,15 @@ function itemsLayoutStyle(
 ): CSSProperties {
   return viewMode === "grid"
     ? {
-      display: "grid",
-      gridTemplateColumns: `repeat(auto-fill, minmax(min(100%, ${minWidth}px), 1fr))`,
-      gap: "12px",
-    }
+        display: "grid",
+        gridTemplateColumns: `repeat(auto-fill, minmax(min(100%, ${minWidth}px), 1fr))`,
+        gap: "12px",
+      }
     : {
-      display: "flex",
-      flexDirection: "column",
-      gap: "8px",
-    };
+        display: "flex",
+        flexDirection: "column",
+        gap: "8px",
+      };
 }
 
 // ─── FOLDER TREE HELPERS ──────────────────────────────────────────────────────
@@ -226,7 +229,7 @@ function ClassificationDebugNote({ summary }: { summary: ClassificationSummary }
         <span aria-hidden="true" className="shrink-0">
           {style.icon}
         </span>
-        <span className="wrap-break-word min-w-0">{style.label}</span>
+        <span className="break-words min-w-0">{style.label}</span>
       </div>
 
       <div className="flex flex-col gap-1 text-xs leading-relaxed">
@@ -236,7 +239,7 @@ function ClassificationDebugNote({ summary }: { summary: ClassificationSummary }
             className={`grid grid-cols-[3rem_minmax(0,1fr)] gap-x-2 ${FIELD_TEXT_COLOR[field.status]}`}
           >
             <span className="font-medium">{label}</span>
-            <span className="wrap-break-word">{field.text}</span>
+            <span className="break-words">{field.text}</span>
           </div>
         ))}
       </div>
@@ -284,7 +287,7 @@ function FileCard({
 
             <div className="flex-1 min-w-0">
               {/* <div className="flex items-center gap-2 flex-wrap">*/}
-              {/* {item.block_code && (
+                  {/* {item.block_code && (
               <span className="text-xs text-slate-400">{item.block_code}</span>
             )} */}
               <span
@@ -611,6 +614,10 @@ function FolderGroup({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
   const committedRef = useRef(false);
+  const [reclassifying, setReclassifying] = useState(false);
+  const reclass = useFolderReclassify();
+  // This folder is being bulk-updated right now: dim it and block its controls.
+  const folderBusy = reclass.busyPath === node.fullPath;
   const fs = useFolderSettings();
   const shownName = fs.displayName(node.fullPath, node.name);
   const folderHidden = fs.isFolderHidden(node.fullPath);
@@ -653,10 +660,11 @@ function FolderGroup({
         role="button"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center cursor-pointer select-none py-3 pr-3 hover:bg-slate-50 transition-colors"
+        className={`flex items-center justify-between cursor-pointer select-none px-4 py-3 hover:bg-slate-50 transition-colors ${
+          folderBusy ? "opacity-60 pointer-events-none" : ""
+        }`}
       >
-        {/* Left: grows to fill the row, pushing everything else to the right */}
-        <div className="flex items-center gap-3 flex-1 min-w-0">
+        <div className="flex items-center gap-3 min-w-0">
           {dragHandle}
           <span
             className="shrink-0 flex items-center justify-center rounded-lg"
@@ -667,7 +675,11 @@ function FolderGroup({
               color: accentColor,
             }}
           >
-            {open ? <FolderOpen className="w-4 h-4" /> : <Folder className="w-4 h-4" />}
+            {open ? (
+              <FolderOpen className="w-4 h-4" />
+            ) : (
+              <Folder className="w-4 h-4" />
+            )}
           </span>
           <div className="min-w-0">
             {editing ? (
@@ -687,8 +699,9 @@ function FolderGroup({
               />
             ) : (
               <p
-                className={`text-sm font-semibold truncate ${folderHidden ? "text-slate-400 italic" : "text-slate-900"
-                  }`}
+                className={`text-sm font-semibold truncate ${
+                  folderHidden ? "text-slate-400 italic" : "text-slate-900"
+                }`}
               >
                 {shownName}
               </p>
@@ -700,18 +713,28 @@ function FolderGroup({
             </p>
           </div>
         </div>
-
-        {/* Right: Pencil + Eye/EyeOff + chevron */}
         {isAdmin && (
           <div
-            className="flex items-center gap-1 ml-2 shrink-0"
+            className="flex items-center gap-0.5 ml-2 shrink-0"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               type="button"
+              aria-label="Change type / board exam for all files in this folder"
+              title="Change type / board exam for all files"
+              disabled={reclass.busyPath !== null || reclass.syncing}
+              onClick={() => setReclassifying((v) => !v)}
+              className={`p-1.5 rounded hover:bg-slate-100 disabled:opacity-30 ${
+                reclassifying ? "bg-slate-100 text-slate-900" : "text-slate-500"
+              }`}
+            >
+              <Tag className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
               aria-label="Rename folder"
               onClick={startRename}
-              className="p-1.5 rounded text-[#E5007D] hover:bg-pink-50"
+              className="p-1.5 rounded hover:bg-slate-100 text-slate-500"
             >
               <Pencil className="w-3.5 h-3.5" />
             </button>
@@ -725,10 +748,27 @@ function FolderGroup({
             </button>
           </div>
         )}
-        <span className="text-slate-400 ml-1 shrink-0">
-          {open ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+        <span className="text-slate-400 ml-2 shrink-0">
+          {open ? (
+            <ChevronDown className="w-4 h-4" />
+          ) : (
+            <ChevronRight className="w-4 h-4" />
+          )}
         </span>
       </div>
+
+      {isAdmin && reclassifying && (
+        <FolderReclassifyRow
+          folderPath={node.fullPath}
+          defaultFromDocType={categoryName}
+          defaultFromBlock={(() => {
+            const blocks = Array.from(new Set(collectAllItems(node).map((i) => i.block)));
+            return blocks.length === 1 ? blocks[0] : undefined;
+          })()}
+          visibleCount={total}
+          onClose={() => setReclassifying(false)}
+        />
+      )}
 
       {open && (
         <div
@@ -880,8 +920,8 @@ export function ContentCategory({
             borderColor: isPrecourse
               ? "#BAE6FD"
               : expanded
-                ? "#E2E8F0"
-                : "transparent",
+              ? "#E2E8F0"
+              : "transparent",
           }}
         >
           <div className="flex items-center gap-3">
@@ -905,20 +945,24 @@ export function ContentCategory({
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
                 {singleFolder
-                  ? `${unWrappedFolderChildren.length} folder${unWrappedFolderChildren.length !== 1 ? "s" : ""
-                  }${unWrappedFolderFiles.length + flatCount > 0
-                    ? ` · ${unWrappedFolderFiles.length + flatCount} file${unWrappedFolderFiles.length + flatCount !== 1
-                      ? "s"
-                      : ""
+                  ? `${unWrappedFolderChildren.length} folder${
+                      unWrappedFolderChildren.length !== 1 ? "s" : ""
+                    }${
+                      unWrappedFolderFiles.length + flatCount > 0
+                        ? ` · ${unWrappedFolderFiles.length + flatCount} file${
+                            unWrappedFolderFiles.length + flatCount !== 1
+                              ? "s"
+                              : ""
+                          }`
+                        : ""
                     }`
-                    : ""
-                  }`
                   : folderCount > 0
-                    ? `${folderCount} folder${folderCount !== 1 ? "s" : ""}${flatCount > 0
-                      ? ` · ${flatCount} file${flatCount !== 1 ? "s" : ""}`
-                      : ""
+                  ? `${folderCount} folder${folderCount !== 1 ? "s" : ""}${
+                      flatCount > 0
+                        ? ` · ${flatCount} file${flatCount !== 1 ? "s" : ""}`
+                        : ""
                     }`
-                    : `${items.length} resource${items.length !== 1 ? "s" : ""}`}
+                  : `${items.length} resource${items.length !== 1 ? "s" : ""}`}
               </p>
             </div>
           </div>

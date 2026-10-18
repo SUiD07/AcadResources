@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { SUPABASE_CONFIG } from './config';
 import type { PeerSupportItem, Activity, ResourceCategory, StudentDocument, DriveSyncRecord } from './types';
 import type { Generation, Board, BoardContent, KeywordConfig } from './types'
-// import { AddAnnouncementDialog } from '../components/admin/AddAnnouncementDialog';
+import { AddAnnouncementDialog } from '../components/admin/AddAnnouncementDialog';
 
 // ============================================
 // SUPABASE CLIENT INITIALIZATION
@@ -884,5 +884,65 @@ export async function upsertFolderSettings(
 
 export async function deleteFolderSetting(folderPath: string): Promise<void> {
   const { error } = await supabase.from('folder_settings').delete().eq('folder_path', folderPath);
+  if (error) throw error;
+}
+
+
+// ============================================
+// BULK RECLASSIFY (folder -> files)
+// ============================================
+export interface ReclassifyFilter {
+  /** null = any, '' = empty, otherwise must equal */
+  fromDocType: string | null;
+  fromBoardExam: string | null;
+  fromBlock: string | null;
+}
+
+export interface ReclassifyPatch {
+  doc_type?: string;
+  board_exam?: string | null;
+  block?: string;
+}
+
+function rpcArgs(folder: string, f: ReclassifyFilter) {
+  return {
+    p_folder: folder,
+    p_from_doc_type: f.fromDocType,
+    p_from_board_exam: f.fromBoardExam,
+    p_from_block: f.fromBlock,
+  };
+}
+
+export async function countFolderDocs(folder: string, f: ReclassifyFilter): Promise<number> {
+  const { data, error } = await supabase.rpc('folder_docs_count', rpcArgs(folder, f));
+  if (error) throw error;
+  return Number(data ?? 0);
+}
+
+export async function listFolderDocs(
+  folder: string,
+  f: ReclassifyFilter,
+  afterId: number,
+  limit: number,
+): Promise<Array<{ id: number; title: string }>> {
+  const { data, error } = await supabase.rpc('folder_docs_matching', {
+    ...rpcArgs(folder, f),
+    p_after_id: afterId,
+    p_limit: limit,
+  });
+  if (error) throw error;
+  return ((data ?? []) as Array<{ id: number | string; title: string }>).map((r) => ({
+    id: Number(r.id),
+    title: r.title,
+  }));
+}
+
+export async function updateDocsClassification(ids: number[], patch: ReclassifyPatch): Promise<void> {
+  if (ids.length === 0) return;
+  // is_overridden = true so the Drive sync keeps these values.
+  const { error } = await supabase
+    .from('student_documents')
+    .update({ ...patch, is_overridden: true })
+    .in('id', ids);
   if (error) throw error;
 }

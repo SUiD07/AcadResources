@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { FilterBar, filterBlocksByYear } from "../FilterBar";
 import { ContentCategory } from "../ContentCategory";
-import { FolderSettingsProvider } from "../FolderSettingsContext";
+import { FolderSettingsProvider } from "../folder/FolderDisplayContext";
+import { FolderReclassifyContext } from "../folder/FolderReclassifyContext";
 import {
   createStudentDocument,
   getStudentDocuments,
@@ -170,7 +171,7 @@ function SubjectCard({
         className="flex items-start sm:items-center justify-between gap-2 cursor-pointer select-none px-4 sm:px-6 py-4 hover:bg-slate-50 transition-colors"
       >
         <div className="min-w-0 flex-1">
-          <h3 className="font-bold text-slate-900 text-base wrap-break-word">{subject}</h3>
+          <h3 className="font-bold text-slate-900 text-base break-words">{subject}</h3>
           <div className="flex flex-wrap gap-1.5 mt-2">
             {typesPresent.map((t) => (
               <span
@@ -389,6 +390,8 @@ export function PeerSupportSection({
   const [peerItems, setPeerItems] = useState<PeerSupportItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncingDrive, setIsSyncingDrive] = useState(false);
+  // Folder currently being bulk-reclassified (null = none). Blocks Drive sync.
+  const [reclassifyPath, setReclassifyPath] = useState<string | null>(null);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [syncFailed, setSyncFailed] = useState(false);
   const [loadingYears, setLoadingYears] = useState<string[]>([]);
@@ -476,8 +479,25 @@ export function PeerSupportSection({
     loadMissingYears();
   }, [selectedYear, yearMap]);
 
+  // Reload documents after a bulk reclassify changed files.
+  const refreshDocs = async () => {
+    const blocksInYear = selectedYear.length > 0 ? getBlocksInYear(selectedYear, yearMap) : [];
+    const docs = await getStudentDocuments(blocksInYear.length > 0 ? { blocks: blocksInYear } : undefined);
+    setStudentDocs(docs);
+  };
+
+  const reclassifyOptions = useMemo(() => {
+    const labels = (type: string) =>
+      Array.from(new Set(configs.filter((c) => c.config_type === type).map((c) => c.label)));
+    return {
+      docTypes: labels("doc_type"),
+      boardExams: labels("board_exam"),
+      blocks: labels("block_mapping"),
+    };
+  }, [configs]);
+
   const handleDriveSync = async () => {
-    if (isSyncingDrive) return;
+    if (isSyncingDrive || reclassifyPath !== null) return;
 
     setIsSyncingDrive(true);
     setSyncMessage(null);
@@ -621,7 +641,9 @@ export function PeerSupportSection({
         const catMatch = selectedCategory.length === 0 || (catVal === "other" ? selectedCategory.includes("other") || selectedCategory.length === 0 : selectedCategory.includes(catVal));
 
         const boardVal = !item.board_exam || item.board_exam === "None" ? "other" : item.board_exam;
-        const boardMatch = selectedBoardExam.length === 0 || (boardVal === "other" ? selectedBoardExam.includes("other") || selectedBoardExam.length === 0 : selectedBoardExam.includes(boardVal));
+        const boardMatch = selectedBoardExam.length === 0
+          ? boardVal === "other"
+          : selectedBoardExam.includes(boardVal);
 
         if (!genMatch || !blockMatch || !catMatch || !boardMatch) return false;
         return evaluateSearch(item, searchBoxes, searchOperators);
@@ -661,168 +683,182 @@ export function PeerSupportSection({
 
   return (
     <FolderSettingsProvider isAdmin={isAdmin}>
-    <div className="pb-20 lg:pb-8 w-full max-w-full overflow-x-hidden">
-      <div className="mb-6 sm:mb-8">
-        <p className="text-xs text-slate-400 font-normal">
-          พบการ filter ผิดแจ้ง LINE: <span className="font-medium text-slate-500">0905588858</span> (ภูมิ MDCU80)
-        </p>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
-          <h1 className="text-slate-900 font-bold text-[24px]">
-            Peer Support Resources
-          </h1>
-          {isAdmin && (
-            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleDriveSync}
-                disabled={isSyncingDrive}
-                className="w-full sm:w-auto"
-              >
-                <RefreshCcw className={`w-4 h-4 mr-2${isSyncingDrive ? ' animate-spin' : ''}`} />
-                {isSyncingDrive ? 'Syncing Drive...' : 'Sync Drive'}
-              </Button>
-              <Button size="sm" onClick={() => setAddDialogOpen(true)} className="bg-[#E5007D] hover:bg-[#c00069] text-white w-full sm:w-auto">
-                <Plus className="w-4 h-4 mr-2" /> Add New Resource
-              </Button>
-            </div>
-          )}
-        </div>
-        {isAdmin && syncMessage && (
-          <p role={syncFailed ? "alert" : "status"} className={`text-sm ${syncFailed ? 'text-red-600' : 'text-emerald-700'}`}>
-            {syncMessage}
-          </p>
-        )}
-        <p className="text-slate-600 text-sm sm:text-base">Browse and access peer-created academic materials</p>
-      </div>
-
-      <SearchBar
-        boxes={searchBoxes}
-        operators={searchOperators}
-        onChange={(boxes, ops) => {
-          setSearchBoxes(boxes);
-          setSearchOperators(ops);
+      <FolderReclassifyContext.Provider
+        value={{
+          options: reclassifyOptions,
+          syncing: isSyncingDrive,
+          busyPath: reclassifyPath,
+          setBusyPath: setReclassifyPath,
+          onChanged: refreshDocs,
+          notify: (message, failed = false) => {
+            setSyncMessage(message);
+            setSyncFailed(failed);
+          },
         }}
-      />
-
-      <div style={{ display: "flex", flexDirection: isMobileScreen ? "column" : "row", gap: 20, alignItems: isMobileScreen ? "stretch" : "flex-start" }}>
-        <div style={{ width: isMobileScreen ? "100%" : 230, flexShrink: 0, position: isMobileScreen ? "static" : "sticky", top: 20, maxHeight: isMobileScreen ? "auto" : "calc(100vh - 40px)", overflowY: isMobileScreen ? "visible" : "auto" }}>
-          <FilterBar
-            generationOptions={filterOptions.generations}
-            blockOptions={filterOptions.blocks}
-            categoryOptions={filterOptions.types}
-            boardExamOptions={filterOptions.boardExams}
-            selectedGeneration={selectedGeneration}
-            selectedBlock={selectedBlock}
-            selectedCategory={selectedCategory}
-            selectedBoardExam={selectedBoardExam}
-            onGenerationChange={setSelectedGeneration}
-            onBlockChange={setSelectedBlock}
-            onCategoryChange={setSelectedCategory}
-            onBoardExamChange={setSelectedBoardExam}
-            isMobile={isMobileScreen}
-            selectedYear={selectedYear}
-            onYearChange={setSelectedYear}
-          />
-        </div>
-
-        <div style={{ flex: 1, minWidth: 0, width: isMobileScreen ? "100%" : "auto" }}>
-          {isLoading && (
-            <div className="flex justify-center items-center py-12">
-              <RefreshCcw className="w-6 h-6 text-[#E5007D] animate-spin mr-2" />
-              <div className="text-slate-600">Loading...</div>
-            </div>
-          )}
-          {!isLoading && loadingYears.length > 0 && (
-            <div className="flex flex-col gap-1 py-3">
-              <div className="flex items-center">
-                <RefreshCcw className="w-5 h-5 text-[#E5007D] animate-spin mr-2" />
-                <div className="text-slate-600">
-                  Loading {loadingYears.map((y) => (y === "other" ? "other" : `ปี ${y}`)).join(", ")}...
-                </div>
-              </div>
-              {loadedYears.length > 0 && (
-                <div className="text-xs text-slate-400 ml-7">
-                  โหลดไปแล้ว: {loadedYears.map((y) => (y === "other" ? "other" : `ปี ${y}`)).join(", ")}
+      >
+        <div className="pb-20 lg:pb-8 w-full max-w-full overflow-x-hidden">
+          <div className="mb-6 sm:mb-8">
+            <p className="text-xs text-slate-400 font-normal">
+              พบการ filter ผิดแจ้ง LINE: <span className="font-medium text-slate-500">0905588858</span> (ภูมิ MDCU80)
+            </p>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
+              <h1 className="text-slate-900 font-bold text-[24px]">
+                Peer Support Resources
+              </h1>
+              {isAdmin && (
+                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleDriveSync}
+                    disabled={isSyncingDrive || reclassifyPath !== null}
+                    className="w-full sm:w-auto"
+                  >
+                    <RefreshCcw className={`w-4 h-4 mr-2${isSyncingDrive ? ' animate-spin' : ''}`} />
+                    {isSyncingDrive ? 'Syncing Drive...' : 'Sync Drive'}
+                  </Button>
+                  <Button size="sm" onClick={() => setAddDialogOpen(true)} className="bg-[#E5007D] hover:bg-[#c00069] text-white w-full sm:w-auto">
+                    <Plus className="w-4 h-4 mr-2" /> Add New Resource
+                  </Button>
                 </div>
               )}
             </div>
-          )}
-          {/* ── Count row + view toggle ── */}
-          {!isLoading && (
-            <div className="flex items-center justify-between gap-2 mb-3">
-              <span className="text-xs text-slate-400 truncate">
-                พบ {filteredItems.length} รายการ จาก {groupedBySubject.length} วิชา
-              </span>
-              <div className="flex items-center rounded-lg border border-slate-200 overflow-hidden shrink-0">
-                <button
-                  onClick={() => setViewMode("grid")}
-                  className="flex items-center justify-center px-2.5 py-1.5 transition-colors"
-                  style={{
-                    background: viewMode === "grid" ? "#E5007D" : "white",
-                    color: viewMode === "grid" ? "white" : "#94A3B8",
-                  }}
-                  title="Grid view"
-                >
-                  <LayoutGrid className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  onClick={() => setViewMode("list")}
-                  className="flex items-center justify-center px-2.5 py-1.5 transition-colors"
-                  style={{
-                    background: viewMode === "list" ? "#E5007D" : "white",
-                    color: viewMode === "list" ? "white" : "#94A3B8",
-                  }}
-                  title="List view"
-                >
-                  <List className="w-3.5 h-3.5" />
-                </button>
-              </div>
+            {isAdmin && syncMessage && (
+              <p role={syncFailed ? "alert" : "status"} className={`text-sm ${syncFailed ? 'text-red-600' : 'text-emerald-700'}`}>
+                {syncMessage}
+              </p>
+            )}
+            <p className="text-slate-600 text-sm sm:text-base">Browse and access peer-created academic materials</p>
+          </div>
+
+          <SearchBar
+            boxes={searchBoxes}
+            operators={searchOperators}
+            onChange={(boxes, ops) => {
+              setSearchBoxes(boxes);
+              setSearchOperators(ops);
+            }}
+          />
+
+          <div style={{ display: "flex", flexDirection: isMobileScreen ? "column" : "row", gap: 20, alignItems: isMobileScreen ? "stretch" : "flex-start" }}>
+            <div style={{ width: isMobileScreen ? "100%" : 230, flexShrink: 0, position: isMobileScreen ? "static" : "sticky", top: 20, maxHeight: isMobileScreen ? "auto" : "calc(100vh - 40px)", overflowY: isMobileScreen ? "visible" : "auto" }}>
+              <FilterBar
+                generationOptions={filterOptions.generations}
+                blockOptions={filterOptions.blocks}
+                categoryOptions={filterOptions.types}
+                boardExamOptions={filterOptions.boardExams}
+                selectedGeneration={selectedGeneration}
+                selectedBlock={selectedBlock}
+                selectedCategory={selectedCategory}
+                selectedBoardExam={selectedBoardExam}
+                onGenerationChange={setSelectedGeneration}
+                onBlockChange={setSelectedBlock}
+                onCategoryChange={setSelectedCategory}
+                onBoardExamChange={setSelectedBoardExam}
+                isMobile={isMobileScreen}
+                selectedYear={selectedYear}
+                onYearChange={setSelectedYear}
+              />
             </div>
-          )}
 
-          {!isLoading &&
-            (groupedBySubject.length > 0
-              ? (
-                <Virtuoso
-                  style={{ height: isMobileScreen ? "70vh" : "80vh", width: "100%" }}
-                  data={groupedBySubject}
-                  itemContent={(index, { subject, items }) => (
-                    <SubjectCard
-                      key={subject}
-                      subject={subject}
-                      items={items}
-                      isAdmin={isAdmin}
-                      knownTypes={knownDocTypes}
-                      viewMode={viewMode}
-                      onEdit={(item) => {
-                        setEditingItem({ id: item.id, fileName: item.block_name, generation: item.generation, block: item.block, category: item.category, driveLink: item.drive_link, thumbnail: item.thumbnail });
-                        setEditDialogOpen(true);
-                      }}
-                      onDelete={(item) => {
-                        setDeletingItem({ id: item.id, name: item.block_name });
-                        setDeleteDialogOpen(true);
-                      }}
-                    />
-                  )}
-                />
-              )
-              : (
-                <div className="text-center py-20 bg-white rounded-xl border border-dashed border-slate-300">
-                  <br />
-                  <Search className="w-12 h-12 text-slate-300 mx-auto " />
-                  <h3 className="text-slate-900 font-medium ">No resources found</h3>
-                  <p className="text-slate-500 text-sm">Try adjusting your filters.</p>
-                  <br />
+            <div style={{ flex: 1, minWidth: 0, width: isMobileScreen ? "100%" : "auto" }}>
+              {isLoading && (
+                <div className="flex justify-center items-center py-12">
+                  <RefreshCcw className="w-6 h-6 text-[#E5007D] animate-spin mr-2" />
+                  <div className="text-slate-600">Loading...</div>
                 </div>
-              ))}
-        </div>
-      </div>
+              )}
+              {!isLoading && loadingYears.length > 0 && (
+                <div className="flex flex-col gap-1 py-3">
+                  <div className="flex items-center">
+                    <RefreshCcw className="w-5 h-5 text-[#E5007D] animate-spin mr-2" />
+                    <div className="text-slate-600">
+                      Loading {loadingYears.map((y) => (y === "other" ? "other" : `ปี ${y}`)).join(", ")}...
+                    </div>
+                  </div>
+                  {loadedYears.length > 0 && (
+                    <div className="text-xs text-slate-400 ml-7">
+                      โหลดไปแล้ว: {loadedYears.map((y) => (y === "other" ? "other" : `ปี ${y}`)).join(", ")}
+                    </div>
+                  )}
+                </div>
+              )}
+              {/* ── Count row + view toggle ── */}
+              {!isLoading && (
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <span className="text-xs text-slate-400 truncate">
+                    พบ {filteredItems.length} รายการ จาก {groupedBySubject.length} วิชา
+                  </span>
+                  <div className="flex items-center rounded-lg border border-slate-200 overflow-hidden shrink-0">
+                    <button
+                      onClick={() => setViewMode("grid")}
+                      className="flex items-center justify-center px-2.5 py-1.5 transition-colors"
+                      style={{
+                        background: viewMode === "grid" ? "#E5007D" : "white",
+                        color: viewMode === "grid" ? "white" : "#94A3B8",
+                      }}
+                      title="Grid view"
+                    >
+                      <LayoutGrid className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => setViewMode("list")}
+                      className="flex items-center justify-center px-2.5 py-1.5 transition-colors"
+                      style={{
+                        background: viewMode === "list" ? "#E5007D" : "white",
+                        color: viewMode === "list" ? "white" : "#94A3B8",
+                      }}
+                      title="List view"
+                    >
+                      <List className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )}
 
-      <AddResourceDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} onSubmit={handleAdd} />
-      <EditResourceDialog open={editDialogOpen} onOpenChange={setEditDialogOpen} onSubmit={handleEdit} initialData={editingItem ?? undefined} />
-      <DeleteConfirmDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen} onConfirm={handleDelete} itemName={deletingItem?.name ?? ""} />
-    </div>
+              {!isLoading &&
+                (groupedBySubject.length > 0
+                  ? (
+                    <Virtuoso
+                      style={{ height: isMobileScreen ? "70vh" : "80vh", width: "100%" }}
+                      data={groupedBySubject}
+                      itemContent={(index, { subject, items }) => (
+                        <SubjectCard
+                          key={subject}
+                          subject={subject}
+                          items={items}
+                          isAdmin={isAdmin}
+                          knownTypes={knownDocTypes}
+                          viewMode={viewMode}
+                          onEdit={(item) => {
+                            setEditingItem({ id: item.id, fileName: item.block_name, generation: item.generation, block: item.block, category: item.category, driveLink: item.drive_link, thumbnail: item.thumbnail });
+                            setEditDialogOpen(true);
+                          }}
+                          onDelete={(item) => {
+                            setDeletingItem({ id: item.id, name: item.block_name });
+                            setDeleteDialogOpen(true);
+                          }}
+                        />
+                      )}
+                    />
+                  )
+                  : (
+                    <div className="text-center py-20 bg-white rounded-xl border border-dashed border-slate-300">
+                      <br />
+                      <Search className="w-12 h-12 text-slate-300 mx-auto " />
+                      <h3 className="text-slate-900 font-medium ">No resources found</h3>
+                      <p className="text-slate-500 text-sm">Try adjusting your filters.</p>
+                      <br />
+                    </div>
+                  ))}
+            </div>
+          </div>
+
+          <AddResourceDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} onSubmit={handleAdd} />
+          <EditResourceDialog open={editDialogOpen} onOpenChange={setEditDialogOpen} onSubmit={handleEdit} initialData={editingItem ?? undefined} />
+          <DeleteConfirmDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen} onConfirm={handleDelete} itemName={deletingItem?.name ?? ""} />
+        </div>
+      </FolderReclassifyContext.Provider>
     </FolderSettingsProvider>
   );
 }

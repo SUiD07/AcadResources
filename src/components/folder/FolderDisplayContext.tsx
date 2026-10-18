@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { getFolderSettings, saveFolderSettings } from "../lib/dataService";
+import { getFolderSettings, saveFolderSettings } from "../../lib/dataService";
 import {
   buildFolderSettingsMap,
   getDisplayName,
@@ -8,9 +8,9 @@ import {
   normalizeFolderPath,
   settingKey,
   sortFolders,
-} from "../lib/FolderSettings";
-import type { FolderSettingsMap } from "../lib/FolderSettings";
-import type { FolderSetting } from "../lib/types";
+} from "../../lib/folderDisplay";
+import type { FolderSettingsMap } from "../../lib/folderDisplay";
+import type { FolderSetting } from "../../lib/types";
 
 export type FolderSettingRow = Partial<FolderSetting> & { folder_path: string };
 
