@@ -946,3 +946,83 @@ export async function updateDocsClassification(ids: number[], patch: ReclassifyP
     .in('id', ids);
   if (error) throw error;
 }
+
+
+// ============================================
+// FOLDERS (keyed by Google Drive ID)
+// ============================================
+/** All folders. Loaded in pages because the API returns at most 1000 rows per request. */
+export async function fetchFolders(): Promise<import('./types').Folder[]> {
+  const PAGE = 1000;
+  const all: import('./types').Folder[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from('folders')
+      .select('drive_id, parent_drive_id, drive_name, parent_override, custom_name, sort_order, hidden, missing')
+      .order('drive_id', { ascending: true })
+      .range(from, from + PAGE - 1);
+    if (error) throw error;
+    const rows = (data ?? []) as import('./types').Folder[];
+    all.push(...rows);
+    if (rows.length < PAGE) break;
+  }
+  return all;
+}
+
+export type FolderEditRow = { drive_id: string } & Partial<
+  Pick<import('./types').Folder, 'custom_name' | 'sort_order' | 'hidden' | 'parent_override'>
+>;
+
+/** Saves admin edits (name / order / hidden / moved). Updates only; never creates folder rows. */
+export async function updateFolders(rows: FolderEditRow[]): Promise<void> {
+  if (rows.length === 0) return;
+  const stamp = new Date().toISOString();
+  const results = await Promise.all(
+    rows.map(({ drive_id, ...patch }) =>
+      supabase.from('folders').update({ ...patch, updated_at: stamp }).eq('drive_id', drive_id),
+    ),
+  );
+  const failed = results.find((r) => r.error);
+  if (failed?.error) throw failed.error;
+}
+
+/** Copies folder rows from drive_sync into `folders`, then links new files to their folder. */
+export async function syncFoldersFromDrive(): Promise<void> {
+  const a = await supabase.rpc('sync_folders_from_drive');
+  if (a.error) throw a.error;
+  const b = await supabase.rpc('link_documents_to_folders');
+  if (b.error) throw b.error;
+}
+
+function rpcArgsById(folderId: string, f: ReclassifyFilter) {
+  return {
+    p_folder_id: folderId,
+    p_from_doc_type: f.fromDocType,
+    p_from_board_exam: f.fromBoardExam,
+    p_from_block: f.fromBlock,
+  };
+}
+
+export async function countFolderDocsById(folderId: string, f: ReclassifyFilter): Promise<number> {
+  const { data, error } = await supabase.rpc('folder_docs_count_by_id', rpcArgsById(folderId, f));
+  if (error) throw error;
+  return Number(data ?? 0);
+}
+
+export async function listFolderDocsById(
+  folderId: string,
+  f: ReclassifyFilter,
+  afterId: number,
+  limit: number,
+): Promise<Array<{ id: number; title: string }>> {
+  const { data, error } = await supabase.rpc('folder_docs_matching_by_id', {
+    ...rpcArgsById(folderId, f),
+    p_after_id: afterId,
+    p_limit: limit,
+  });
+  if (error) throw error;
+  return ((data ?? []) as Array<{ id: number | string; title: string }>).map((r) => ({
+    id: Number(r.id),
+    title: r.title,
+  }));
+}

@@ -9,6 +9,7 @@ import {
   updateStudentDocument,
   deleteStudentDocument,
   getKeywordConfigs,
+  syncFolders,
 } from "../../lib/dataService";
 import type { StudentDocument, PeerSupportItem, KeywordConfig } from "../../lib/types";
 import * as googleDrive from "../../lib/googleDriveService";
@@ -394,6 +395,8 @@ export function PeerSupportSection({
   const [reclassifyPath, setReclassifyPath] = useState<string | null>(null);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [syncFailed, setSyncFailed] = useState(false);
+  // Bumped after a Drive sync so the folders are reloaded.
+  const [folderReloadKey, setFolderReloadKey] = useState(0);
   const [loadingYears, setLoadingYears] = useState<string[]>([]);
   const [loadedYears, setLoadedYears] = useState<string[]>([]);
   const fetchedYears = useRef<Set<string>>(new Set());
@@ -505,10 +508,24 @@ export function PeerSupportSection({
 
     try {
       await syncStudentDocumentsFromDrive();
+      // Refresh the folders table and link new files to their folder before reloading the files.
+      let foldersRefreshed = true;
+      try {
+        await syncFolders();
+      } catch (folderError) {
+        foldersRefreshed = false;
+        console.error("Folder refresh failed:", folderError);
+      }
       const blocksInYear = selectedYear.length > 0 ? getBlocksInYear(selectedYear, yearMap) : [];
       const docs = await getStudentDocuments(blocksInYear.length > 0 ? { blocks: blocksInYear } : undefined);
       setStudentDocs(docs);
-      setSyncMessage('Drive sync completed.');
+      setFolderReloadKey((k) => k + 1);
+      setSyncMessage(
+        foldersRefreshed
+          ? 'Drive sync completed.'
+          : 'Drive sync completed, but the folder list could not be refreshed. Run the sync again.',
+      );
+      if (!foldersRefreshed) setSyncFailed(true);
     } catch (syncError) {
       console.error("Drive sync failed:", syncError);
       setSyncFailed(true);
@@ -547,6 +564,7 @@ export function PeerSupportSection({
           category: finalCategory,
           board_exam: finalBoardExam,
           folder_path: doc.folder_path,
+          folder_drive_id: doc.folder_drive_id,
           classificationSummary,
         };
       });
@@ -682,7 +700,7 @@ export function PeerSupportSection({
   }, [filteredItems, blockOrderMap]);
 
   return (
-    <FolderSettingsProvider isAdmin={isAdmin}>
+    <FolderSettingsProvider isAdmin={isAdmin} reloadKey={folderReloadKey}>
       <FolderReclassifyContext.Provider
         value={{
           options: reclassifyOptions,

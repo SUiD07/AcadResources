@@ -46,13 +46,14 @@ function Field({
  * Only files in the folder + subfolders that match FROM are changed.
  */
 export function FolderReclassifyRow({
-  folderPath,
+  folderKey,
   defaultFromDocType,
   defaultFromBlock,
   visibleCount,
   onClose,
 }: {
-  folderPath: string;
+  /** Drive ID of the folder (or "path:<path>" for a folder known only from file paths). */
+  folderKey: string;
   defaultFromDocType?: string;
   /** The block this folder is shown under (so the change stays inside it). */
   defaultFromBlock?: string;
@@ -90,7 +91,7 @@ export function FolderReclassifyRow({
     setPreview((p) => ({ ...p, loading: true, error: null }));
     const t = setTimeout(async () => {
       try {
-        const r = await previewReclassify(folderPath, toFilter(from));
+        const r = await previewReclassify(folderKey, toFilter(from));
         if (!cancelled) setPreview({ ...r, loading: false, error: null });
       } catch (e) {
         if (!cancelled)
@@ -106,7 +107,7 @@ export function FolderReclassifyRow({
       cancelled = true;
       clearTimeout(t);
     };
-  }, [folderPath, from, refreshKey, running]);
+  }, [folderKey, from, refreshKey, running]);
 
   const editFrom = (patchFrom: Partial<FieldSet>) => {
     setFrom((f) => ({ ...f, ...patchFrom }));
@@ -127,7 +128,7 @@ export function FolderReclassifyRow({
     setPhase("running");
     setMessage(null);
     setProgress({ done: 0, total: preview.count });
-    ctx.setBusyPath(folderPath);
+    ctx.setBusyPath(folderKey);
 
     const warn = (e: BeforeUnloadEvent) => {
       e.preventDefault();
@@ -136,7 +137,7 @@ export function FolderReclassifyRow({
     window.addEventListener("beforeunload", warn);
 
     try {
-      const res = await runReclassify(folderPath, toFilter(from), patch, (done, total) =>
+      const res = await runReclassify(folderKey, toFilter(from), patch, (done, total) =>
         setProgress({ done, total }),
       );
       if (res.error) {
@@ -245,7 +246,7 @@ export function FolderReclassifyRow({
             </span>
           ) : preview.error ? (
             <span className="text-red-600">
-              {preview.error} — did you run supabase/phase1_reclassify.sql?
+              {preview.error} — did you run supabase/phase1_reclassify.sql and supabase/step3_reclassify_by_id.sql?
             </span>
           ) : preview.count === 0 ? (
             <span>No files match “From”.</span>

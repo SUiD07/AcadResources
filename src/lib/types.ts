@@ -16,6 +16,8 @@ export interface PeerSupportItem {
   category: string;
   board_exam?: string;
   folder_path?: string;
+  /** Google Drive ID of the folder this file sits in (null for files not linked yet). */
+  folder_drive_id?: string | null;
 }
 
 export interface StudentDocument {
@@ -34,6 +36,8 @@ export interface StudentDocument {
   board_exam?: string;
   drive_id?: string;
   is_overridden?: boolean; 
+  /** Google Drive ID of the parent folder; joins to folders.drive_id. */
+  folder_drive_id?: string | null;
 }
 
 export interface Activity {
@@ -132,4 +136,18 @@ export interface FolderSetting {
   sort_order: number | null;
   hidden: boolean;
   updated_at?: string;
+}
+
+// A Drive folder, keyed by its Google Drive ID (table `folders`).
+// drive_name / parent_drive_id come from Drive; the rest are admin edits.
+export interface Folder {
+  drive_id: string;
+  parent_drive_id: string | null;
+  drive_name: string;
+  /** "Move to": drive_id of the new parent (display only, never touches Drive). */
+  parent_override: string | null;
+  custom_name: string | null;
+  sort_order: number | null;
+  hidden: boolean;
+  missing: boolean;
 }

@@ -407,3 +407,38 @@ export async function updateDocsClassification(
 ): Promise<void> {
   if (USE_SUPABASE) return await supabaseApi.updateDocsClassification(ids, patch);
 }
+
+
+// ============================================
+// FOLDERS (keyed by Google Drive ID)
+// ============================================
+export async function getFolders(): Promise<import('./types').Folder[]> {
+  if (USE_SUPABASE) return await supabaseApi.fetchFolders();
+  return [];
+}
+
+export async function saveFolderEdits(rows: supabaseApi.FolderEditRow[]): Promise<void> {
+  if (USE_SUPABASE) return await supabaseApi.updateFolders(rows);
+}
+
+export async function syncFolders(): Promise<void> {
+  if (USE_SUPABASE) return await supabaseApi.syncFoldersFromDrive();
+}
+
+export async function countFolderDocsById(
+  folderId: string,
+  filter: supabaseApi.ReclassifyFilter,
+): Promise<number> {
+  if (USE_SUPABASE) return await supabaseApi.countFolderDocsById(folderId, filter);
+  return 0;
+}
+
+export async function listFolderDocsById(
+  folderId: string,
+  filter: supabaseApi.ReclassifyFilter,
+  afterId: number,
+  limit: number,
+): Promise<Array<{ id: number; title: string }>> {
+  if (USE_SUPABASE) return await supabaseApi.listFolderDocsById(folderId, filter, afterId, limit);
+  return [];
+}

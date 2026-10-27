@@ -1,4 +1,4 @@
-import { useState, useRef, createContext, useContext } from "react";
+import { useState, useRef, useEffect, useCallback, createContext, useContext } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import {
   ExternalLink,
@@ -13,15 +13,18 @@ import {
   Eye,
   EyeOff,
   Tag,
+  Undo2,
 } from "lucide-react";
 import {
   DndContext,
   closestCenter,
   PointerSensor,
   TouchSensor,
+  useDroppable,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
+import type { CollisionDetection } from "@dnd-kit/core";
 import {
   SortableContext,
   verticalListSortingStrategy,
@@ -33,6 +36,7 @@ import { Button } from "./ui/button";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import type { ClassificationSummary } from "../lib/KeywordMatching";
 import { useFolderSettings } from "./folder/FolderDisplayContext";
+import type { ChainNode } from "../lib/folderDisplay";
 import { useFolderReclassify } from "./folder/FolderReclassifyContext";
 import { FolderReclassifyRow } from "./folder/FolderReclassifyRow";
 
@@ -67,6 +71,7 @@ interface ContentItem {
   block: string;
   category: string;
   folder_path?: string;
+  folder_drive_id?: string | null;
   board_exam?: string;
   classificationSummary?: ClassificationSummary;
 }
@@ -114,40 +119,39 @@ function itemsLayoutStyle(
 // ─── FOLDER TREE HELPERS ──────────────────────────────────────────────────────
 
 interface FolderNode {
+  /** Google Drive ID of the folder, or "path:<path>" when the folder is known only from file paths. */
+  id: string;
   name: string;
-  fullPath: string;
+  /** Known only from file paths: it can be shown but not renamed, hidden or reordered. */
+  virtual: boolean;
   children: Map<string, FolderNode>;
   items: ContentItem[];
 }
 
-function makeFolderNode(name: string, fullPath: string): FolderNode {
-  return { name, fullPath, children: new Map(), items: [] };
+function makeFolderNode(id: string, name: string, virtual = false): FolderNode {
+  return { id, name, virtual, children: new Map(), items: [] };
 }
 
 /**
- * Build a full-path tree from items' folder_path strings.
- * Each path segment becomes a tree level, so siblings from different
- * branches are never merged even if their last segment matches.
+ * Build the folder tree from each file's folder chain (outermost folder first).
+ * Folders are matched by Drive ID, so one folder is never split in two or merged
+ * with another folder that happens to have the same name.
  */
-function buildFolderTree(items: ContentItem[]): FolderNode {
+function buildFolderTree(
+  items: ContentItem[],
+  chainFor: (item: ContentItem) => ChainNode[],
+): FolderNode {
   const root = makeFolderNode("", "");
 
   for (const item of items) {
-    const raw = item.folder_path || "";
-    const separator = raw.includes(" > ") ? " > " : "/";
-    const segments = raw
-      .split(separator)
-      .map((s) => s.trim())
-      .filter(Boolean);
-
     let node = root;
-    let builtPath = "";
-    for (const seg of segments) {
-      builtPath = builtPath ? `${builtPath} > ${seg}` : seg;
-      if (!node.children.has(seg)) {
-        node.children.set(seg, makeFolderNode(seg, builtPath));
+    for (const folder of chainFor(item)) {
+      let child = node.children.get(folder.id);
+      if (!child) {
+        child = makeFolderNode(folder.id, folder.name, folder.virtual);
+        node.children.set(folder.id, child);
       }
-      node = node.children.get(seg)!;
+      node = child;
     }
     node.items.push(item);
   }
@@ -179,8 +183,9 @@ function collapseChains(node: FolderNode): FolderNode {
   if (node.items.length === 0 && node.children.size === 1 && node.name !== "") {
     const [, onlyChild] = [...node.children.entries()][0];
     return {
+      id: onlyChild.id,
       name: onlyChild.name,
-      fullPath: onlyChild.fullPath,
+      virtual: onlyChild.virtual,
       children: onlyChild.children,
       items: onlyChild.items,
     };
@@ -491,7 +496,8 @@ function SortableFolderItem({
   const handle = (
     <button
       type="button"
-      aria-label="Drag to reorder folder"
+      aria-label="Drag to reorder folder, or drop it onto another folder to move it inside"
+      title="Drag to reorder, or drop onto another folder to move it inside"
       {...attributes}
       {...listeners}
       onClick={(e) => e.stopPropagation()}
@@ -517,8 +523,104 @@ function SortableFolderItem({
   );
 }
 
-/** A list of sibling folders. Admins can drag them to reorder; the order is saved instantly. */
+// Id prefix of the "drop inside this folder" zone on a folder's header row.
+const INSIDE = "inside:";
+
+/**
+ * One drag area for a whole folder tree (admin only). Dropping a folder on the
+ * middle of another folder's header moves it inside; dropping between folders
+ * reorders them. Moves only change how folders are shown, never Drive.
+ */
+function FolderDndProvider({
+  onMoved,
+  children,
+}: {
+  /** Called with the target folder after a move, so it can open and show the result. */
+  onMoved: (targetId: string) => void;
+  children: ReactNode;
+}) {
+  const fs = useFolderSettings();
+  const { canMoveTo, moveTo, reorder } = fs;
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 8 } })
+  );
+
+  const collisionDetection = useCallback<CollisionDetection>(
+    (args) => {
+      const activeId = String(args.active.id);
+      const pointer = args.pointerCoordinates;
+
+      // 1. Pointer in the middle band of another folder's header: move inside it.
+      if (pointer) {
+        for (const c of args.droppableContainers) {
+          const id = String(c.id);
+          if (!id.startsWith(INSIDE)) continue;
+          if (!canMoveTo(activeId, id.slice(INSIDE.length))) continue;
+          const r = args.droppableRects.get(c.id);
+          if (!r) continue;
+          const top = r.top + r.height * 0.25;
+          const bottom = r.bottom - r.height * 0.25;
+          if (pointer.x >= r.left && pointer.x <= r.right && pointer.y >= top && pointer.y <= bottom) {
+            return [{ id: c.id }];
+          }
+        }
+      }
+
+      // 2. Otherwise reorder among the folders next to it.
+      const listId = args.active.data.current?.sortable?.containerId;
+      return closestCenter({
+        ...args,
+        droppableContainers: args.droppableContainers.filter(
+          (c) =>
+            !String(c.id).startsWith(INSIDE) &&
+            (listId === undefined || c.data.current?.sortable?.containerId === listId),
+        ),
+      });
+    },
+    [canMoveTo],
+  );
+
+  return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={collisionDetection}
+      onDragEnd={({ active, over }) => {
+        if (!over) return;
+        const activeId = String(active.id);
+        const overId = String(over.id);
+
+        if (overId.startsWith(INSIDE)) {
+          const target = overId.slice(INSIDE.length);
+          if (canMoveTo(activeId, target)) {
+            moveTo(activeId, target);
+            onMoved(target);
+          }
+          return;
+        }
+
+        if (activeId === overId) return;
+        const a = active.data.current?.sortable;
+        const o = over.data.current?.sortable;
+        if (!a || !o || a.containerId !== o.containerId) return;
+        const ids: string[] = a.items.map(String);
+        const from = ids.indexOf(activeId);
+        const to = ids.indexOf(overId);
+        if (from < 0 || to < 0) return;
+        reorder(arrayMove(ids, from, to));
+      }}
+    >
+      {children}
+    </DndContext>
+  );
+}
+
+// Tells a folder to open itself (used so the target of a move shows the result).
+const RevealContext = createContext<{ id: string | null; n: number }>({ id: null, n: 0 });
+
+/** A list of sibling folders. Admins can drag them to reorder (inside one FolderDndProvider). */
 function FolderList({
+  listId,
   nodes,
   categoryName,
   accentColor,
@@ -527,6 +629,8 @@ function FolderList({
   onDelete,
   depth,
 }: {
+  /** Identifies this list of siblings ("root", or the parent folder's id). */
+  listId: string;
   nodes: FolderNode[];
   categoryName: string;
   accentColor: string;
@@ -535,18 +639,12 @@ function FolderList({
   onDelete?: (item: ContentItem) => void;
   depth: number;
 }) {
-  const fs = useFolderSettings();
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 8 } })
-  );
-
   if (nodes.length === 0) return null;
-  const paths = nodes.map((n) => n.fullPath);
+  const paths = nodes.map((n) => n.id);
 
   const renderFolder = (node: FolderNode, dragHandle?: ReactNode) => (
     <FolderGroup
-      key={node.fullPath}
+      key={node.id}
       node={node}
       categoryName={categoryName}
       accentColor={accentColor}
@@ -565,27 +663,15 @@ function FolderList({
   }
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCenter}
-      onDragEnd={({ active, over }) => {
-        if (!over || active.id === over.id) return;
-        const from = paths.indexOf(String(active.id));
-        const to = paths.indexOf(String(over.id));
-        if (from < 0 || to < 0) return;
-        fs.reorder(arrayMove(paths, from, to));
-      }}
-    >
-      <SortableContext items={paths} strategy={verticalListSortingStrategy}>
-        <div className="flex flex-col gap-2">
-          {nodes.map((node) => (
-            <SortableFolderItem key={node.fullPath} id={node.fullPath}>
-              {(handle) => renderFolder(node, handle)}
-            </SortableFolderItem>
-          ))}
-        </div>
-      </SortableContext>
-    </DndContext>
+    <SortableContext id={listId} items={paths} strategy={verticalListSortingStrategy}>
+      <div className="flex flex-col gap-2">
+        {nodes.map((node) => (
+          <SortableFolderItem key={node.id} id={node.id}>
+            {(handle) => renderFolder(node, handle)}
+          </SortableFolderItem>
+        ))}
+      </div>
+    </SortableContext>
   );
 }
 
@@ -617,12 +703,25 @@ function FolderGroup({
   const [reclassifying, setReclassifying] = useState(false);
   const reclass = useFolderReclassify();
   // This folder is being bulk-updated right now: dim it and block its controls.
-  const folderBusy = reclass.busyPath === node.fullPath;
+  const folderBusy = reclass.busyPath === node.id;
   const fs = useFolderSettings();
-  const shownName = fs.displayName(node.fullPath, node.name);
-  const folderHidden = fs.isFolderHidden(node.fullPath);
+  const shownName = fs.displayName(node.id, node.name);
+  const folderHidden = fs.isFolderHidden(node.id);
   const viewMode = useContext(ViewModeContext);
   const total = countDescendants(node);
+  const moved = fs.isMoved(node.id);
+
+  // The header row is a "drop inside this folder" zone while an admin drags a folder.
+  const { setNodeRef: setDropRef, isOver } = useDroppable({
+    id: INSIDE + node.id,
+    disabled: !isAdmin || node.virtual,
+  });
+
+  // Open when a folder was just moved into this one.
+  const reveal = useContext(RevealContext);
+  useEffect(() => {
+    if (reveal.id === node.id) setOpen(true);
+  }, [reveal.n]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const startRename = () => {
     committedRef.current = false;
@@ -632,7 +731,7 @@ function FolderGroup({
   const commitRename = () => {
     if (committedRef.current) return;
     committedRef.current = true;
-    fs.rename(node.fullPath, draft, node.name);
+    fs.rename(node.id, draft, node.name);
     setEditing(false);
   };
   const cancelRename = () => {
@@ -657,12 +756,13 @@ function FolderGroup({
   return (
     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
       <div
+        ref={setDropRef}
         role="button"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
         className={`flex items-center justify-between cursor-pointer select-none px-4 py-3 hover:bg-slate-50 transition-colors ${
           folderBusy ? "opacity-60 pointer-events-none" : ""
-        }`}
+        } ${isOver ? "bg-pink-50 ring-2 ring-inset ring-[#E5007D]" : ""}`}
       >
         <div className="flex items-center gap-3 min-w-0">
           {dragHandle}
@@ -710,6 +810,7 @@ function FolderGroup({
               {total} files
               {shownName !== node.name ? ` · Drive name: ${node.name}` : ""}
               {folderHidden ? " · hidden from students" : ""}
+              {isAdmin && moved ? " · moved (not its Drive location)" : ""}
             </p>
           </div>
         </div>
@@ -730,19 +831,34 @@ function FolderGroup({
             >
               <Tag className="w-3.5 h-3.5" />
             </button>
+            {moved && (
+              <button
+                type="button"
+                aria-label="Back to Drive location"
+                title="Back to Drive location"
+                onClick={() => fs.resetMove(node.id)}
+                className="p-1.5 rounded hover:bg-slate-100 text-[#E5007D]"
+              >
+                <Undo2 className="w-3.5 h-3.5" />
+              </button>
+            )}
             <button
               type="button"
               aria-label="Rename folder"
+              title={node.virtual ? "This folder is not linked to Drive yet" : undefined}
+              disabled={node.virtual}
               onClick={startRename}
-              className="p-1.5 rounded hover:bg-slate-100 text-slate-500"
+              className="p-1.5 rounded hover:bg-slate-100 text-slate-500 disabled:opacity-30"
             >
               <Pencil className="w-3.5 h-3.5" />
             </button>
             <button
               type="button"
               aria-label={folderHidden ? "Show folder to students" : "Hide folder from students"}
-              onClick={() => fs.setHidden(node.fullPath, !folderHidden)}
-              className="p-1.5 rounded hover:bg-slate-100 text-slate-500"
+              title={node.virtual ? "This folder is not linked to Drive yet" : undefined}
+              disabled={node.virtual}
+              onClick={() => fs.setHidden(node.id, !folderHidden)}
+              className="p-1.5 rounded hover:bg-slate-100 text-slate-500 disabled:opacity-30"
             >
               {folderHidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
             </button>
@@ -759,7 +875,7 @@ function FolderGroup({
 
       {isAdmin && reclassifying && (
         <FolderReclassifyRow
-          folderPath={node.fullPath}
+          folderKey={node.id}
           defaultFromDocType={categoryName}
           defaultFromBlock={(() => {
             const blocks = Array.from(new Set(collectAllItems(node).map((i) => i.block)));
@@ -780,6 +896,7 @@ function FolderGroup({
         >
           {realFolderChildren.length > 0 && (
             <FolderList
+              listId={node.id}
               nodes={realFolderChildren}
               categoryName={categoryName}
               accentColor={accentColor}
@@ -830,12 +947,13 @@ export function ContentCategory({
   onDelete,
 }: ContentCategoryProps) {
   const [expanded, setExpanded] = useState(defaultExpanded);
+  const [reveal, setReveal] = useState<{ id: string | null; n: number }>({ id: null, n: 0 });
   const fs = useFolderSettings();
 
   // Students never see files inside a hidden folder; admins see everything.
   const uniqueItems = items
     .filter((item, idx, arr) => arr.findIndex((i) => i.id === item.id) === idx)
-    .filter((item) => !fs.isHiddenForViewer(item.folder_path));
+    .filter((item) => !fs.isHiddenForViewer(item));
 
   if (uniqueItems.length === 0) return null;
 
@@ -843,7 +961,7 @@ export function ContentCategory({
   const isPrecourse = categoryName === "Precourse";
 
   // Build the full recursive tree, then collapse pointless single-child chains
-  const rawTree = buildFolderTree(uniqueItems);
+  const rawTree = buildFolderTree(uniqueItems, fs.chainFor);
   const tree = collapseChains(rawTree);
 
   // Top-level: children with 2+ descendants become FolderGroups;
@@ -873,6 +991,7 @@ export function ContentCategory({
   const renderFolderGroups = (nodes: FolderNode[]) =>
     nodes.length > 0 && (
       <FolderList
+        listId="root"
         nodes={nodes}
         categoryName={categoryName}
         accentColor={accentColor}
@@ -900,7 +1019,7 @@ export function ContentCategory({
       </div>
     );
 
-  return (
+  const content = (
     <ViewModeContext.Provider value={viewMode}>
       <div
         className="rounded-xl border overflow-hidden"
@@ -1009,5 +1128,17 @@ export function ContentCategory({
       </div>
 
     </ViewModeContext.Provider>
+  );
+
+  return (
+    <RevealContext.Provider value={reveal}>
+      {isAdmin ? (
+        <FolderDndProvider onMoved={(target) => setReveal((r) => ({ id: target, n: r.n + 1 }))}>
+          {content}
+        </FolderDndProvider>
+      ) : (
+        content
+      )}
+    </RevealContext.Provider>
   );
 }

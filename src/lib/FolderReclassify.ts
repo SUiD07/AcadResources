@@ -2,7 +2,14 @@
 // folder (and its subfolders) that currently match a "From" filter. ─────────
 // Matching files get is_overridden = true so the Drive sync keeps the result.
 
-import { countFolderDocs, listFolderDocs, updateDocsClassification } from './dataService';
+import {
+  countFolderDocs,
+  countFolderDocsById,
+  listFolderDocs,
+  listFolderDocsById,
+  updateDocsClassification,
+} from './dataService';
+import { virtualKeyPath } from './folderDisplay';
 import type { ReclassifyFilter, ReclassifyPatch } from './supabase';
 
 /** Sentinel select values. */
@@ -38,10 +45,23 @@ export interface ReclassifyPreview {
   samples: string[];
 }
 
+// A folder key is a Drive ID, or "path:<path>" for a folder known only from file paths.
+function countDocs(key: string, filter: ReclassifyFilter): Promise<number> {
+  const path = virtualKeyPath(key);
+  return path !== undefined ? countFolderDocs(path, filter) : countFolderDocsById(key, filter);
+}
+
+function listDocs(key: string, filter: ReclassifyFilter, afterId: number, limit: number) {
+  const path = virtualKeyPath(key);
+  return path !== undefined
+    ? listFolderDocs(path, filter, afterId, limit)
+    : listFolderDocsById(key, filter, afterId, limit);
+}
+
 export async function previewReclassify(folder: string, filter: ReclassifyFilter): Promise<ReclassifyPreview> {
   const [count, first] = await Promise.all([
-    countFolderDocs(folder, filter),
-    listFolderDocs(folder, filter, 0, 5),
+    countDocs(folder, filter),
+    listDocs(folder, filter, 0, 5),
   ]);
   return { count, samples: first.map((r) => r.title) };
 }
@@ -50,7 +70,7 @@ async function loadAllMatchingIds(folder: string, filter: ReclassifyFilter): Pro
   const ids: number[] = [];
   let after = 0;
   for (;;) {
-    const page = await listFolderDocs(folder, filter, after, PAGE_SIZE);
+    const page = await listDocs(folder, filter, after, PAGE_SIZE);
     for (const r of page) ids.push(r.id);
     if (page.length < PAGE_SIZE) break;
     after = page[page.length - 1].id;
